@@ -81,7 +81,7 @@ export interface SpaceSummary {
 
 export interface CreateSpaceOptions {
   readonly id?: string;
-  readonly document: BoardDocument;
+  readonly document: unknown;
   readonly locale?: string;
   readonly timezone?: string;
 }

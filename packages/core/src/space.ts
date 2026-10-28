@@ -1,3 +1,4 @@
+import type { BoardValidationCatalog } from "./board-validation.js";
 import type { Clock } from "./clock.js";
 import {
   documentSchemaVersion,
@@ -18,6 +19,8 @@ import {
 } from "./diagnostics.js";
 import type { SpaceEvent, SpaceEventInput, Unsubscribe } from "./events.js";
 import { EventBus } from "./events.js";
+import type { BoardSerialization, BoardSerializationOptions } from "./document-io.js";
+import { serializeBoardDocument } from "./document-io.js";
 import type { FormatterProvider } from "./formatting.js";
 import type { IdFactory } from "./ids.js";
 import { deepFreeze, jsonEqual } from "./json.js";
@@ -29,6 +32,7 @@ import {
   type LocaleConfigInput,
 } from "./locale.js";
 import { createMessageProvider, type MessageDictionary, type MessageProvider } from "./messages.js";
+import type { BoardMigrationReport } from "./migrations.js";
 import type {
   AcquireEditorLeaseOptions,
   CreateSpaceOptions,
@@ -62,6 +66,7 @@ export interface SpaceDependencies {
   readonly clock: Clock;
   readonly logger: Logger;
   readonly documentValidator: DocumentValidator;
+  readonly validationCatalog?: BoardValidationCatalog;
   readonly formatterFactory: (config: LocaleConfig) => FormatterProvider;
   readonly messageDictionaries: Readonly<Partial<Record<BoardloomLocale, MessageDictionary>>>;
   readonly historyLimit: number;
@@ -75,6 +80,14 @@ export interface SpaceInitOptions extends CreateSpaceOptions {
   readonly warnings?: readonly Diagnostic[];
 }
 
+export interface SpaceImportMetadata {
+  readonly sourceSpaceId?: string;
+  readonly documentId: string;
+  readonly schemaVersion: number;
+  readonly migration: BoardMigrationReport | null;
+  readonly warnings: readonly Diagnostic[];
+}
+
 export interface BoardSpace {
   readonly id: string;
   readonly lifetimeId: string;
@@ -83,10 +96,8 @@ export interface BoardSpace {
   readonly taskCount: number;
   readonly viewCount: number;
   getSnapshot(): SpaceSnapshot;
-  loadDocument(
-    document: BoardDocument,
-    options?: { readonly source?: string },
-  ): Result<SpaceSnapshot>;
+  exportDocument(options?: BoardSerializationOptions): Result<BoardSerialization>;
+  loadDocument(document: unknown, options?: { readonly source?: string }): Result<SpaceSnapshot>;
   setLocale(config: LocaleConfigInput): Result<SpaceSnapshot>;
   getFormatters(): FormatterProvider;
   getMessageProvider(): MessageProvider;
@@ -98,7 +109,7 @@ export interface BoardSpace {
     lease: EditorLease,
     options?: ReleaseEditorLeaseOptions,
   ): Result<SpaceSnapshot>;
-  updateDraft(lease: EditorLease, document: BoardDocument): Result<DraftSnapshot>;
+  updateDraft(lease: EditorLease, document: unknown): Result<DraftSnapshot>;
   undoDraft(lease: EditorLease): Result<DraftSnapshot>;
   redoDraft(lease: EditorLease): Result<DraftSnapshot>;
   applyDraft(lease: EditorLease): Result<SpaceSnapshot>;
@@ -161,7 +172,7 @@ class SpaceImpl implements BoardSpace {
       locale: options.localeConfig.locale,
       dictionaries: deps.messageDictionaries,
     });
-    this.committedDocument = snapshotDocument(options.document);
+    this.committedDocument = snapshotDocument(options.document as BoardDocument);
     this.validationDiagnostics = deepFreeze([...(options.warnings ?? [])]);
     this.createdAt = deps.clock.now();
     this.updatedAt = this.createdAt;
@@ -213,9 +224,28 @@ class SpaceImpl implements BoardSpace {
     return this.views.size;
   }
 
-  start(): void {
+  start(importMetadata?: SpaceImportMetadata): void {
+    const initialWarnings = this.validationDiagnostics;
+    const initialSchemaVersion = documentSchemaVersion(this.committedDocument);
     this.emit({ type: "space:created" });
-    this.emitLoaded(this.validationDiagnostics);
+    if (importMetadata) {
+      if (importMetadata.migration?.migrated) {
+        this.emit({ type: "document:migrated", report: importMetadata.migration });
+      }
+      this.emit({
+        type: "space:imported",
+        documentId: importMetadata.documentId,
+        ...(importMetadata.sourceSpaceId === undefined
+          ? {}
+          : { sourceSpaceId: importMetadata.sourceSpaceId }),
+        schemaVersion: importMetadata.schemaVersion,
+        migration: importMetadata.migration,
+        warnings: importMetadata.warnings,
+      });
+      this.emitLoaded(importMetadata.warnings, importMetadata.schemaVersion);
+      return;
+    }
+    this.emitLoaded(initialWarnings, initialSchemaVersion);
   }
 
   getFormatters(): FormatterProvider {
@@ -259,8 +289,31 @@ class SpaceImpl implements BoardSpace {
     });
   }
 
+  exportDocument(options: BoardSerializationOptions = {}): Result<BoardSerialization> {
+    const blocked = this.assertActive();
+    if (blocked) {
+      return blocked;
+    }
+    const serialized = serializeBoardDocument(this.committedDocument, {
+      ...options,
+      ...(options.catalog === undefined && this.deps.validationCatalog !== undefined
+        ? { catalog: this.deps.validationCatalog }
+        : {}),
+    });
+    if (!serialized.ok) {
+      return serialized;
+    }
+    this.updatedAt = this.deps.clock.now();
+    this.emit({
+      type: "document:exported",
+      document: serialized.value.document,
+      schemaVersion: serialized.value.schemaVersion,
+    });
+    return serialized;
+  }
+
   loadDocument(
-    document: BoardDocument,
+    document: unknown,
     options: { readonly source?: string } = {},
   ): Result<SpaceSnapshot> {
     const blocked = this.assertActive();
@@ -269,20 +322,22 @@ class SpaceImpl implements BoardSpace {
     }
     const validation = this.deps.documentValidator(document);
     if (isBlockingValidation(validation)) {
-      return this.failWith(validation.diagnostics);
+      return this.failDocument(validation.diagnostics, "load");
     }
     const warnings = validationWarnings(validation);
     const previousDiagnostics = this.combinedDiagnostics();
-    this.committedDocument = snapshotDocument(document);
+    const loadedDocument = snapshotDocument(document as BoardDocument);
+    const loadedSchemaVersion = documentSchemaVersion(loadedDocument);
+    this.committedDocument = loadedDocument;
     this.committedRevision += 1;
     this.setDiagnosticsState(warnings);
     this.publishDiagnosticsChange(previousDiagnostics);
     this.emit({
       type: "document:changed",
-      document: this.committedDocument,
+      document: loadedDocument,
       source: options.source ?? "host",
     });
-    this.emitLoaded(warnings);
+    this.emitLoaded(warnings, loadedSchemaVersion);
     return ok(this.getSnapshot());
   }
 
@@ -539,7 +594,7 @@ class SpaceImpl implements BoardSpace {
     return ok(this.getSnapshot());
   }
 
-  updateDraft(lease: EditorLease, document: BoardDocument): Result<DraftSnapshot> {
+  updateDraft(lease: EditorLease, document: unknown): Result<DraftSnapshot> {
     const blocked = this.assertActive();
     if (blocked) {
       return blocked;
@@ -558,13 +613,13 @@ class SpaceImpl implements BoardSpace {
     }
     const validation = this.deps.documentValidator(document);
     if (isBlockingValidation(validation)) {
-      return this.failWith([
-        createDiagnostic(DIAGNOSTIC_CODES.DRAFT_INVALID, "draft"),
-        ...validation.diagnostics,
-      ]);
+      return this.failDocument(
+        [createDiagnostic(DIAGNOSTIC_CODES.DRAFT_INVALID, "draft"), ...validation.diagnostics],
+        "draft",
+      );
     }
     const warnings = validationWarnings(validation);
-    const next = snapshotDocument(document);
+    const next = snapshotDocument(document as BoardDocument);
     if (jsonEqual(next, draft.document)) {
       const previousDiagnostics = this.combinedDiagnostics();
       this.setDiagnosticsState(warnings);
@@ -582,10 +637,11 @@ class SpaceImpl implements BoardSpace {
     draft.document = next;
     draft.revision += 1;
     this.updatedAt = this.deps.clock.now();
+    const changed = this.draftEventData(draft);
     const previousDiagnostics = this.combinedDiagnostics();
     this.setDiagnosticsState(warnings);
     this.publishDiagnosticsChange(previousDiagnostics);
-    this.emitDraftChanged();
+    this.emitDraftChanged(changed);
     return ok(this.createDraftSnapshot(draft));
   }
 
@@ -617,8 +673,9 @@ class SpaceImpl implements BoardSpace {
     draft.document = previous;
     draft.revision += 1;
     this.updatedAt = this.deps.clock.now();
+    const changed = this.draftEventData(draft);
     this.clearDiagnostics();
-    this.emitDraftChanged();
+    this.emitDraftChanged(changed);
     return ok(this.createDraftSnapshot(draft));
   }
 
@@ -650,8 +707,9 @@ class SpaceImpl implements BoardSpace {
     draft.document = next;
     draft.revision += 1;
     this.updatedAt = this.deps.clock.now();
+    const changed = this.draftEventData(draft);
     this.clearDiagnostics();
-    this.emitDraftChanged();
+    this.emitDraftChanged(changed);
     return ok(this.createDraftSnapshot(draft));
   }
 
@@ -809,22 +867,42 @@ class SpaceImpl implements BoardSpace {
     });
   }
 
-  private emitDraftChanged(): void {
-    if (!this.draft) {
+  private draftEventData(draft: DraftState): {
+    readonly revision: number;
+    readonly canUndo: boolean;
+    readonly canRedo: boolean;
+  } {
+    return Object.freeze({
+      revision: draft.revision,
+      canUndo: draft.undo.length > 0,
+      canRedo: draft.redo.length > 0,
+    });
+  }
+
+  private emitDraftChanged(changed?: {
+    readonly revision: number;
+    readonly canUndo: boolean;
+    readonly canRedo: boolean;
+  }): void {
+    const data = changed ?? (this.draft ? this.draftEventData(this.draft) : null);
+    if (!data) {
       return;
     }
     this.emit({
       type: "draft:changed",
-      revision: this.draft.revision,
-      canUndo: this.draft.undo.length > 0,
-      canRedo: this.draft.redo.length > 0,
+      revision: data.revision,
+      canUndo: data.canUndo,
+      canRedo: data.canRedo,
     });
   }
 
-  private emitLoaded(warnings: readonly Diagnostic[] = this.validationDiagnostics): void {
+  private emitLoaded(
+    warnings: readonly Diagnostic[] = this.validationDiagnostics,
+    schemaVersion: number | null = documentSchemaVersion(this.committedDocument),
+  ): void {
     this.emit({
       type: "space:loaded",
-      schemaVersion: documentSchemaVersion(this.committedDocument),
+      schemaVersion,
       warnings,
     });
   }
@@ -900,23 +978,26 @@ class SpaceImpl implements BoardSpace {
     }
     const validation = this.deps.documentValidator(draft.document);
     if (isBlockingValidation(validation)) {
-      return this.failWith([
-        createDiagnostic(DIAGNOSTIC_CODES.DRAFT_INVALID, "draft"),
-        ...validation.diagnostics,
-      ]);
+      return this.failDocument(
+        [createDiagnostic(DIAGNOSTIC_CODES.DRAFT_INVALID, "draft"), ...validation.diagnostics],
+        "apply",
+      );
     }
     if (draft.baseRevision !== this.committedRevision) {
+      const expectedRevision = draft.baseRevision;
+      const actualRevision = this.committedRevision;
       const conflict = createDiagnostic(DIAGNOSTIC_CODES.REVISION_CONFLICT, "draft/baseRevision", {
-        message: `The committed revision is ${this.committedRevision}, but the draft is based on ${draft.baseRevision}.`,
+        message: `The committed revision is ${actualRevision}, but the draft is based on ${expectedRevision}.`,
       });
-      this.failWith([conflict]);
+      const conflicts = Object.freeze([conflict]);
+      this.failWith(conflicts);
       this.emit({
         type: "draft:conflict",
-        expectedRevision: draft.baseRevision,
-        actualRevision: this.committedRevision,
-        diagnostics: Object.freeze([conflict]),
+        expectedRevision,
+        actualRevision,
+        diagnostics: conflicts,
       });
-      return fail(Object.freeze([conflict]));
+      return fail(conflicts);
     }
     return ok(validationWarnings(validation));
   }
@@ -987,6 +1068,20 @@ class SpaceImpl implements BoardSpace {
       sessionId: lease.sessionId,
       status: "released",
     });
+  }
+
+  private failDocument(
+    diagnostics: readonly Diagnostic[],
+    source: "load" | "draft" | "apply",
+  ): Result<never> {
+    const rejected = deepFreeze([...diagnostics]);
+    this.setDiagnostics(rejected);
+    this.emit({
+      type: "document:invalid",
+      source,
+      diagnostics: rejected,
+    });
+    return fail(rejected);
   }
 
   private failWith(diagnostics: readonly Diagnostic[]): Result<never> {

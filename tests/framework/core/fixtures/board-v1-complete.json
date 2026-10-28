@@ -1,0 +1,575 @@
+{
+  "schemaVersion": 1,
+  "id": "board-assessment-overview",
+  "title": "Assessment overview",
+  "description": "Synthetic fixture for schema and migration verification.",
+  "createdAt": 1700000000000,
+  "updatedAt": 1700000001000,
+  "theme": {
+    "mode": "system",
+    "tokens": {
+      "accent": "#3366cc",
+      "surface": "#ffffff"
+    }
+  },
+  "datasets": [
+    {
+      "id": "assessments",
+      "provider": "local.fixture",
+      "label": "Assessments",
+      "fields": [
+        {
+          "id": "subject",
+          "type": "string",
+          "role": "dimension"
+        },
+        {
+          "id": "grade",
+          "type": "string",
+          "role": "dimension"
+        },
+        {
+          "id": "score",
+          "type": "number",
+          "role": "measure",
+          "unit": "points"
+        },
+        {
+          "id": "submittedAt",
+          "type": "datetime",
+          "role": "dimension"
+        }
+      ]
+    },
+    {
+      "id": "assessmentsPercent",
+      "provider": "local.fixture",
+      "label": "Assessments normalized",
+      "fields": [
+        {
+          "id": "subject",
+          "type": "string",
+          "role": "dimension"
+        },
+        {
+          "id": "score",
+          "type": "number",
+          "role": "measure",
+          "unit": "percent"
+        },
+        {
+          "id": "submittedAt",
+          "type": "datetime",
+          "role": "dimension"
+        }
+      ]
+    }
+  ],
+  "slices": [
+    {
+      "id": "term-2026",
+      "datasetId": "assessments",
+      "label": "Term 2026",
+      "fieldIds": ["subject", "grade", "score", "submittedAt"]
+    },
+    {
+      "id": "term-2025",
+      "datasetId": "assessments",
+      "label": "Term 2025",
+      "fieldIds": ["subject", "grade", "score", "submittedAt"]
+    },
+    {
+      "id": "term-2025-percent",
+      "datasetId": "assessmentsPercent",
+      "label": "Term 2025 normalized",
+      "fieldIds": ["subject", "score", "submittedAt"]
+    }
+  ],
+  "filterGroups": [
+    {
+      "id": "group-subjects",
+      "label": "Subject blocks",
+      "blockIds": ["block-score-chart", "block-score-table"]
+    }
+  ],
+  "blocks": [
+    {
+      "id": "block-score-chart",
+      "type": "chart",
+      "title": "Scores by subject",
+      "groupId": "group-subjects",
+      "bindings": [
+        {
+          "id": "binding-subject",
+          "role": "dimension",
+          "field": {
+            "datasetId": "assessments",
+            "fieldId": "subject"
+          },
+          "sliceId": "term-2026",
+          "mode": "selectable",
+          "axis": "x"
+        },
+        {
+          "id": "binding-score",
+          "role": "measure",
+          "field": {
+            "datasetId": "assessments",
+            "fieldId": "score"
+          },
+          "sliceId": "term-2026",
+          "aggregation": {
+            "type": "average"
+          },
+          "format": {
+            "unit": "points",
+            "precision": 1
+          },
+          "mode": "selectable",
+          "axis": "y"
+        },
+        {
+          "id": "binding-group",
+          "role": "group",
+          "mode": "selectable",
+          "axis": "none",
+          "field": {
+            "datasetId": "assessments",
+            "fieldId": "grade"
+          },
+          "sliceId": "term-2026"
+        },
+        {
+          "id": "binding-size",
+          "role": "size",
+          "mode": "selectable",
+          "axis": "none",
+          "field": {
+            "datasetId": "assessments",
+            "fieldId": "score"
+          },
+          "sliceId": "term-2026"
+        },
+        {
+          "id": "binding-color",
+          "role": "color",
+          "mode": "selectable",
+          "axis": "none",
+          "field": {
+            "datasetId": "assessments",
+            "fieldId": "grade"
+          },
+          "sliceId": "term-2026"
+        }
+      ],
+      "config": {
+        "visualization": "bar",
+        "comparisonId": "comparison-prev-term",
+        "options": {
+          "legend": "hidden",
+          "xAxis": {
+            "label": "Subject"
+          },
+          "yAxis": {
+            "label": "Average score"
+          }
+        }
+      }
+    },
+    {
+      "id": "block-score-table",
+      "type": "table",
+      "title": "Scores",
+      "groupId": "group-subjects",
+      "bindings": [
+        {
+          "id": "table-subject",
+          "role": "dimension",
+          "field": {
+            "datasetId": "assessments",
+            "fieldId": "subject"
+          },
+          "sliceId": "term-2026"
+        },
+        {
+          "id": "table-score",
+          "role": "measure",
+          "field": {
+            "datasetId": "assessments",
+            "fieldId": "score"
+          },
+          "sliceId": "term-2026",
+          "aggregation": {
+            "type": "average"
+          }
+        },
+        {
+          "id": "table-submitted",
+          "role": "dimension",
+          "mode": "selectable",
+          "axis": "none",
+          "bucket": {
+            "grain": "month",
+            "timezone": "UTC"
+          },
+          "field": {
+            "datasetId": "assessments",
+            "fieldId": "submittedAt"
+          },
+          "sliceId": "term-2026"
+        }
+      ],
+      "config": {
+        "pageSize": 10,
+        "columns": ["table-subject", "table-score", "table-submitted"],
+        "sort": {
+          "bindingId": "table-score",
+          "direction": "descending"
+        }
+      }
+    },
+    {
+      "id": "block-average-metric",
+      "type": "metric",
+      "title": "Average score",
+      "bindings": [
+        {
+          "id": "metric-score",
+          "role": "measure",
+          "field": {
+            "datasetId": "assessments",
+            "fieldId": "score"
+          },
+          "sliceId": "term-2026",
+          "aggregation": {
+            "type": "average"
+          },
+          "mode": "fixed",
+          "axis": "y"
+        }
+      ],
+      "config": {
+        "comparisonId": "comparison-prev-term",
+        "format": {
+          "precision": 1,
+          "unit": "points"
+        }
+      }
+    },
+    {
+      "id": "block-note",
+      "type": "text",
+      "title": "Note",
+      "bindings": [],
+      "config": {
+        "text": "Synthetic assessment fixture."
+      }
+    },
+    {
+      "id": "block-filter",
+      "type": "filter",
+      "title": "Subject filter",
+      "bindings": [],
+      "config": {
+        "filterIds": ["filter-subject", "filter-submitted"]
+      }
+    }
+  ],
+  "filters": [
+    {
+      "id": "filter-subject",
+      "label": "Subject",
+      "field": {
+        "datasetId": "assessments",
+        "fieldId": "subject"
+      },
+      "operator": "in",
+      "defaultValue": ["Mathematics", "Science"],
+      "viewerEditable": true,
+      "target": {
+        "kind": "group",
+        "groupId": "group-subjects"
+      }
+    },
+    {
+      "id": "filter-submitted",
+      "label": "Submitted",
+      "field": {
+        "datasetId": "assessments",
+        "fieldId": "submittedAt"
+      },
+      "operator": "between",
+      "defaultValue": ["2026-01-01T00:00:00Z", "2026-06-30T23:59:59Z"],
+      "viewerEditable": false,
+      "temporal": {
+        "timezone": "UTC",
+        "bounds": "inclusive"
+      },
+      "target": {
+        "kind": "board"
+      }
+    }
+  ],
+  "comparisons": [
+    {
+      "id": "comparison-prev-term",
+      "label": "Previous term",
+      "displayMode": "overlay",
+      "deltaMode": "both",
+      "base": {
+        "datasetId": "assessments",
+        "sliceId": "term-2026"
+      },
+      "reference": {
+        "datasetId": "assessments",
+        "sliceId": "term-2025"
+      },
+      "mapping": [
+        {
+          "primary": {
+            "datasetId": "assessments",
+            "fieldId": "subject"
+          },
+          "reference": {
+            "datasetId": "assessments",
+            "fieldId": "subject"
+          },
+          "role": "dimension"
+        },
+        {
+          "primary": {
+            "datasetId": "assessments",
+            "fieldId": "score"
+          },
+          "reference": {
+            "datasetId": "assessments",
+            "fieldId": "score"
+          },
+          "role": "measure"
+        }
+      ],
+      "alignment": {
+        "keys": ["subject"],
+        "collation": "unicode",
+        "normalization": "none"
+      },
+      "windows": {
+        "primary": {
+          "timezone": "UTC",
+          "start": "2026-01-01",
+          "end": "2026-06-30",
+          "bounds": "inclusive"
+        },
+        "reference": {
+          "timezone": "UTC",
+          "start": "2025-01-01",
+          "end": "2025-06-30",
+          "bounds": "inclusive"
+        }
+      },
+      "unitPolicy": {
+        "mode": "identical"
+      }
+    },
+    {
+      "id": "comparison-converted",
+      "label": "Normalized previous term",
+      "displayMode": "side-by-side",
+      "deltaMode": "absolute",
+      "base": {
+        "datasetId": "assessments",
+        "sliceId": "term-2026"
+      },
+      "reference": {
+        "datasetId": "assessmentsPercent",
+        "sliceId": "term-2025-percent"
+      },
+      "mapping": [
+        {
+          "primary": {
+            "datasetId": "assessments",
+            "fieldId": "subject"
+          },
+          "reference": {
+            "datasetId": "assessmentsPercent",
+            "fieldId": "subject"
+          },
+          "role": "dimension"
+        },
+        {
+          "primary": {
+            "datasetId": "assessments",
+            "fieldId": "score"
+          },
+          "reference": {
+            "datasetId": "assessmentsPercent",
+            "fieldId": "score"
+          },
+          "role": "measure"
+        }
+      ],
+      "alignment": {
+        "keys": ["subject"],
+        "collation": "unicode",
+        "normalization": "none"
+      },
+      "windows": {
+        "primary": {
+          "timezone": "UTC",
+          "start": "2026-01-01",
+          "end": "2026-06-30",
+          "bounds": "inclusive"
+        },
+        "reference": {
+          "timezone": "UTC",
+          "start": "2025-01-01",
+          "end": "2025-06-30",
+          "bounds": "inclusive"
+        }
+      },
+      "unitPolicy": {
+        "mode": "explicit",
+        "conversions": [
+          {
+            "from": "points",
+            "to": "percent",
+            "factor": 1,
+            "offset": 0,
+            "provider": "local.fixture",
+            "documentation": "Synthetic fixture conversion, not a physical unit conversion."
+          }
+        ]
+      }
+    }
+  ],
+  "layout": {
+    "desktop": {
+      "columns": 12,
+      "rowHeight": 8,
+      "placements": [
+        {
+          "blockId": "block-score-chart",
+          "x": 0,
+          "y": 0,
+          "width": 8,
+          "height": 4
+        },
+        {
+          "blockId": "block-average-metric",
+          "x": 8,
+          "y": 0,
+          "width": 4,
+          "height": 4
+        },
+        {
+          "blockId": "block-score-table",
+          "x": 0,
+          "y": 4,
+          "width": 8,
+          "height": 4
+        },
+        {
+          "blockId": "block-note",
+          "x": 8,
+          "y": 4,
+          "width": 4,
+          "height": 4
+        },
+        {
+          "blockId": "block-filter",
+          "x": 0,
+          "y": 8,
+          "width": 12,
+          "height": 2
+        }
+      ]
+    },
+    "tablet": {
+      "columns": 8,
+      "rowHeight": 8,
+      "placements": [
+        {
+          "blockId": "block-score-chart",
+          "x": 0,
+          "y": 0,
+          "width": 8,
+          "height": 4
+        },
+        {
+          "blockId": "block-average-metric",
+          "x": 0,
+          "y": 4,
+          "width": 8,
+          "height": 4
+        },
+        {
+          "blockId": "block-score-table",
+          "x": 0,
+          "y": 8,
+          "width": 8,
+          "height": 4
+        },
+        {
+          "blockId": "block-note",
+          "x": 0,
+          "y": 12,
+          "width": 8,
+          "height": 4
+        },
+        {
+          "blockId": "block-filter",
+          "x": 0,
+          "y": 16,
+          "width": 8,
+          "height": 2
+        }
+      ]
+    },
+    "narrow": {
+      "columns": 4,
+      "rowHeight": 8,
+      "placements": [
+        {
+          "blockId": "block-score-chart",
+          "x": 0,
+          "y": 0,
+          "width": 4,
+          "height": 4
+        },
+        {
+          "blockId": "block-average-metric",
+          "x": 0,
+          "y": 4,
+          "width": 4,
+          "height": 4
+        },
+        {
+          "blockId": "block-score-table",
+          "x": 0,
+          "y": 8,
+          "width": 4,
+          "height": 4
+        },
+        {
+          "blockId": "block-note",
+          "x": 0,
+          "y": 12,
+          "width": 4,
+          "height": 4
+        },
+        {
+          "blockId": "block-filter",
+          "x": 0,
+          "y": 16,
+          "width": 4,
+          "height": 2
+        }
+      ]
+    }
+  },
+  "extensions": {
+    "com.example.fixture": {
+      "source": "synthetic"
+    }
+  }
+}

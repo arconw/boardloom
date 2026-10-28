@@ -12,6 +12,14 @@ export interface JsonValidationResult {
   readonly issues: readonly JsonValidationIssue[];
 }
 
+export interface JsonValidationLimits {
+  readonly maxDepth?: number;
+  readonly maxNodes?: number;
+  readonly maxArrayLength?: number;
+  readonly maxObjectKeys?: number;
+  readonly maxStringLength?: number;
+}
+
 const MAX_DEPTH = 64;
 
 export function isPlainObject(value: unknown): value is Record<string, unknown> {
@@ -30,17 +38,46 @@ function isArrayIndex(key: string, length: number): boolean {
   return Number.isInteger(index) && index >= 0 && index < length && String(index) === key;
 }
 
-export function validateJsonValue(value: unknown, maxDepth = MAX_DEPTH): JsonValidationResult {
+export function validateJsonValue(
+  value: unknown,
+  options: number | JsonValidationLimits = {},
+): JsonValidationResult {
+  const limits = typeof options === "number" ? { maxDepth: options } : options;
+  const maxDepth = limits.maxDepth ?? MAX_DEPTH;
   const issues: JsonValidationIssue[] = [];
   const ancestors = new Set<unknown>();
+  let nodeCount = 0;
+  let nodeLimitReached = false;
 
   function visit(current: unknown, path: string, depth: number): void {
+    if (nodeLimitReached) {
+      return;
+    }
+    nodeCount += 1;
+    if (limits.maxNodes !== undefined && nodeCount > limits.maxNodes) {
+      issues.push({
+        path,
+        message: `JSON value exceeds the maximum node count of ${limits.maxNodes}`,
+      });
+      nodeLimitReached = true;
+      return;
+    }
     if (depth > maxDepth) {
       issues.push({ path, message: `JSON value exceeds the maximum depth of ${maxDepth}` });
       return;
     }
 
-    if (current === null || typeof current === "string" || typeof current === "boolean") {
+    if (current === null || typeof current === "boolean") {
+      return;
+    }
+
+    if (typeof current === "string") {
+      if (limits.maxStringLength !== undefined && current.length > limits.maxStringLength) {
+        issues.push({
+          path,
+          message: `JSON string exceeds the maximum length of ${limits.maxStringLength}`,
+        });
+      }
       return;
     }
 
@@ -74,6 +111,13 @@ export function validateJsonValue(value: unknown, maxDepth = MAX_DEPTH): JsonVal
 
   function visitArray(current: unknown[], path: string, depth: number): void {
     const length = current.length;
+    if (limits.maxArrayLength !== undefined && length > limits.maxArrayLength) {
+      issues.push({
+        path,
+        message: `JSON array exceeds the maximum length of ${limits.maxArrayLength}`,
+      });
+      return;
+    }
     if (Object.getOwnPropertySymbols(current).length > 0) {
       issues.push({
         path: `${path}/[symbol]`,
@@ -102,6 +146,16 @@ export function validateJsonValue(value: unknown, maxDepth = MAX_DEPTH): JsonVal
   }
 
   function visitObject(current: Record<string, unknown>, path: string, depth: number): void {
+    if (limits.maxObjectKeys !== undefined) {
+      const keys = Object.getOwnPropertyNames(current);
+      if (keys.length > limits.maxObjectKeys) {
+        issues.push({
+          path,
+          message: `JSON object exceeds the maximum key count of ${limits.maxObjectKeys}`,
+        });
+        return;
+      }
+    }
     if (Object.getOwnPropertySymbols(current).length > 0) {
       issues.push({
         path: `${path}/[symbol]`,
@@ -146,6 +200,111 @@ export function validateJsonValue(value: unknown, maxDepth = MAX_DEPTH): JsonVal
 
 export function isJsonValue(value: unknown): value is JsonValue {
   return validateJsonValue(value).valid;
+}
+
+export function utf8ByteLength(value: string): number {
+  let bytes = 0;
+  for (let index = 0; index < value.length; index += 1) {
+    const code = value.charCodeAt(index);
+    if (code <= 0x7f) {
+      bytes += 1;
+    } else if (code <= 0x7ff) {
+      bytes += 2;
+    } else if (code >= 0xd800 && code <= 0xdbff) {
+      const next = value.charCodeAt(index + 1);
+      if (next >= 0xdc00 && next <= 0xdfff) {
+        bytes += 4;
+        index += 1;
+      } else {
+        bytes += 3;
+      }
+    } else {
+      bytes += 3;
+    }
+  }
+  return bytes;
+}
+
+export function jsonByteLength(value: JsonValue, maxBytes = Number.POSITIVE_INFINITY): number {
+  const budget = Number.isFinite(maxBytes) && maxBytes >= 0 ? maxBytes : Number.POSITIVE_INFINITY;
+  let total = 0;
+  let exceeded = false;
+
+  function add(bytes: number): boolean {
+    total += bytes;
+    if (total > budget) {
+      exceeded = true;
+      return false;
+    }
+    return true;
+  }
+
+  function walk(current: JsonValue): void {
+    if (exceeded) {
+      return;
+    }
+    if (current === null) {
+      add(4);
+      return;
+    }
+    if (typeof current === "string") {
+      add(utf8ByteLength(JSON.stringify(current)));
+      return;
+    }
+    if (typeof current === "number") {
+      add(String(current).length);
+      return;
+    }
+    if (typeof current === "boolean") {
+      add(current ? 4 : 5);
+      return;
+    }
+    if (Array.isArray(current)) {
+      if (!add(1)) {
+        return;
+      }
+      for (let index = 0; index < current.length; index += 1) {
+        if (index > 0 && !add(1)) {
+          return;
+        }
+        const entry = current[index];
+        if (entry === undefined) {
+          return;
+        }
+        walk(entry);
+      }
+      add(1);
+      return;
+    }
+    if (!add(1)) {
+      return;
+    }
+    const keys = Object.keys(current).sort();
+    for (let index = 0; index < keys.length; index += 1) {
+      const key = keys[index];
+      if (key === undefined) {
+        continue;
+      }
+      if (index > 0 && !add(1)) {
+        return;
+      }
+      if (!add(utf8ByteLength(JSON.stringify(key)))) {
+        return;
+      }
+      if (!add(1)) {
+        return;
+      }
+      const entry = current[key];
+      if (entry === undefined) {
+        return;
+      }
+      walk(entry);
+    }
+    add(1);
+  }
+
+  walk(value);
+  return total;
 }
 
 export function cloneJson<T extends JsonValue>(value: T): T {

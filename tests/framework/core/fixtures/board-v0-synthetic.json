@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 0,
+  "id": "board-legacy-synthetic",
+  "title": "Synthetic pre-release board",
+  "createdAt": 1699000000000,
+  "updatedAt": 1699000001000,
+  "blocks": [
+    {
+      "id": "legacy-note",
+      "type": "text",
+      "title": "Legacy note",
+      "config": {
+        "text": "Synthetic pre-release fixture; not a published Boardloom format."
+      }
+    }
+  ]
+}

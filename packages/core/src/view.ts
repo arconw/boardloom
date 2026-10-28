@@ -1,4 +1,3 @@
-import type { BoardDocument } from "./document.js";
 import { DIAGNOSTIC_CODES, createDiagnostic, fail, ok, type Result } from "./diagnostics.js";
 import type {
   CreateViewOptions,
@@ -14,7 +13,7 @@ import type {
 } from "./types.js";
 
 export interface ViewCommands {
-  updateDraft(document: BoardDocument): Result<DraftSnapshot>;
+  updateDraft(document: unknown): Result<DraftSnapshot>;
   undo(): Result<DraftSnapshot>;
   redo(): Result<DraftSnapshot>;
   applyDraft(): Result<SpaceSnapshot>;
@@ -37,7 +36,7 @@ export interface ViewHost {
   createId(namespace: string): string;
   getState(): ViewState;
   getLease(leaseId: string): EditorLease | null;
-  updateDraft(lease: EditorLease, document: BoardDocument): Result<DraftSnapshot>;
+  updateDraft(lease: EditorLease, document: unknown): Result<DraftSnapshot>;
   undoDraft(lease: EditorLease): Result<DraftSnapshot>;
   redoDraft(lease: EditorLease): Result<DraftSnapshot>;
   applyDraft(lease: EditorLease): Result<SpaceSnapshot>;
@@ -80,7 +79,7 @@ export class ViewImpl implements BoardView {
 
   get commands(): ViewCommands {
     return Object.freeze({
-      updateDraft: (document: BoardDocument): Result<DraftSnapshot> => {
+      updateDraft: (document: unknown): Result<DraftSnapshot> => {
         const context = this.authoringContext();
         return context.ok ? this.host.updateDraft(context.value, document) : context;
       },

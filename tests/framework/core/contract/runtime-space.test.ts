@@ -177,18 +177,29 @@ describe("runtime and space public contract", () => {
     expect(runtime.spaceCount).toBe(0);
   });
 
-  it("preserves own __proto__ data and exposes an immutable snapshot", () => {
+  it("preserves own __proto__ data inside a namespaced extension snapshot", () => {
     const { runtime } = createHarness();
+    const serialized = JSON.stringify({
+      ...makeDocument("Proto"),
+      extensions: { "com.example.proto": {} },
+    });
     const parsed = JSON.parse(
-      '{"schemaVersion":1,"__proto__":{"polluted":true},"title":"Proto"}',
+      serialized.replace(
+        '"com.example.proto":{}',
+        '"com.example.proto":{"__proto__":{"polluted":true}}',
+      ),
     ) as never;
     const space = unwrap(runtime.createSpace({ id: "proto-space", document: parsed }));
     const document = space.getSnapshot().committedDocument as Record<string, unknown>;
+    const extensions = document.extensions as Record<string, Record<string, unknown>>;
+    const extension = extensions["com.example.proto"];
 
-    expect(Object.hasOwn(document, "__proto__")).toBe(true);
-    expect(Object.getPrototypeOf(document)).toBe(Object.prototype);
-    expect(document.__proto__).toEqual({ polluted: true });
-    expect(Object.isFrozen(document.__proto__)).toBe(true);
+    expect(extension).toBeDefined();
+    expect(Object.hasOwn(extension as object, "__proto__")).toBe(true);
+    expect(Object.getPrototypeOf(extension)).toBe(Object.prototype);
+    expect((extension as Record<string, unknown>).__proto__).toEqual({ polluted: true });
+    expect(Object.isFrozen((extension as Record<string, unknown>).__proto__)).toBe(true);
+    expect(Object.isFrozen(extension)).toBe(true);
     expect((Object.prototype as Record<string, unknown>).polluted).toBeUndefined();
   });
 

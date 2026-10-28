@@ -1,3 +1,4 @@
+import { validateBoardDocument } from "./board-validation.js";
 import { DIAGNOSTIC_CODES, createDiagnostic, hasError, type Diagnostic } from "./diagnostics.js";
 import {
   cloneJson,
@@ -38,9 +39,17 @@ export const defaultDocumentValidator: DocumentValidator = (document) => {
     );
   }
 
+  if (diagnostics.length > 0) {
+    return Object.freeze({
+      valid: false,
+      diagnostics: Object.freeze(diagnostics),
+    });
+  }
+
+  const schema = validateBoardDocument(document);
   return Object.freeze({
-    valid: diagnostics.length === 0,
-    diagnostics: Object.freeze(diagnostics),
+    valid: schema.valid,
+    diagnostics: schema.diagnostics,
   });
 };
 

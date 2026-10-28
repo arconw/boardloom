@@ -1,6 +1,7 @@
 import type { BoardDocument } from "./document.js";
 import type { Diagnostic } from "./diagnostics.js";
 import type { BoardloomLocale } from "./locale.js";
+import type { BoardMigrationReport } from "./migrations.js";
 import type { ViewMode } from "./types.js";
 
 export type Unsubscribe = () => void;
@@ -85,6 +86,40 @@ export interface DiagnosticsChangedEvent extends BaseSpaceEvent {
   readonly diagnostics: readonly Diagnostic[];
 }
 
+export interface DocumentExportedEvent extends BaseSpaceEvent {
+  readonly type: "document:exported";
+  readonly document: BoardDocument;
+  readonly schemaVersion: number;
+}
+
+export interface DocumentInvalidEvent extends BaseSpaceEvent {
+  readonly type: "document:invalid";
+  readonly source?: string;
+  readonly diagnostics: readonly Diagnostic[];
+}
+
+export interface DocumentMigratedEvent extends BaseSpaceEvent {
+  readonly type: "document:migrated";
+  readonly report: BoardMigrationReport;
+}
+
+export interface SpaceImportedEvent extends BaseSpaceEvent {
+  readonly type: "space:imported";
+  readonly documentId: string;
+  readonly sourceSpaceId?: string;
+  readonly schemaVersion: number;
+  readonly migration: BoardMigrationReport | null;
+  readonly warnings: readonly Diagnostic[];
+}
+
+export interface ImportFailedEvent extends BaseSpaceEvent {
+  readonly type: "import:failed";
+  readonly scope: "runtime";
+  readonly runtimeId: string;
+  readonly sourceSpaceId?: string;
+  readonly diagnostics: readonly Diagnostic[];
+}
+
 export type SpaceEvent =
   | SpaceCreatedEvent
   | SpaceLoadedEvent
@@ -97,7 +132,12 @@ export type SpaceEvent =
   | EditorLeaseChangedEvent
   | DocumentChangedEvent
   | LocaleChangedEvent
-  | DiagnosticsChangedEvent;
+  | DiagnosticsChangedEvent
+  | DocumentExportedEvent
+  | DocumentInvalidEvent
+  | DocumentMigratedEvent
+  | SpaceImportedEvent
+  | ImportFailedEvent;
 
 export type SpaceEventType = SpaceEvent["type"];
 export type SpaceEventListener = (event: SpaceEvent) => void;

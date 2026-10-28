@@ -1,10 +1,11 @@
-import type {
-  BoardDocument,
-  Clock,
-  IdFactory,
-  LogContext,
-  Logger,
-  TimerHandle,
+import {
+  createEmptyBoardDocument,
+  type BoardDocument,
+  type Clock,
+  type IdFactory,
+  type LogContext,
+  type Logger,
+  type TimerHandle,
 } from "../../../../packages/core/src/index.js";
 
 export class FakeClock implements Clock {
@@ -97,12 +98,13 @@ export function createRecordingLogger(): RecordingLogger {
 }
 
 export function makeDocument(title: string, revision = 1): BoardDocument {
-  return {
-    schemaVersion: 1,
+  const createdAt = 1_700_000_000_000;
+  return createEmptyBoardDocument({
     id: `board-${title}`,
     title,
-    revision,
-  };
+    createdAt,
+    updatedAt: createdAt + revision,
+  }) as unknown as BoardDocument;
 }
 
 export function collectTypes(events: readonly { readonly type: string }[]): readonly string[] {
