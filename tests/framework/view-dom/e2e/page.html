@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Boardloom T06 viewer check</title>
+    <link rel="stylesheet" href="/build/view-dom/styles.css" />
+    <style>
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        background: #dddddd;
+      }
+      body {
+        font-family: sans-serif;
+      }
+      #instance,
+      #second {
+        width: 100%;
+      }
+      #result {
+        white-space: pre-wrap;
+      }
+    </style>
+    <script type="importmap">
+      {
+        "imports": {
+          "@boardloom/core": "/build/core/dist/index.js"
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <div id="instance"></div>
+    <div id="second"></div>
+    <div id="third" style="width: 360px"></div>
+    <pre id="result"></pre>
+    <script type="module" src="./page.js"></script>
+  </body>
+</html>

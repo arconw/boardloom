@@ -1,4 +1,12 @@
-import { copyFileSync, existsSync, mkdirSync, rmSync } from "node:fs";
+import {
+  copyFileSync,
+  cpSync,
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+} from "node:fs";
 import path from "node:path";
 import { listPackages, repoRoot, run } from "./lib/repo.mjs";
 
@@ -41,6 +49,38 @@ run(process.execPath, [
   "--outDir",
   path.join(stagingDirectory, "dist"),
 ]);
+
+const distDirectory = path.join(stagingDirectory, "dist");
+if (!existsSync(path.join(distDirectory, "index.js"))) {
+  const packageTsconfig = JSON.parse(
+    readFileSync(path.join(packageDirectory, "tsconfig.json"), "utf8"),
+  );
+  const rootDirSetting = packageTsconfig.compilerOptions?.rootDir;
+  if (typeof rootDirSetting === "string") {
+    const absoluteRootDir = path.resolve(packageDirectory, rootDirSetting);
+    const sourceRoot = path.join(packageDirectory, "src");
+    const relativeSource = path.relative(absoluteRootDir, sourceRoot);
+    const emittedSource = path.join(distDirectory, relativeSource);
+    if (existsSync(path.join(emittedSource, "index.js"))) {
+      const flattenedDirectory = path.join(stagingDirectory, "dist-flat");
+      rmSync(flattenedDirectory, { recursive: true, force: true });
+      mkdirSync(flattenedDirectory, { recursive: true });
+      for (const entry of readdirSync(emittedSource)) {
+        cpSync(path.join(emittedSource, entry), path.join(flattenedDirectory, entry), {
+          recursive: true,
+        });
+      }
+      rmSync(distDirectory, { recursive: true, force: true });
+      mkdirSync(distDirectory, { recursive: true });
+      for (const entry of readdirSync(flattenedDirectory)) {
+        cpSync(path.join(flattenedDirectory, entry), path.join(distDirectory, entry), {
+          recursive: true,
+        });
+      }
+      rmSync(flattenedDirectory, { recursive: true, force: true });
+    }
+  }
+}
 
 for (const file of ["package.json", "README.md", "LICENSE", "styles.css"]) {
   const source = path.join(packageDirectory, file);

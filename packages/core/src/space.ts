@@ -220,9 +220,10 @@ class SpaceImpl implements BoardSpace {
         this.emit({ type: "mode:changed", viewId, sessionId, from, to });
       },
       detachView: (viewId) => {
-        this.views.delete(viewId);
-        if (!this.disposedFlag && !this.disposing) {
+        const removed = this.views.delete(viewId);
+        if (removed && !this.disposedFlag && !this.disposing) {
           this.updatedAt = this.deps.clock.now();
+          this.emit({ type: "view:disposed", viewId });
         }
       },
     };

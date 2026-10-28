@@ -36,6 +36,11 @@ export interface ModeChangedEvent extends BaseSpaceEvent {
   readonly to: ViewMode;
 }
 
+export interface ViewDisposedEvent extends BaseSpaceEvent {
+  readonly type: "view:disposed";
+  readonly viewId: string;
+}
+
 export interface DraftChangedEvent extends BaseSpaceEvent {
   readonly type: "draft:changed";
   readonly revision: number;
@@ -202,6 +207,7 @@ export type SpaceEvent =
   | SpaceLoadedEvent
   | SpaceDisposedEvent
   | ModeChangedEvent
+  | ViewDisposedEvent
   | DraftChangedEvent
   | DraftAppliedEvent
   | DraftCancelledEvent

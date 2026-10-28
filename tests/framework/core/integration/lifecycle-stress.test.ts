@@ -81,10 +81,12 @@ describe("create, switch and dispose stress", () => {
       unwrap(view.dispose());
     }
     expect(space.viewCount).toBe(0);
+    expect(spaceEvents.filter((event) => event.type === "view:disposed")).toHaveLength(12);
 
     unsubscribe();
     unsubscribe();
     expect(space.listenerCount).toBe(0);
+    spaceEvents.length = 0;
     unwrap(space.loadDocument(makeDocument("No listeners"), { source: "host" }));
     expect(spaceEvents).toHaveLength(0);
     expect(runtimeEvents.map((event) => event.type)).toContain("document:changed");

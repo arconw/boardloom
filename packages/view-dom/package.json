@@ -26,6 +26,9 @@
     "README.md",
     "LICENSE"
   ],
+  "dependencies": {
+    "@boardloom/core": "0.0.0"
+  },
   "scripts": {
     "build": "node ../../scripts/build-package.mjs view-dom",
     "typecheck": "tsc -p tsconfig.json --noEmit"

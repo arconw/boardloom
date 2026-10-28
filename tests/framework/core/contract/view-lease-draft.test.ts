@@ -4,6 +4,7 @@ import {
   createDiagnostic,
   createRuntime,
   defaultDocumentValidator,
+  restoreViewSession,
   type BoardDocument,
   type Diagnostic,
   type DocumentValidation,
@@ -85,6 +86,20 @@ describe("view-local modes and editor lease contract", () => {
       expect(modeEvent.to).toBe("editor");
       expect(modeEvent.sessionId).toBe("session-a");
     }
+  });
+
+  it("restores a view session for host rollback without losing the active lease", () => {
+    const { space, lease } = createHarness();
+    const view = unwrap(space.createView({ mode: "viewer" }));
+    const editor = unwrap(restoreViewSession(view, "editor", lease));
+    expect(editor.mode).toBe("editor");
+    expect(editor.leaseId).toBe(lease.leaseId);
+    expect(editor.sessionId).toBe(lease.sessionId);
+    const viewer = unwrap(restoreViewSession(view, "viewer", null));
+    expect(viewer.mode).toBe("viewer");
+    expect(viewer.leaseId).toBeNull();
+    expect(viewer.sessionId).toBeNull();
+    expectFailure(restoreViewSession(view, "editor", null), DIAGNOSTIC_CODES.EDITOR_LEASE_REQUIRED);
   });
 
   it("preserves committed document, draft and history across mode switches", () => {

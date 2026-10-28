@@ -561,7 +561,7 @@
     },
     {
       "key": "state.cancelled.body",
-      "english": "The previous data remains visible",
+      "english": "No result was applied for this update",
       "context": "Cancelled query explanation",
       "source": "proposed"
     },
@@ -1804,6 +1804,12 @@
       "key": "state.stale.chartSummary",
       "english": "Last valid result remains visible, clearly marked stale",
       "context": "Text alternative for a stale chart",
+      "source": "proposed"
+    },
+    {
+      "key": "a11y.tableRegion",
+      "english": "Data table",
+      "context": "Accessible name for a scrollable table or chart data-table region without a host title",
       "source": "proposed"
     }
   ]

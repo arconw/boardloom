@@ -5,7 +5,12 @@
     "declaration": false,
     "declarationMap": false,
     "sourceMap": false,
-    "types": ["node"]
+    "types": ["node"],
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "baseUrl": ".",
+    "paths": {
+      "@boardloom/core": ["packages/core/src/index.ts"]
+    }
   },
   "include": ["tests/framework/**/*.ts", "vitest.config.ts"]
 }

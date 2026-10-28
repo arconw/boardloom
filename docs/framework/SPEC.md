@@ -241,6 +241,7 @@ Public events are delivered as immutable notifications with a space ID, monotoni
 | `space:loaded` | Document loaded and validated | spaceId, schemaVersion, warnings |
 | `space:disposed` | Disposal completed | spaceId |
 | `mode:changed` | A view mode changed | spaceId, viewId, sessionId, from, to |
+| `view:disposed` | A view was explicitly disposed and detached | spaceId, viewId |
 | `document:changed` | Committed document replaced | spaceId, document, source |
 | `draft:changed` | Draft mutated or undo/redo | spaceId, revision, canUndo, canRedo |
 | `draft:applied` | Draft committed | spaceId, revision, document |

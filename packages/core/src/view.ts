@@ -204,6 +204,36 @@ export class ViewImpl implements BoardView {
     return ok(Object.freeze({ viewId: this.viewId, retainedLease }));
   }
 
+  restoreSession(mode: ViewMode, lease: EditorLease | null): Result<ViewSnapshot> {
+    if (this.disposedFlag) {
+      return viewDisposedFailure();
+    }
+    if (mode !== "viewer" && mode !== "editor") {
+      return fail([
+        createDiagnostic(DIAGNOSTIC_CODES.INVALID_ARGUMENT, "mode", {
+          message: "A view mode must be viewer or editor.",
+        }),
+      ]);
+    }
+    if (mode === "editor" && lease === null) {
+      return fail([createDiagnostic(DIAGNOSTIC_CODES.EDITOR_LEASE_REQUIRED, "lease")]);
+    }
+    let active: EditorLease | null = null;
+    if (lease !== null) {
+      active = this.host.getLease(lease.leaseId);
+      if (!active || active.spaceId !== this.host.spaceId) {
+        return fail([createDiagnostic(DIAGNOSTIC_CODES.EDITOR_LEASE_INVALID, "lease")]);
+      }
+    }
+    const previous = this.currentMode;
+    this.currentMode = mode;
+    this.lease = active;
+    if (previous !== mode) {
+      this.host.emitModeChanged(this.viewId, this.lease?.sessionId ?? null, previous, mode);
+    }
+    return ok(this.getSnapshot());
+  }
+
   markDisposed(): void {
     this.disposedFlag = true;
     this.lease = null;
@@ -247,4 +277,19 @@ export class ViewImpl implements BoardView {
 
 export function createView(host: ViewHost, options: CreateViewOptions = {}): BoardView {
   return new ViewImpl(host, options);
+}
+
+export function restoreViewSession(
+  view: BoardView,
+  mode: ViewMode,
+  lease: EditorLease | null,
+): Result<ViewSnapshot> {
+  if (!(view instanceof ViewImpl)) {
+    return fail([
+      createDiagnostic(DIAGNOSTIC_CODES.INVALID_ARGUMENT, "view", {
+        message: "The view does not support session restoration.",
+      }),
+    ]);
+  }
+  return view.restoreSession(mode, lease);
 }

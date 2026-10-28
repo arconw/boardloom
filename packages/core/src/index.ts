@@ -302,6 +302,7 @@ export type {
   SpaceEventType,
   SpaceImportedEvent,
   Unsubscribe,
+  ViewDisposedEvent,
 } from "./events.js";
 
 export type {
@@ -324,6 +325,7 @@ export type {
   ViewSummary,
 } from "./types.js";
 
+export { restoreViewSession } from "./view.js";
 export type { BoardView, ViewCommands } from "./view.js";
 export type { BoardSpace } from "./space.js";
 

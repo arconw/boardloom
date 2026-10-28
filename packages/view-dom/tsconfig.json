@@ -3,8 +3,12 @@
   "compilerOptions": {
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "outDir": "dist",
-    "rootDir": "src",
-    "types": []
+    "rootDir": "..",
+    "types": [],
+    "baseUrl": ".",
+    "paths": {
+      "@boardloom/core": ["../core/src/index.ts"]
+    }
   },
   "include": ["src/**/*.ts"]
 }

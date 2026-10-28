@@ -7,6 +7,7 @@ import {
 } from "./diagnostics.js";
 import { isPlainObject } from "./json.js";
 import { DEFAULT_LOCALE, isBoardloomLocale, type BoardloomLocale } from "./locale.js";
+import { UI_MESSAGES } from "./ui-messages.js";
 
 export interface MessageDictionary {
   readonly [key: string]: string;
@@ -35,40 +36,6 @@ export interface MessageProviderOptions {
   readonly dictionaries?: Partial<Record<BoardloomLocale, MessageDictionary>>;
 }
 
-const COMMON_MESSAGES: MessageDictionary = Object.freeze({
-  "common.unknown": "Unknown",
-  "common.loading": "Loading",
-  "common.empty": "No data",
-  "common.error": "Something went wrong",
-  "common.stale": "Data may be out of date",
-  "common.partial": "Partial data",
-  "common.retry": "Retry",
-  "common.apply": "Apply",
-  "common.cancel": "Cancel",
-  "common.undo": "Undo",
-  "common.redo": "Redo",
-  "common.close": "Close",
-  "common.reset": "Reset",
-  "common.more": "More",
-  "common.rows.one": "{count} row",
-  "common.rows.other": "{count} rows",
-  "common.selected.one": "{count} selected",
-  "common.selected.other": "{count} selected",
-  "common.minutes.one": "{count} minute",
-  "common.minutes.other": "{count} minutes",
-  "mode.viewer": "Viewer",
-  "mode.editor": "Editor",
-  "draft.clean": "No unsaved changes",
-  "draft.dirty": "Unsaved changes",
-  "editor.leaseHeld": "Another editor is active",
-  "editor.leaseFree": "Editing is available",
-  "status.active": "Active",
-  "status.paused": "Paused",
-  "status.disposed": "Disposed",
-  "a11y.status": "Status",
-  "a11y.error": "Error",
-});
-
 const DIAGNOSTIC_MESSAGE_KEYS: MessageDictionary = Object.freeze(
   Object.fromEntries(
     Object.entries(DIAGNOSTIC_MESSAGES).map(([code, message]) => [`diagnostic.${code}`, message]),
@@ -76,7 +43,7 @@ const DIAGNOSTIC_MESSAGE_KEYS: MessageDictionary = Object.freeze(
 );
 
 export const ENGLISH_MESSAGES: MessageDictionary = Object.freeze({
-  ...COMMON_MESSAGES,
+  ...UI_MESSAGES,
   ...DIAGNOSTIC_MESSAGE_KEYS,
 });
 

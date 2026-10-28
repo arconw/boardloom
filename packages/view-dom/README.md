@@ -1,9 +1,79 @@
 # @boardloom/view-dom
 
-Planned package for the Boardloom framework-neutral viewer and editor DOM runtime, accessible shell and scoped design tokens.
+Framework-neutral DOM runtime for the Boardloom viewer shell, design tokens and accessible state surfaces.
 
-Status: T05 implements the scoped token layer in `styles.css`. T06 implements the DOM runtime, viewer shell and state surfaces. No production viewer, editor, chart renderer or live UI exists yet. The package must not depend on a backend, a database or a UI framework.
+Status: T06 implements the browser ESM viewer runtime, mount/update/unmount host contract, view-local mode handling, block registry foundation, locale/timezone forwarding, scoped responsive layout and loading, empty, error, cancelled, stale and partial states. The text, metric, table and filter surfaces are production containers. Chart blocks use an accessible tabular data alternative until the built-in chart renderers arrive in T07. The full editor belongs to T12. No DOM runtime depends on React, Angular, Svelte, a backend or a database.
 
-The token layer declares `--bl-` custom properties inside the `boardloom` cascade layer. A host mounts an instance with the `boardloom` class and a `data-boardloom-theme` value of `light`, `dark` or `system`. Host CSS can override tokens on the scoped root, and multiple instances can use different themes without changing the host page or document direction. The token contract and reference compositions are documented in `docs/design/`.
+The package exports browser ESM with TypeScript declarations and `@boardloom/view-dom/styles.css`. npm publication is not authorized; planned scoped names are used for tarball consumers only.
 
-Distribution target: browser ESM with TypeScript declarations and `@boardloom/view-dom/styles.css`. npm publication is not authorized at T05; the planned scoped name is used for tarball consumers only.
+## Host contract
+
+```ts
+import { createRuntime } from "@boardloom/core";
+import { mountBoardView } from "@boardloom/view-dom";
+import "@boardloom/view-dom/styles.css";
+
+const runtime = createRuntime({ datasetProvider });
+const created = runtime.createSpace({ document });
+if (!created.ok) {
+  throw new Error(created.diagnostics[0]?.message);
+}
+
+const mounted = mountBoardView(document.querySelector("#board"), {
+  space: created.value,
+  theme: "system",
+  locale: "en",
+  timezone: "UTC",
+  realtime: { status: "historical" },
+  provenance: "Synthetic fixture",
+});
+if (!mounted.ok) {
+  throw new Error(mounted.diagnostics[0]?.message);
+}
+
+const view = mounted.value;
+void view.update({ locale: "ar", timezone: "Asia/Riyadh", theme: "dark" });
+const lease = created.value.acquireEditorLease({ sessionId: "host-session" });
+if (lease.ok) {
+  void view.setMode("editor", { lease: lease.value });
+}
+view.focus("content");
+void view.unmount();
+void view.dispose();
+```
+
+`mountBoardView(target, options)` requires a DOM element. It accepts either an existing `space` or a `runtime`/`document` pair. Mount-time locale and timezone options are applied to an external space before the first render and are rolled back if the mount fails. When the mount creates a space or runtime, it owns and disposes it. An externally supplied space and an externally supplied view are host-owned: unmount releases only the mounted DOM, listeners, observers and the view-created query slots. A zero-view external space stays alive until the host disposes it.
+
+A live view can be mounted by one viewer handle at a time; a second mount is rejected instead of sharing destructive query ownership. Disposing the exposed core view also tears down the mounted shell and its listeners, while preserving a host-owned space. Public update, refresh, mode and focus operations stop being admitted once unmount begins, including when re-entered from a disposal callback.
+
+`update(options)` forwards locale and timezone changes through `space.setLocale`, preserves the committed document, editor draft, undo history, query generations and view mode, and reconciles the shell in place. A messages-only update rebuilds all framework copy, accessible region names and filter headings without reloading the board or queries. When a combined update also requests a rejected editor mode, the presentation inputs are applied and the localized diagnostic is announced through the new locale and dictionary; the board, queries and view mode stay unchanged. External-view mode requests are applied only after the rest of the mount succeeds. A throw or rejected mode during that deferred step unmounts the fresh shell, releases the mount claim and restores the host-owned view's original mode and session before returning a failure Result. Because that rollback uses the core view session contract, a structurally compatible non-core `BoardView` wrapper supplied together with mount-time mode or lease options is rejected before any mode change with `VIEW_SESSION_RESTORE_FAILED`; set the wrapper's mode before mounting instead. Restoration failure during an actual rollback is reported in the returned diagnostics rather than suppressed. Validated document theme tokens are applied as scoped `--bl-` custom properties on the instance root. Host theme and message overrides are presentation inputs and are not written into the board document. Message overrides apply to the selected locale and use the core English fallback.
+
+`unmount(options)` disposes a view created by the mount. A dirty draft still requires an explicit `apply`, `cancel` or `keep` decision. `dispose()` is idempotent and also disposes owned spaces and runtimes.
+
+## Viewer shell
+
+The root carries the `boardloom` class, a `data-boardloom-theme` value of `light`, `dark` or `system`, a scoped `lang` and `dir`, and a `data-boardloom-breakpoint` value. The shell provides:
+
+- A skip link, banner header, mode group, board region, filter region, status live region and diagnostics disclosure.
+- Board title, host provenance, update time and explicit display timezone.
+- A realtime status placeholder that distinguishes historical, live, connecting, reconnecting, resyncing, paused, degraded, disconnected and error states.
+- Read-only declared filter summaries with scope words and host filter values.
+- A responsive 12/8/4-column board grid selected from the instance width, with placed row spans, deliberate vertical gaps and instance-scoped narrow stacking even inside a wider host page.
+- Block-level loading, empty, error, cancelled, stale and partial states driven by actual query state. No placeholder values or fabricated zero axes are rendered. Chart data disclosures are removed from the accessibility tree and keyboard order in every non-settled state.
+- Table and chart data-table regions always have a localized accessible name, using host block titles when present and a stable fallback key otherwise.
+
+Block types are resolved through a per-instance block registry. The built-ins are `text`, `metric`, `table`, `chart` and `filter`. A duplicate type ID is rejected instead of replacing an existing surface. Custom block definitions may be supplied to a mount for host integration experiments; the public extension lifecycle belongs to T13.
+
+## Localization and styling
+
+All framework-owned copy comes from stable message keys published in the core English dictionary. Host board titles, block titles, filter labels, dataset field labels, narrative text and data values are host content. Missing selected-locale keys fall back to English deterministically. The runtime sets Arabic RTL only on the scoped Boardloom root. Numeric values and units are isolated in stable left-to-right runs while their table cells and metric containers keep the surrounding reading direction and alignment.
+
+Styles live in the `boardloom` cascade layer and remain scoped to the Boardloom root. The shell uses the approved `--bl-` tokens, logical properties, visible focus, a 24 px minimum target, reduced-motion handling and no page-level horizontal overflow at 320 px. Multiple instances keep independent themes, locales and directions.
+
+## Scope boundaries
+
+- No editor controls, draft bar or inspector. The mode group reflects and changes the core view mode, but the editor interface is T12.
+- No built-in chart matrix. Chart blocks expose their query data as an accessible table until T07 replaces the surface.
+- No filter editing or cross-filter UI. Declared filter defaults are summarized read-only until T09.
+- No realtime transport. The shell renders host-supplied transport status until T11.
+- No locale dictionaries beyond English. Full dictionaries, key parity and RTL acceptance belong to T17.
