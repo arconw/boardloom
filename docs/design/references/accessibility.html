@@ -1,0 +1,539 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Accessibility annotations · Boardloom design references</title>
+    <link rel="stylesheet" href="./reference.css" />
+    <style>
+      .focus-sample {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 16px;
+        align-items: center;
+        margin-top: 12px;
+      }
+      .focus-sample__target {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 36px;
+        min-height: 36px;
+        padding: 0 10px;
+        border: 1px solid #8a8174;
+        border-radius: 4px;
+        background: #fffdf8;
+        color: #1c2422;
+        font-size: 13px;
+      }
+      .focus-sample__target:focus-visible {
+        outline: 2px solid #8a4b00;
+        outline-offset: 2px;
+      }
+      .focus-sample__label {
+        color: #59645f;
+        font-size: 12px;
+      }
+    </style>
+  </head>
+  <body class="ref-page" data-reference-kind="annotations">
+    <header class="ref-banner">
+      <a class="ref-brand" href="./index.html">Boardloom design references</a>
+      <span class="ref-badge">Design reference - not production UI</span>
+      <nav class="ref-nav" aria-label="Design reference pages" data-doc-content="">
+        <a href="./index.html">Index</a>
+        <a href="./viewer-desktop.html">Viewer desktop</a>
+        <a href="./viewer-narrow.html">Viewer narrow</a>
+        <a href="./editor-desktop.html">Editor desktop</a>
+        <a href="./editor-narrow.html">Editor narrow</a>
+        <a href="./states.html">States</a>
+        <a href="./boards.html">Boards</a>
+        <a href="./localization.html">Localization</a>
+        <a href="./accessibility.html" aria-current="page">Accessibility</a>
+      </nav>
+    </header>
+
+    <main class="ref-main">
+      <header class="ref-intro">
+        <p class="ref-kicker">T05 · Accessibility annotations</p>
+        <h1 class="ref-title">Landmarks, focus order and keyboard parity by design</h1>
+        <p class="ref-lede">
+          The viewer and editor are designed for keyboard-only operation and WCAG 2.2 AA. This page
+          annotates the intended landmarks, focus order, live regions and chart alternative. It is a
+          design basis, not an axe result or a screen-reader certification.
+        </p>
+        <div class="ref-note-grid">
+          <div class="ref-note">
+            <strong>Focus is never removed</strong>
+            A 2 px amber ring with 2 px offset has at least 3:1 contrast on the canvas in both
+            themes. Drawers and sticky bars reserve space for it.
+          </div>
+          <div class="ref-note">
+            <strong>Every core flow</strong>
+            Open, mode switch, field binding, add/move/resize, filters, comparison, apply/cancel,
+            reset, realtime pause/resume, chart alternative and plugin recovery have keyboard paths.
+          </div>
+          <div class="ref-note">
+            <strong>Announce, then continue</strong>
+            Routine updates are polite. Blocking errors are assertive once. Announcements are
+            visible text too, never sound-only.
+          </div>
+        </div>
+      </header>
+
+      <section class="ref-artboard-section" aria-labelledby="focus-title">
+        <div class="ref-artboard-head">
+          <h2 class="ref-artboard-title" id="focus-title">Viewer focus order and landmarks</h2>
+          <span class="ref-artboard-meta"
+            >Desktop schematic · DOM order, not visual decoration</span
+          >
+        </div>
+        <div class="boardloom" data-boardloom-theme="light">
+          <div class="a11y-layout">
+            <div class="a11y-wireframe" aria-label="Annotated viewer wireframe">
+              <div class="a11y-zone" style="margin-inline-start: 8px">
+                <span class="focus-badge" aria-hidden="true">1</span>
+                <span class="a11y-zone__title">Skip link</span>
+                <span class="a11y-zone__detail">First focusable element; jumps to board main.</span>
+              </div>
+              <div class="a11y-zone" style="margin-inline-start: 8px">
+                <span class="focus-badge" aria-hidden="true">2</span>
+                <span class="a11y-zone__title">Banner · board identity and title</span>
+                <span class="a11y-zone__detail"
+                  >Host, title, provenance, metadata; `header` with an accessible name.</span
+                >
+              </div>
+              <div class="a11y-zone" style="margin-inline-start: 8px">
+                <span class="focus-badge" aria-hidden="true">3</span>
+                <span class="a11y-zone__title">Board modes · navigation landmark</span>
+                <span class="a11y-zone__detail"
+                  >Viewer/Editor segmented control; arrow keys or Enter/Space.</span
+                >
+              </div>
+              <div class="a11y-zone" style="margin-inline-start: 8px">
+                <span class="focus-badge" aria-hidden="true">4</span>
+                <span class="a11y-zone__title">Filters · search/form landmark</span>
+                <span class="a11y-zone__detail"
+                  >Active chips, remove actions, Filters, Reset. Origin is written in words.</span
+                >
+              </div>
+              <div class="a11y-zone" style="margin-inline-start: 8px">
+                <span class="focus-badge" aria-hidden="true">5</span>
+                <span class="a11y-zone__title">Board region · canvas</span>
+                <span class="a11y-zone__detail"
+                  >A labelled region, or `main` in a full-page host; blocks follow in document
+                  order.</span
+                >
+              </div>
+              <div class="a11y-zone" style="margin-inline-start: 8px">
+                <span class="focus-badge" aria-hidden="true">6</span>
+                <span class="a11y-zone__title">Block title → actions → chart/table</span>
+                <span class="a11y-zone__detail"
+                  >Each block is a labelled section; chart summary and data disclosure are
+                  reachable.</span
+                >
+              </div>
+              <div class="a11y-zone a11y-zone--live" style="margin-inline-start: 8px">
+                <span class="focus-badge" aria-hidden="true">7</span>
+                <span class="a11y-zone__title">Realtime status and pause/resume</span>
+                <span class="a11y-zone__detail"
+                  >Visible status text plus polite live announcement. Pause/resume is a real
+                  control.</span
+                >
+              </div>
+              <div class="a11y-zone a11y-zone--live" style="margin-inline-start: 8px">
+                <span class="focus-badge" aria-hidden="true">8</span>
+                <span class="a11y-zone__title">Live region · not in tab order</span>
+                <span class="a11y-zone__detail"
+                  >Polite status; assertive alert only for blocking errors, announced once.</span
+                >
+              </div>
+            </div>
+            <div>
+              <ul class="a11y-legend">
+                <li>
+                  <span class="a11y-number">1</span
+                  ><span
+                    ><strong>Skip link</strong>Visually hidden until focused; the first Tab
+                    stop.</span
+                  >
+                </li>
+                <li>
+                  <span class="a11y-number">2</span
+                  ><span
+                    ><strong>Banner</strong>The board title is the first heading in the board
+                    region; a full-page host may use `main`.</span
+                  >
+                </li>
+                <li>
+                  <span class="a11y-number">3</span
+                  ><span
+                    ><strong>Modes</strong>Mode belongs to the view; switching never discards the
+                    draft.</span
+                  >
+                </li>
+                <li>
+                  <span class="a11y-number">4</span
+                  ><span
+                    ><strong>Filters</strong>Removable chips include the filter name and scope in
+                    the accessible name.</span
+                  >
+                </li>
+                <li>
+                  <span class="a11y-number">5</span
+                  ><span
+                    ><strong>Board region</strong>The host has exactly one main landmark; the
+                    embedded canvas is a region when the host already has one.</span
+                  >
+                </li>
+                <li>
+                  <span class="a11y-number">6</span
+                  ><span
+                    ><strong>Blocks</strong>Focus order stays in DOM order; chart table is the text
+                    alternative.</span
+                  >
+                </li>
+                <li>
+                  <span class="a11y-number">7</span
+                  ><span
+                    ><strong>Live status</strong>The status is not color-only: dot plus the word
+                    “Live” or “Reconnecting”.</span
+                  >
+                </li>
+                <li>
+                  <span class="a11y-number">8</span
+                  ><span
+                    ><strong>Live output</strong>A pre-existing polite region; no repeated
+                    announcements on each render.</span
+                  >
+                </li>
+              </ul>
+              <div class="board-panel" style="margin-top: 16px">
+                <p class="panel-kicker" data-host-content="">Focus sample</p>
+                <p class="panel-title" data-host-content="">
+                  Visible focus, not just a hover style
+                </p>
+                <div class="focus-sample">
+                  <button
+                    class="focus-sample__target"
+                    type="button"
+                    data-message-key="a11y.focusSampleAction"
+                  >
+                    Focus me
+                  </button>
+                  <span class="focus-sample__label"
+                    >2 px ring · 2 px offset · 5.98:1 light contrast · 10.84:1 dark</span
+                  >
+                </div>
+                <p class="panel-meta" style="margin-top: 10px" data-host-content="">
+                  Focus ring is never removed. Dialog and modal drawer focus is trapped and returned
+                  to the invoker on close.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="ref-artboard-section" aria-labelledby="landmarks-title">
+        <div class="ref-artboard-head">
+          <h2 class="ref-artboard-title" id="landmarks-title">Landmarks and live regions</h2>
+          <span class="ref-artboard-meta">Semantic contract shared by viewer and editor</span>
+        </div>
+        <div class="boardloom" data-boardloom-theme="light">
+          <div class="a11y-layout">
+            <section class="board-panel" aria-labelledby="landmark-table-title">
+              <h3 class="panel-title" id="landmark-table-title" data-host-content="">Landmarks</h3>
+              <div
+                class="table-scroll"
+                role="region"
+                tabindex="0"
+                aria-labelledby="landmarks-table-caption"
+              >
+                <table class="data-table" style="margin-top: 10px">
+                  <caption class="sr-only" id="landmarks-table-caption">
+                    Landmark regions and accessible names
+                  </caption>
+                  <thead>
+                    <tr>
+                      <th scope="col">Region</th>
+                      <th scope="col">Element</th>
+                      <th scope="col">Accessible name</th>
+                    </tr>
+                  </thead>
+                  <tbody data-host-content="">
+                    <tr>
+                      <th scope="row">Banner</th>
+                      <td><code>header</code></td>
+                      <td>Board identity and title</td>
+                    </tr>
+                    <tr>
+                      <th scope="row">Modes</th>
+                      <td><code>nav</code></td>
+                      <td>Board modes</td>
+                    </tr>
+                    <tr>
+                      <th scope="row">Filters</th>
+                      <td><code>search</code> / <code>form</code></td>
+                      <td>Board filters</td>
+                    </tr>
+                    <tr>
+                      <th scope="row">Board region</th>
+                      <td><code>main</code> or <code>region</code></td>
+                      <td>Board title</td>
+                    </tr>
+                    <tr>
+                      <th scope="row">Block</th>
+                      <td><code>section</code> / <code>article</code></td>
+                      <td>Block title</td>
+                    </tr>
+                    <tr>
+                      <th scope="row">Inspector</th>
+                      <td><code>complementary</code></td>
+                      <td>Block inspector</td>
+                    </tr>
+                    <tr>
+                      <th scope="row">Status</th>
+                      <td><code>status</code> / <code>log</code></td>
+                      <td>Board status</td>
+                    </tr>
+                    <tr>
+                      <th scope="row">Dialog</th>
+                      <td><code>dialog</code></td>
+                      <td>Dialog title, modal when blocking</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </section>
+            <section class="board-panel" aria-labelledby="live-table-title">
+              <h3 class="panel-title" id="live-table-title" data-host-content="">Live regions</h3>
+              <div
+                class="table-scroll"
+                role="region"
+                tabindex="0"
+                aria-labelledby="live-regions-table-caption"
+              >
+                <table class="data-table" style="margin-top: 10px">
+                  <caption class="sr-only" id="live-regions-table-caption">
+                    Live region announcements
+                  </caption>
+                  <thead>
+                    <tr>
+                      <th scope="col">Event</th>
+                      <th scope="col">Politeness</th>
+                      <th scope="col">Message intent</th>
+                    </tr>
+                  </thead>
+                  <tbody data-host-content="">
+                    <tr>
+                      <th scope="row">Board loaded</th>
+                      <td>Polite</td>
+                      <td>Board name, warning count</td>
+                    </tr>
+                    <tr>
+                      <th scope="row">Query settled</th>
+                      <td>Polite</td>
+                      <td>Data updated, stale/partial qualifier</td>
+                    </tr>
+                    <tr>
+                      <th scope="row">Empty result</th>
+                      <td>Polite</td>
+                      <td>No data for active filters</td>
+                    </tr>
+                    <tr>
+                      <th scope="row">Block error</th>
+                      <td>Assertive once</td>
+                      <td>Block failed, recovery action</td>
+                    </tr>
+                    <tr>
+                      <th scope="row">Draft applied</th>
+                      <td>Polite</td>
+                      <td>Changes applied or conflict</td>
+                    </tr>
+                    <tr>
+                      <th scope="row">Realtime</th>
+                      <td>Polite</td>
+                      <td>Reconnecting attempt, resync, live</td>
+                    </tr>
+                    <tr>
+                      <th scope="row">Plugin error</th>
+                      <td>Assertive once</td>
+                      <td>Plugin identity, contained block</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          </div>
+        </div>
+      </section>
+
+      <section class="ref-artboard-section" aria-labelledby="keyboard-title">
+        <div class="ref-artboard-head">
+          <h2 class="ref-artboard-title" id="keyboard-title">Keyboard paths for core flows</h2>
+          <span class="ref-artboard-meta"
+            >Every flow has a visible button alternative · full table in ACCESSIBILITY.md §4</span
+          >
+        </div>
+        <div class="boardloom" data-boardloom-theme="light">
+          <div class="board-panel" role="region" aria-labelledby="keyboard-title">
+            <div
+              class="table-scroll"
+              role="region"
+              tabindex="0"
+              aria-labelledby="keyboard-paths-table-caption"
+            >
+              <table class="data-table">
+                <caption class="sr-only" id="keyboard-paths-table-caption">
+                  Keyboard paths for core flows
+                </caption>
+                <thead>
+                  <tr>
+                    <th scope="col">Flow</th>
+                    <th scope="col">Keyboard path</th>
+                    <th scope="col">Announcement / focus</th>
+                  </tr>
+                </thead>
+                <tbody data-host-content="">
+                  <tr>
+                    <th scope="row">Open/import</th>
+                    <td>Open board → file chooser → validation summary → Open as new board</td>
+                    <td>New board name; focus on title</td>
+                  </tr>
+                  <tr>
+                    <th scope="row">Switch mode</th>
+                    <td>Tab to segmented control → arrow keys / Enter</td>
+                    <td>Mode and draft preserved</td>
+                  </tr>
+                  <tr>
+                    <th scope="row">Select chart fields</th>
+                    <td>Select block → inspector → choose roles → validate</td>
+                    <td>Accepted binding or inline diagnostic</td>
+                  </tr>
+                  <tr>
+                    <th scope="row">Add block</th>
+                    <td>Add block / library search → choose type → Add</td>
+                    <td>Block name and position; focus on block</td>
+                  </tr>
+                  <tr>
+                    <th scope="row">Move/resize</th>
+                    <td>Select block → Move/Resize → arrows → Enter; Escape cancels</td>
+                    <td>New grid position or original restored</td>
+                  </tr>
+                  <tr>
+                    <th scope="row">Edit filters</th>
+                    <td>Focus chip or Filters → change operator/value → apply</td>
+                    <td>Scope, affected block count, settled state</td>
+                  </tr>
+                  <tr>
+                    <th scope="row">Comparison</th>
+                    <td>Inspector Comparison → map fields → validate</td>
+                    <td>Mapping result; unavailable reasons</td>
+                  </tr>
+                  <tr>
+                    <th scope="row">Apply/cancel</th>
+                    <td>Draft bar Apply or Discard → confirm if dirty</td>
+                    <td>Applied revision or draft discarded; focus retained</td>
+                  </tr>
+                  <tr>
+                    <th scope="row">Reset</th>
+                    <td>Reset → choose filter/scope/block/board → confirm</td>
+                    <td>Restored defaults; scope announced</td>
+                  </tr>
+                  <tr>
+                    <th scope="row">Realtime pause/resume</th>
+                    <td>Focus status → Pause or Resume</td>
+                    <td>Paused or resync policy announced</td>
+                  </tr>
+                  <tr>
+                    <th scope="row">Chart alternative</th>
+                    <td>Focus chart → View data table → table navigation</td>
+                    <td>Row/column, value, unit, missing count</td>
+                  </tr>
+                  <tr>
+                    <th scope="row">Plugin recovery</th>
+                    <td>Plugin error → View diagnostics / Disable / Remove</td>
+                    <td>Contained block, recovery action</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="ref-artboard-section" aria-labelledby="reflow-title">
+        <div class="ref-artboard-head">
+          <h2 class="ref-artboard-title" id="reflow-title">
+            Reduced motion, reflow and target size
+          </h2>
+          <span class="ref-artboard-meta">Plans checked in T18 · not runtime results</span>
+        </div>
+        <div class="boardloom" data-boardloom-theme="light">
+          <div class="a11y-layout">
+            <section class="board-panel">
+              <h3 class="panel-title" data-host-content="">Reduced motion</h3>
+              <p class="panel-meta" data-host-content="">
+                Duration tokens collapse to 0.01 ms, scoped transitions and animations stop, and
+                smooth scrolling is disabled. Loading keeps a static skeleton; charts appear in
+                their final state. A chart animation longer than five seconds has a visible stop
+                control.
+              </p>
+              <div class="state-actions">
+                <button
+                  class="ui-button ui-button--sm"
+                  type="button"
+                  data-message-key="a11y.pauseChartAnimation"
+                >
+                  Pause chart animation
+                </button>
+                <button
+                  class="ui-button ui-button--ghost ui-button--sm"
+                  type="button"
+                  data-message-key="a11y.showFinalState"
+                >
+                  Show final state
+                </button>
+              </div>
+            </section>
+            <section class="board-panel">
+              <h3 class="panel-title" data-host-content="">320 px and 200 percent zoom</h3>
+              <p class="panel-meta" data-host-content="">
+                1440 px at 200 percent equals 720 CSS px; 1280 px at 200 percent equals 640 CSS px.
+                Both use the narrow/tablet compositions. No function is removed; the page never
+                scrolls horizontally. Targets remain at least 24 by 24 px.
+              </p>
+              <div class="state-actions">
+                <button
+                  class="ui-button ui-button--sm"
+                  type="button"
+                  style="min-width: 24px; min-height: 24px"
+                >
+                  24
+                </button>
+                <button
+                  class="ui-button ui-button--sm"
+                  type="button"
+                  style="min-width: 24px; min-height: 24px"
+                >
+                  24
+                </button>
+                <span class="panel-meta" data-host-content="">Minimum target size sample</span>
+              </div>
+            </section>
+          </div>
+        </div>
+      </section>
+
+      <footer class="ref-footer">
+        <p>
+          The complete accessibility specification, including all keyboard paths, live regions,
+          contrast evidence, chart alternatives and the manual audit plan, is in
+          <a href="../ACCESSIBILITY.md">ACCESSIBILITY.md</a>. This page is a static annotation, not
+          an audit pass.
+        </p>
+      </footer>
+    </main>
+  </body>
+</html>

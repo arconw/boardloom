@@ -1,0 +1,1810 @@
+{
+  "version": 1,
+  "status": "T05 proposed catalog for the first UI implementation; T06 publishes the keys in the core English dictionary and T17 completes all built-in locales",
+  "rules": {
+    "namespace": "lowercase namespace followed by dot-separated segments; diagnostic codes may use uppercase segments after diagnostic.",
+    "fallback": "English is the deterministic fallback; host overrides win over the selected built-in locale and English.",
+    "interpolation": "Placeholders use single braces with scalar parameter names and are escaped; translations are never assembled from fragments.",
+    "hostData": "Board titles, dataset labels, field labels and data values are host content and are not framework message keys."
+  },
+  "keys": [
+    {
+      "key": "common.unknown",
+      "english": "Unknown",
+      "context": "Fallback label for an unknown value",
+      "source": "core"
+    },
+    {
+      "key": "common.loading",
+      "english": "Loading",
+      "context": "Generic loading label",
+      "source": "core"
+    },
+    {
+      "key": "common.empty",
+      "english": "No data",
+      "context": "Generic empty label",
+      "source": "core"
+    },
+    {
+      "key": "common.error",
+      "english": "Something went wrong",
+      "context": "Generic error label",
+      "source": "core"
+    },
+    {
+      "key": "common.stale",
+      "english": "Data may be out of date",
+      "context": "Generic stale-data label",
+      "source": "core"
+    },
+    {
+      "key": "common.partial",
+      "english": "Partial data",
+      "context": "Generic partial-result label",
+      "source": "core"
+    },
+    {
+      "key": "common.retry",
+      "english": "Retry",
+      "context": "Retry action",
+      "source": "core"
+    },
+    {
+      "key": "common.apply",
+      "english": "Apply",
+      "context": "Commit a draft",
+      "source": "core"
+    },
+    {
+      "key": "common.cancel",
+      "english": "Cancel",
+      "context": "Cancel the current operation",
+      "source": "core"
+    },
+    {
+      "key": "common.undo",
+      "english": "Undo",
+      "context": "Undo action",
+      "source": "core"
+    },
+    {
+      "key": "common.redo",
+      "english": "Redo",
+      "context": "Redo action",
+      "source": "core"
+    },
+    {
+      "key": "common.close",
+      "english": "Close",
+      "context": "Close a panel or dialog",
+      "source": "core"
+    },
+    {
+      "key": "common.reset",
+      "english": "Reset",
+      "context": "Reset action",
+      "source": "core"
+    },
+    {
+      "key": "common.more",
+      "english": "More",
+      "context": "Overflow menu label",
+      "source": "core"
+    },
+    {
+      "key": "common.rows.one",
+      "english": "{count} row",
+      "context": "One-row count",
+      "placeholders": ["count"],
+      "source": "core"
+    },
+    {
+      "key": "common.rows.other",
+      "english": "{count} rows",
+      "context": "Plural row count",
+      "placeholders": ["count"],
+      "source": "core"
+    },
+    {
+      "key": "common.selected.one",
+      "english": "{count} selected",
+      "context": "One selected item",
+      "placeholders": ["count"],
+      "source": "core"
+    },
+    {
+      "key": "common.selected.other",
+      "english": "{count} selected",
+      "context": "Selected item count",
+      "placeholders": ["count"],
+      "source": "core"
+    },
+    {
+      "key": "common.minutes.one",
+      "english": "{count} minute",
+      "context": "One-minute duration",
+      "placeholders": ["count"],
+      "source": "core"
+    },
+    {
+      "key": "common.minutes.other",
+      "english": "{count} minutes",
+      "context": "Minute duration",
+      "placeholders": ["count"],
+      "source": "core"
+    },
+    {
+      "key": "mode.viewer",
+      "english": "Viewer",
+      "context": "Viewer mode",
+      "source": "core"
+    },
+    {
+      "key": "mode.editor",
+      "english": "Editor",
+      "context": "Editor mode",
+      "source": "core"
+    },
+    {
+      "key": "draft.clean",
+      "english": "No unsaved changes",
+      "context": "Draft is clean",
+      "source": "core"
+    },
+    {
+      "key": "draft.dirty",
+      "english": "Unsaved changes",
+      "context": "Draft has pending changes",
+      "source": "core"
+    },
+    {
+      "key": "editor.leaseHeld",
+      "english": "Another editor is active",
+      "context": "Editor lease conflict",
+      "source": "core"
+    },
+    {
+      "key": "editor.leaseFree",
+      "english": "Editing is available",
+      "context": "Editor lease is available",
+      "source": "core"
+    },
+    {
+      "key": "status.active",
+      "english": "Active",
+      "context": "Active status",
+      "source": "core"
+    },
+    {
+      "key": "status.paused",
+      "english": "Paused",
+      "context": "Paused status",
+      "source": "core"
+    },
+    {
+      "key": "status.disposed",
+      "english": "Disposed",
+      "context": "Disposed status",
+      "source": "core"
+    },
+    {
+      "key": "a11y.status",
+      "english": "Status",
+      "context": "Status region label",
+      "source": "core"
+    },
+    {
+      "key": "a11y.error",
+      "english": "Error",
+      "context": "Error label",
+      "source": "core"
+    },
+    {
+      "key": "board.open",
+      "english": "Open board",
+      "context": "Open or import a board",
+      "source": "proposed"
+    },
+    {
+      "key": "board.openAsNew",
+      "english": "Open as new board",
+      "context": "Confirm import into a new space",
+      "source": "proposed"
+    },
+    {
+      "key": "board.new",
+      "english": "New board",
+      "context": "Create a board",
+      "source": "proposed"
+    },
+    {
+      "key": "board.create",
+      "english": "Create board",
+      "context": "Confirm board creation",
+      "source": "proposed"
+    },
+    {
+      "key": "board.title",
+      "english": "Board title",
+      "context": "Board title field label",
+      "source": "proposed"
+    },
+    {
+      "key": "board.description",
+      "english": "Description",
+      "context": "Optional board description field label",
+      "source": "proposed"
+    },
+    {
+      "key": "board.untitled",
+      "english": "Untitled board",
+      "context": "Fallback board name",
+      "source": "proposed"
+    },
+    {
+      "key": "board.export",
+      "english": "Export",
+      "context": "Export the board document",
+      "source": "proposed"
+    },
+    {
+      "key": "board.moreActions",
+      "english": "More board actions",
+      "context": "Overflow menu accessible name",
+      "source": "proposed"
+    },
+    {
+      "key": "board.importFailed",
+      "english": "The board could not be opened",
+      "context": "Import failure heading",
+      "source": "proposed"
+    },
+    {
+      "key": "board.importInvalid",
+      "english": "This file is not a valid Boardloom document",
+      "context": "Invalid import explanation",
+      "source": "proposed"
+    },
+    {
+      "key": "viewer.meta.updated",
+      "english": "Updated {time}",
+      "context": "Data update time",
+      "placeholders": ["time"],
+      "source": "proposed"
+    },
+    {
+      "key": "viewer.meta.timezone",
+      "english": "Times shown in {timezone}",
+      "context": "Display timezone",
+      "placeholders": ["timezone"],
+      "source": "proposed"
+    },
+    {
+      "key": "viewer.meta.synthetic",
+      "english": "Synthetic {fixture} fixture",
+      "context": "Synthetic data provenance",
+      "placeholders": ["fixture"],
+      "source": "proposed"
+    },
+    {
+      "key": "viewer.meta.refreshed",
+      "english": "Refreshed {time}",
+      "context": "Successful refresh time",
+      "placeholders": ["time"],
+      "source": "proposed"
+    },
+    {
+      "key": "viewer.meta.live",
+      "english": "Live",
+      "context": "Realtime data is current",
+      "source": "proposed"
+    },
+    {
+      "key": "viewer.meta.historical",
+      "english": "Historical snapshot",
+      "context": "Non-realtime board",
+      "source": "proposed"
+    },
+    {
+      "key": "viewer.filters",
+      "english": "Filters",
+      "context": "Filter panel trigger",
+      "source": "proposed"
+    },
+    {
+      "key": "viewer.filters.count",
+      "english": "Filters ({count})",
+      "context": "Active filter count",
+      "placeholders": ["count"],
+      "source": "proposed"
+    },
+    {
+      "key": "viewer.filters.active",
+      "english": "Active filters",
+      "context": "Filter strip label",
+      "source": "proposed"
+    },
+    {
+      "key": "viewer.filters.reset",
+      "english": "Reset filters",
+      "context": "Reset all active filters",
+      "source": "proposed"
+    },
+    {
+      "key": "viewer.filters.none",
+      "english": "No filters applied",
+      "context": "Empty filter summary",
+      "source": "proposed"
+    },
+    {
+      "key": "viewer.filters.origin.board",
+      "english": "Board",
+      "context": "Board-scoped filter origin",
+      "source": "proposed"
+    },
+    {
+      "key": "viewer.filters.origin.group",
+      "english": "Group: {name}",
+      "context": "Group-scoped filter origin",
+      "placeholders": ["name"],
+      "source": "proposed"
+    },
+    {
+      "key": "viewer.filters.origin.block",
+      "english": "Block: {name}",
+      "context": "Block-scoped filter origin",
+      "placeholders": ["name"],
+      "source": "proposed"
+    },
+    {
+      "key": "viewer.filters.remove",
+      "english": "Remove filter",
+      "context": "Remove a filter value",
+      "source": "proposed"
+    },
+    {
+      "key": "viewer.filters.removeNamed",
+      "english": "Remove filter: {name}",
+      "context": "Accessible remove action",
+      "placeholders": ["name"],
+      "source": "proposed"
+    },
+    {
+      "key": "viewer.filters.open",
+      "english": "Open filters",
+      "context": "Open the filter drawer or panel",
+      "source": "proposed"
+    },
+    {
+      "key": "viewer.filters.close",
+      "english": "Close filters",
+      "context": "Close the filter drawer or panel",
+      "source": "proposed"
+    },
+    {
+      "key": "viewer.diagnostics.open",
+      "english": "View diagnostics",
+      "context": "Open diagnostics panel",
+      "source": "proposed"
+    },
+    {
+      "key": "viewer.diagnostics.close",
+      "english": "Close diagnostics",
+      "context": "Close diagnostics panel",
+      "source": "proposed"
+    },
+    {
+      "key": "viewer.diagnostics.none",
+      "english": "No diagnostics",
+      "context": "Clean diagnostics state",
+      "source": "proposed"
+    },
+    {
+      "key": "viewer.diagnostics.path",
+      "english": "Path",
+      "context": "Diagnostic path label",
+      "source": "proposed"
+    },
+    {
+      "key": "viewer.diagnostics.code",
+      "english": "Code",
+      "context": "Diagnostic code label",
+      "source": "proposed"
+    },
+    {
+      "key": "viewer.diagnostics.block",
+      "english": "Block",
+      "context": "Affected block label",
+      "source": "proposed"
+    },
+    {
+      "key": "viewer.diagnostics.severity.error",
+      "english": "Error",
+      "context": "Error severity",
+      "source": "proposed"
+    },
+    {
+      "key": "viewer.diagnostics.severity.warning",
+      "english": "Warning",
+      "context": "Warning severity",
+      "source": "proposed"
+    },
+    {
+      "key": "viewer.realtime.live",
+      "english": "Live",
+      "context": "Realtime connected and current",
+      "source": "proposed"
+    },
+    {
+      "key": "viewer.realtime.connecting",
+      "english": "Connecting",
+      "context": "Realtime connection starting",
+      "source": "proposed"
+    },
+    {
+      "key": "viewer.realtime.reconnecting",
+      "english": "Reconnecting, attempt {attempt} of {max}",
+      "context": "Reconnect status",
+      "placeholders": ["attempt", "max"],
+      "source": "proposed"
+    },
+    {
+      "key": "viewer.realtime.resyncing",
+      "english": "Resyncing data",
+      "context": "Resync in progress",
+      "source": "proposed"
+    },
+    {
+      "key": "viewer.realtime.paused",
+      "english": "Paused",
+      "context": "Realtime updates paused",
+      "source": "proposed"
+    },
+    {
+      "key": "viewer.realtime.degraded",
+      "english": "Degraded connection",
+      "context": "Realtime repeatedly failing",
+      "source": "proposed"
+    },
+    {
+      "key": "viewer.realtime.closed",
+      "english": "Disconnected",
+      "context": "Realtime closed",
+      "source": "proposed"
+    },
+    {
+      "key": "viewer.realtime.error",
+      "english": "Realtime error",
+      "context": "Realtime error",
+      "source": "proposed"
+    },
+    {
+      "key": "viewer.realtime.pause",
+      "english": "Pause updates",
+      "context": "Pause realtime updates",
+      "source": "proposed"
+    },
+    {
+      "key": "viewer.realtime.resume",
+      "english": "Resume updates",
+      "context": "Resume realtime updates",
+      "source": "proposed"
+    },
+    {
+      "key": "viewer.realtime.lastUpdate",
+      "english": "Last update {time}",
+      "context": "Last applied update time",
+      "placeholders": ["time"],
+      "source": "proposed"
+    },
+    {
+      "key": "viewer.realtime.staleNotice",
+      "english": "Showing the last confirmed data while the connection recovers",
+      "context": "Stale policy during reconnect",
+      "source": "proposed"
+    },
+    {
+      "key": "state.loading.title",
+      "english": "Loading data",
+      "context": "Loading state title",
+      "source": "proposed"
+    },
+    {
+      "key": "state.empty.title",
+      "english": "No data for this scope",
+      "context": "Empty state title",
+      "source": "proposed"
+    },
+    {
+      "key": "state.empty.body",
+      "english": "Adjust or reset the active filters to see results",
+      "context": "Empty state guidance",
+      "source": "proposed"
+    },
+    {
+      "key": "state.error.title",
+      "english": "This block could not load",
+      "context": "Block error title",
+      "source": "proposed"
+    },
+    {
+      "key": "state.error.body",
+      "english": "The rest of the board is still available",
+      "context": "Contained error explanation",
+      "source": "proposed"
+    },
+    {
+      "key": "state.stale.title",
+      "english": "Data may be out of date",
+      "context": "Stale data title",
+      "source": "proposed"
+    },
+    {
+      "key": "state.stale.body",
+      "english": "Last confirmed at {time}",
+      "context": "Stale data time",
+      "placeholders": ["time"],
+      "source": "proposed"
+    },
+    {
+      "key": "state.partial.title",
+      "english": "Partial result",
+      "context": "Partial data title",
+      "source": "proposed"
+    },
+    {
+      "key": "state.cancelled.title",
+      "english": "Update cancelled",
+      "context": "Cancelled query title",
+      "source": "proposed"
+    },
+    {
+      "key": "state.cancelled.body",
+      "english": "The previous data remains visible",
+      "context": "Cancelled query explanation",
+      "source": "proposed"
+    },
+    {
+      "key": "state.diagnostics.title",
+      "english": "Diagnostics",
+      "context": "Diagnostics panel title",
+      "source": "proposed"
+    },
+    {
+      "key": "state.diagnostics.body",
+      "english": "Diagnostics are grouped by severity and affected block",
+      "context": "Diagnostics panel description",
+      "source": "proposed"
+    },
+    {
+      "key": "state.pluginError.title",
+      "english": "Block plugin failed",
+      "context": "Plugin error title",
+      "source": "proposed"
+    },
+    {
+      "key": "state.pluginError.body",
+      "english": "Other blocks are unaffected. Disable or remove the plugin to recover.",
+      "context": "Plugin error explanation",
+      "source": "proposed"
+    },
+    {
+      "key": "state.pluginError.disable",
+      "english": "Disable plugin",
+      "context": "Disable a failing plugin",
+      "source": "proposed"
+    },
+    {
+      "key": "state.pluginError.remove",
+      "english": "Remove block",
+      "context": "Remove a failing plugin block",
+      "source": "proposed"
+    },
+    {
+      "key": "editor.library",
+      "english": "Block library",
+      "context": "Block library region label",
+      "source": "proposed"
+    },
+    {
+      "key": "editor.library.search",
+      "english": "Search blocks",
+      "context": "Block library search",
+      "source": "proposed"
+    },
+    {
+      "key": "editor.library.chart",
+      "english": "Charts",
+      "context": "Chart category",
+      "source": "proposed"
+    },
+    {
+      "key": "editor.library.metric",
+      "english": "Metrics",
+      "context": "Metric category",
+      "source": "proposed"
+    },
+    {
+      "key": "editor.library.table",
+      "english": "Tables",
+      "context": "Table category",
+      "source": "proposed"
+    },
+    {
+      "key": "editor.library.text",
+      "english": "Text",
+      "context": "Text category",
+      "source": "proposed"
+    },
+    {
+      "key": "editor.library.filter",
+      "english": "Filters",
+      "context": "Filter category",
+      "source": "proposed"
+    },
+    {
+      "key": "editor.library.add",
+      "english": "Add block",
+      "context": "Add a block from the library",
+      "source": "proposed"
+    },
+    {
+      "key": "editor.library.noResults",
+      "english": "No blocks match this search",
+      "context": "Empty block search",
+      "source": "proposed"
+    },
+    {
+      "key": "editor.canvas",
+      "english": "Board canvas",
+      "context": "Editor canvas region label",
+      "source": "proposed"
+    },
+    {
+      "key": "editor.inspector",
+      "english": "Block inspector",
+      "context": "Inspector region label",
+      "source": "proposed"
+    },
+    {
+      "key": "editor.inspector.props",
+      "english": "Properties",
+      "context": "Inspector properties tab",
+      "source": "proposed"
+    },
+    {
+      "key": "editor.inspector.layout",
+      "english": "Layout",
+      "context": "Inspector layout tab",
+      "source": "proposed"
+    },
+    {
+      "key": "editor.inspector.data",
+      "english": "Data",
+      "context": "Inspector data tab",
+      "source": "proposed"
+    },
+    {
+      "key": "editor.inspector.comparison",
+      "english": "Comparison",
+      "context": "Inspector comparison tab",
+      "source": "proposed"
+    },
+    {
+      "key": "editor.inspector.close",
+      "english": "Close inspector",
+      "context": "Close the inspector drawer",
+      "source": "proposed"
+    },
+    {
+      "key": "editor.inspector.empty",
+      "english": "Select a block to inspect its settings",
+      "context": "Empty inspector state",
+      "source": "proposed"
+    },
+    {
+      "key": "editor.draft.discard",
+      "english": "Discard changes",
+      "context": "Discard the draft",
+      "source": "proposed"
+    },
+    {
+      "key": "editor.draft.conflict",
+      "english": "The board changed while you were editing",
+      "context": "Revision conflict",
+      "source": "proposed"
+    },
+    {
+      "key": "editor.draft.applied",
+      "english": "Changes applied",
+      "context": "Draft applied status",
+      "source": "proposed"
+    },
+    {
+      "key": "editor.draft.cancelled",
+      "english": "Draft discarded",
+      "context": "Draft cancelled status",
+      "source": "proposed"
+    },
+    {
+      "key": "editor.draft.confirmDiscard",
+      "english": "Discard all unsaved changes?",
+      "context": "Discard confirmation",
+      "source": "proposed"
+    },
+    {
+      "key": "editor.block.add",
+      "english": "Add block",
+      "context": "Add block action",
+      "source": "proposed"
+    },
+    {
+      "key": "editor.block.duplicate",
+      "english": "Duplicate block",
+      "context": "Duplicate block action",
+      "source": "proposed"
+    },
+    {
+      "key": "editor.block.delete",
+      "english": "Delete block",
+      "context": "Delete block action",
+      "source": "proposed"
+    },
+    {
+      "key": "editor.block.resetDefaults",
+      "english": "Reset to defaults",
+      "context": "Reset block configuration",
+      "source": "proposed"
+    },
+    {
+      "key": "editor.block.move",
+      "english": "Move block",
+      "context": "Keyboard move mode",
+      "source": "proposed"
+    },
+    {
+      "key": "editor.block.resize",
+      "english": "Resize block",
+      "context": "Keyboard resize mode",
+      "source": "proposed"
+    },
+    {
+      "key": "editor.block.moveEarlier",
+      "english": "Move earlier",
+      "context": "Reorder action",
+      "source": "proposed"
+    },
+    {
+      "key": "editor.block.moveLater",
+      "english": "Move later",
+      "context": "Reorder action",
+      "source": "proposed"
+    },
+    {
+      "key": "editor.block.moveUp",
+      "english": "Move up",
+      "context": "Keyboard move step",
+      "source": "proposed"
+    },
+    {
+      "key": "editor.block.moveDown",
+      "english": "Move down",
+      "context": "Keyboard move step",
+      "source": "proposed"
+    },
+    {
+      "key": "editor.block.moveLeft",
+      "english": "Move left",
+      "context": "Keyboard move step",
+      "source": "proposed"
+    },
+    {
+      "key": "editor.block.moveRight",
+      "english": "Move right",
+      "context": "Keyboard move step",
+      "source": "proposed"
+    },
+    {
+      "key": "editor.block.wider",
+      "english": "Make wider",
+      "context": "Keyboard resize step",
+      "source": "proposed"
+    },
+    {
+      "key": "editor.block.narrower",
+      "english": "Make narrower",
+      "context": "Keyboard resize step",
+      "source": "proposed"
+    },
+    {
+      "key": "editor.block.taller",
+      "english": "Make taller",
+      "context": "Keyboard resize step",
+      "source": "proposed"
+    },
+    {
+      "key": "editor.block.shorter",
+      "english": "Make shorter",
+      "context": "Keyboard resize step",
+      "source": "proposed"
+    },
+    {
+      "key": "editor.block.locked",
+      "english": "Locked binding",
+      "context": "Fixed binding badge",
+      "source": "proposed"
+    },
+    {
+      "key": "editor.block.selectable",
+      "english": "Selectable binding",
+      "context": "Selectable binding state",
+      "source": "proposed"
+    },
+    {
+      "key": "editor.block.fixed",
+      "english": "Fixed",
+      "context": "Fixed binding mode",
+      "source": "proposed"
+    },
+    {
+      "key": "editor.block.selected",
+      "english": "Selected",
+      "context": "Selected block state",
+      "source": "proposed"
+    },
+    {
+      "key": "editor.block.settings",
+      "english": "Block settings",
+      "context": "Block actions label",
+      "source": "proposed"
+    },
+    {
+      "key": "editor.block.keyboardHint",
+      "english": "Use arrow keys to move, Enter to apply, Escape to cancel",
+      "context": "Keyboard layout hint",
+      "source": "proposed"
+    },
+    {
+      "key": "editor.properties.title",
+      "english": "Title",
+      "context": "Block title field",
+      "source": "proposed"
+    },
+    {
+      "key": "editor.properties.description",
+      "english": "Description",
+      "context": "Block description field",
+      "source": "proposed"
+    },
+    {
+      "key": "editor.properties.binding",
+      "english": "Binding",
+      "context": "Binding section",
+      "source": "proposed"
+    },
+    {
+      "key": "editor.properties.aggregation",
+      "english": "Aggregation",
+      "context": "Aggregation field",
+      "source": "proposed"
+    },
+    {
+      "key": "editor.properties.format",
+      "english": "Format",
+      "context": "Display format field",
+      "source": "proposed"
+    },
+    {
+      "key": "editor.properties.unit",
+      "english": "Unit",
+      "context": "Unit field",
+      "source": "proposed"
+    },
+    {
+      "key": "editor.properties.axis",
+      "english": "Axis",
+      "context": "Axis field",
+      "source": "proposed"
+    },
+    {
+      "key": "editor.properties.field",
+      "english": "Field",
+      "context": "Field picker label",
+      "source": "proposed"
+    },
+    {
+      "key": "editor.properties.series",
+      "english": "Series",
+      "context": "Series binding label",
+      "source": "proposed"
+    },
+    {
+      "key": "editor.properties.groupBy",
+      "english": "Group by",
+      "context": "Grouping label",
+      "source": "proposed"
+    },
+    {
+      "key": "editor.properties.sort",
+      "english": "Sort",
+      "context": "Sorting label",
+      "source": "proposed"
+    },
+    {
+      "key": "editor.properties.limit",
+      "english": "Row limit",
+      "context": "Row limit label",
+      "source": "proposed"
+    },
+    {
+      "key": "editor.filters.manage",
+      "english": "Manage filters",
+      "context": "Filter manager action",
+      "source": "proposed"
+    },
+    {
+      "key": "editor.filters.add",
+      "english": "Add filter",
+      "context": "Add a filter definition",
+      "source": "proposed"
+    },
+    {
+      "key": "editor.filters.scope",
+      "english": "Scope",
+      "context": "Filter scope field",
+      "source": "proposed"
+    },
+    {
+      "key": "editor.filters.target",
+      "english": "Target",
+      "context": "Filter target field",
+      "source": "proposed"
+    },
+    {
+      "key": "editor.filters.operator",
+      "english": "Operator",
+      "context": "Filter operator field",
+      "source": "proposed"
+    },
+    {
+      "key": "editor.filters.value",
+      "english": "Value",
+      "context": "Filter value field",
+      "source": "proposed"
+    },
+    {
+      "key": "editor.filters.default",
+      "english": "Default value",
+      "context": "Filter default field",
+      "source": "proposed"
+    },
+    {
+      "key": "editor.filters.viewerEditable",
+      "english": "Viewer can change this filter",
+      "context": "Viewer-editable filter switch",
+      "source": "proposed"
+    },
+    {
+      "key": "editor.filters.reject",
+      "english": "This filter cannot target the selected blocks",
+      "context": "Rejected filter scope explanation",
+      "source": "proposed"
+    },
+    {
+      "key": "editor.comparison.title",
+      "english": "Comparison",
+      "context": "Comparison panel title",
+      "source": "proposed"
+    },
+    {
+      "key": "editor.comparison.add",
+      "english": "Add comparison",
+      "context": "Add a comparison",
+      "source": "proposed"
+    },
+    {
+      "key": "editor.comparison.remove",
+      "english": "Remove comparison",
+      "context": "Remove a comparison",
+      "source": "proposed"
+    },
+    {
+      "key": "editor.comparison.primary",
+      "english": "Primary",
+      "context": "Primary comparison input",
+      "source": "proposed"
+    },
+    {
+      "key": "editor.comparison.reference",
+      "english": "Reference",
+      "context": "Reference comparison input",
+      "source": "proposed"
+    },
+    {
+      "key": "editor.comparison.mapping",
+      "english": "Field mapping",
+      "context": "Comparison mapping label",
+      "source": "proposed"
+    },
+    {
+      "key": "editor.comparison.alignment",
+      "english": "Alignment keys",
+      "context": "Comparison alignment label",
+      "source": "proposed"
+    },
+    {
+      "key": "editor.comparison.display",
+      "english": "Display",
+      "context": "Comparison display mode",
+      "source": "proposed"
+    },
+    {
+      "key": "editor.comparison.delta",
+      "english": "Delta",
+      "context": "Comparison delta mode",
+      "source": "proposed"
+    },
+    {
+      "key": "editor.comparison.unitPolicy",
+      "english": "Unit policy",
+      "context": "Comparison unit policy",
+      "source": "proposed"
+    },
+    {
+      "key": "editor.comparison.unavailable",
+      "english": "Comparison unavailable",
+      "context": "Comparison unavailable heading",
+      "source": "proposed"
+    },
+    {
+      "key": "chart.legend",
+      "english": "Legend",
+      "context": "Chart legend label",
+      "source": "proposed"
+    },
+    {
+      "key": "chart.viewDataTable",
+      "english": "View data table",
+      "context": "Open the chart data table",
+      "source": "proposed"
+    },
+    {
+      "key": "chart.hideDataTable",
+      "english": "Hide data table",
+      "context": "Close the chart data table",
+      "source": "proposed"
+    },
+    {
+      "key": "chart.summary",
+      "english": "Chart summary",
+      "context": "Chart text alternative label",
+      "source": "proposed"
+    },
+    {
+      "key": "chart.axis.x",
+      "english": "X axis",
+      "context": "X axis label",
+      "source": "proposed"
+    },
+    {
+      "key": "chart.axis.y",
+      "english": "Y axis",
+      "context": "Y axis label",
+      "source": "proposed"
+    },
+    {
+      "key": "chart.series",
+      "english": "Series",
+      "context": "Series label",
+      "source": "proposed"
+    },
+    {
+      "key": "chart.missing",
+      "english": "Not available",
+      "context": "Missing value label",
+      "source": "proposed"
+    },
+    {
+      "key": "chart.notAvailable",
+      "english": "Not available",
+      "context": "Unavailable value label",
+      "source": "proposed"
+    },
+    {
+      "key": "chart.selected",
+      "english": "Selected",
+      "context": "Selected series state",
+      "source": "proposed"
+    },
+    {
+      "key": "chart.threshold",
+      "english": "Target",
+      "context": "Threshold line label",
+      "source": "proposed"
+    },
+    {
+      "key": "chart.reference",
+      "english": "Reference",
+      "context": "Reference line label",
+      "source": "proposed"
+    },
+    {
+      "key": "chart.noData",
+      "english": "No chart data for this scope",
+      "context": "Chart empty state",
+      "source": "proposed"
+    },
+    {
+      "key": "chart.partial",
+      "english": "Partial chart data",
+      "context": "Chart partial state",
+      "source": "proposed"
+    },
+    {
+      "key": "chart.delta.absolute",
+      "english": "Absolute change",
+      "context": "Absolute delta label",
+      "source": "proposed"
+    },
+    {
+      "key": "chart.delta.percent",
+      "english": "Percent change",
+      "context": "Percentage delta label",
+      "source": "proposed"
+    },
+    {
+      "key": "chart.delta.unavailable",
+      "english": "Change not available",
+      "context": "Unavailable delta",
+      "source": "proposed"
+    },
+    {
+      "key": "chart.delta.reason.referenceZero",
+      "english": "The reference value is zero",
+      "context": "Zero-denominator reason",
+      "source": "proposed"
+    },
+    {
+      "key": "chart.delta.reason.primaryNull",
+      "english": "The primary value is missing",
+      "context": "Primary-null reason",
+      "source": "proposed"
+    },
+    {
+      "key": "chart.delta.reason.referenceNull",
+      "english": "The reference value is missing",
+      "context": "Reference-null reason",
+      "source": "proposed"
+    },
+    {
+      "key": "chart.delta.reason.missingPair",
+      "english": "This key is missing on one side",
+      "context": "Outer-join reason",
+      "source": "proposed"
+    },
+    {
+      "key": "a11y.skipToContent",
+      "english": "Skip to board content",
+      "context": "Skip link",
+      "source": "proposed"
+    },
+    {
+      "key": "a11y.boardRegion",
+      "english": "Board content",
+      "context": "Main board region name",
+      "source": "proposed"
+    },
+    {
+      "key": "a11y.modeNavigation",
+      "english": "Board modes",
+      "context": "Mode navigation name",
+      "source": "proposed"
+    },
+    {
+      "key": "a11y.filterRegion",
+      "english": "Board filters",
+      "context": "Filter region name",
+      "source": "proposed"
+    },
+    {
+      "key": "a11y.inspectorRegion",
+      "english": "Block inspector",
+      "context": "Inspector landmark name",
+      "source": "proposed"
+    },
+    {
+      "key": "a11y.statusRegion",
+      "english": "Board status",
+      "context": "Status region name",
+      "source": "proposed"
+    },
+    {
+      "key": "a11y.chartSummary",
+      "english": "Chart summary for {title}",
+      "context": "Chart summary accessible name",
+      "placeholders": ["title"],
+      "source": "proposed"
+    },
+    {
+      "key": "a11y.removeFilter",
+      "english": "Remove filter {name} from {scope}",
+      "context": "Filter chip remove name",
+      "placeholders": ["name", "scope"],
+      "source": "proposed"
+    },
+    {
+      "key": "a11y.dragHandle",
+      "english": "Drag handle for {name}",
+      "context": "Drag handle name",
+      "placeholders": ["name"],
+      "source": "proposed"
+    },
+    {
+      "key": "a11y.resizeHandle",
+      "english": "Resize handle for {name}",
+      "context": "Resize handle name",
+      "placeholders": ["name"],
+      "source": "proposed"
+    },
+    {
+      "key": "a11y.keyboardAlternative",
+      "english": "Keyboard layout controls",
+      "context": "Keyboard alternative label",
+      "source": "proposed"
+    },
+    {
+      "key": "a11y.selected",
+      "english": "Selected",
+      "context": "Selected state",
+      "source": "proposed"
+    },
+    {
+      "key": "a11y.notSelected",
+      "english": "Not selected",
+      "context": "Unselected state",
+      "source": "proposed"
+    },
+    {
+      "key": "a11y.readOnly",
+      "english": "Read only",
+      "context": "Read-only state",
+      "source": "proposed"
+    },
+    {
+      "key": "a11y.required",
+      "english": "Required",
+      "context": "Required field state",
+      "source": "proposed"
+    },
+    {
+      "key": "a11y.warning",
+      "english": "Warning",
+      "context": "Warning label",
+      "source": "proposed"
+    },
+    {
+      "key": "a11y.success",
+      "english": "Success",
+      "context": "Success label",
+      "source": "proposed"
+    },
+    {
+      "key": "a11y.liveRegion",
+      "english": "Board live updates",
+      "context": "Live region label",
+      "source": "proposed"
+    },
+    {
+      "key": "viewer.meta.rows.one",
+      "english": "{count} row in scope",
+      "context": "One row in the active scope",
+      "source": "proposed",
+      "placeholders": ["count"]
+    },
+    {
+      "key": "viewer.meta.rows.other",
+      "english": "{count} rows in scope",
+      "context": "Row count in the active scope",
+      "source": "proposed",
+      "placeholders": ["count"]
+    },
+    {
+      "key": "viewer.filters.summary.one",
+      "english": "{count} active filter: {summary}",
+      "context": "Narrow-screen filter summary with one filter",
+      "source": "proposed",
+      "placeholders": ["count", "summary"]
+    },
+    {
+      "key": "viewer.filters.summary.other",
+      "english": "{count} active filters: {summary}",
+      "context": "Narrow-screen filter summary with multiple filters",
+      "source": "proposed",
+      "placeholders": ["count", "summary"]
+    },
+    {
+      "key": "viewer.diagnostics.summary.one",
+      "english": "{count} data warning",
+      "context": "One data warning",
+      "source": "proposed",
+      "placeholders": ["count"]
+    },
+    {
+      "key": "viewer.diagnostics.summary.other",
+      "english": "{count} data warnings",
+      "context": "Multiple data warnings",
+      "source": "proposed",
+      "placeholders": ["count"]
+    },
+    {
+      "key": "state.loading.body.one",
+      "english": "Preparing {count} block for the active filters",
+      "context": "Loading one block",
+      "source": "proposed",
+      "placeholders": ["count"]
+    },
+    {
+      "key": "state.loading.body.other",
+      "english": "Preparing {count} blocks for the active filters",
+      "context": "Loading multiple blocks",
+      "source": "proposed",
+      "placeholders": ["count"]
+    },
+    {
+      "key": "state.partial.body.one",
+      "english": "Showing {returned} of {total} row",
+      "context": "Partial data counts for one row",
+      "source": "proposed",
+      "placeholders": ["returned", "total"]
+    },
+    {
+      "key": "state.partial.body.other",
+      "english": "Showing {returned} of {total} rows",
+      "context": "Partial data counts for multiple rows",
+      "source": "proposed",
+      "placeholders": ["returned", "total"]
+    },
+    {
+      "key": "common.review",
+      "english": "Review",
+      "context": "Review a diagnostic or item",
+      "source": "proposed"
+    },
+    {
+      "key": "common.refresh",
+      "english": "Refresh",
+      "context": "Refresh stale data",
+      "source": "proposed"
+    },
+    {
+      "key": "table.sort",
+      "english": "Sort",
+      "context": "Sort a table",
+      "source": "proposed"
+    },
+    {
+      "key": "table.header.month",
+      "english": "Month",
+      "context": "Temporal table header",
+      "source": "proposed"
+    },
+    {
+      "key": "table.header.currentPeriod",
+      "english": "Current period",
+      "context": "Comparison table header",
+      "source": "proposed"
+    },
+    {
+      "key": "table.header.priorPeriod",
+      "english": "Prior period",
+      "context": "Comparison table header",
+      "source": "proposed"
+    },
+    {
+      "key": "table.header.target",
+      "english": "Target",
+      "context": "Threshold table header",
+      "source": "proposed"
+    },
+    {
+      "key": "table.header.school",
+      "english": "School",
+      "context": "School dimension header",
+      "source": "proposed"
+    },
+    {
+      "key": "table.header.network",
+      "english": "Network",
+      "context": "Network dimension header",
+      "source": "proposed"
+    },
+    {
+      "key": "table.header.proficiency",
+      "english": "Proficiency",
+      "context": "Measure header",
+      "source": "proposed"
+    },
+    {
+      "key": "table.header.proficiencyShort",
+      "english": "Prof.",
+      "context": "Compact measure header",
+      "source": "proposed"
+    },
+    {
+      "key": "table.header.change",
+      "english": "Change",
+      "context": "Delta header",
+      "source": "proposed"
+    },
+    {
+      "key": "table.header.students",
+      "english": "Students",
+      "context": "Count header",
+      "source": "proposed"
+    },
+    {
+      "key": "table.header.channel",
+      "english": "Channel",
+      "context": "Channel dimension header",
+      "source": "proposed"
+    },
+    {
+      "key": "table.header.netRevenue",
+      "english": "Net revenue",
+      "context": "Revenue measure header",
+      "source": "proposed"
+    },
+    {
+      "key": "table.header.margin",
+      "english": "Margin",
+      "context": "Margin measure header",
+      "source": "proposed"
+    },
+    {
+      "key": "table.header.time",
+      "english": "Time",
+      "context": "Event time header",
+      "source": "proposed"
+    },
+    {
+      "key": "table.header.event",
+      "english": "Event",
+      "context": "Event description header",
+      "source": "proposed"
+    },
+    {
+      "key": "table.header.region",
+      "english": "Region",
+      "context": "Region dimension header",
+      "source": "proposed"
+    },
+    {
+      "key": "table.header.status",
+      "english": "Status",
+      "context": "Status column header",
+      "source": "proposed"
+    },
+    {
+      "key": "viewer.filters.apply",
+      "english": "Apply filters",
+      "context": "Apply the current filter edits",
+      "source": "proposed"
+    },
+    {
+      "key": "viewer.filters.field.term",
+      "english": "Term",
+      "context": "Term filter field label",
+      "source": "proposed"
+    },
+    {
+      "key": "viewer.filters.field.gradeBand",
+      "english": "Grade band",
+      "context": "Grade band filter field label",
+      "source": "proposed"
+    },
+    {
+      "key": "viewer.filters.field.subject",
+      "english": "Subject",
+      "context": "Subject filter field label",
+      "source": "proposed"
+    },
+    {
+      "key": "viewer.incidents.summary.one",
+      "english": "{count} open incident",
+      "context": "One open operational incident",
+      "source": "proposed",
+      "placeholders": ["count"]
+    },
+    {
+      "key": "viewer.incidents.summary.other",
+      "english": "{count} open incidents",
+      "context": "Multiple open operational incidents",
+      "source": "proposed",
+      "placeholders": ["count"]
+    },
+    {
+      "key": "viewer.diagnostics.title",
+      "english": "Board diagnostics",
+      "context": "Diagnostics panel title",
+      "source": "proposed"
+    },
+    {
+      "key": "viewer.diagnostics.severity.info",
+      "english": "Information",
+      "context": "Informational severity",
+      "source": "proposed"
+    },
+    {
+      "key": "viewer.meta.window",
+      "english": "Current window: {window}",
+      "context": "Explicit data window",
+      "source": "proposed",
+      "placeholders": ["window"]
+    },
+    {
+      "key": "viewer.realtime.updating",
+      "english": "Updating",
+      "context": "Live stream is applying updates",
+      "source": "proposed"
+    },
+    {
+      "key": "viewer.realtime.reconnectingShort",
+      "english": "Reconnecting",
+      "context": "Reconnect status without attempt detail",
+      "source": "proposed"
+    },
+    {
+      "key": "viewer.realtime.buffered",
+      "english": "Buffered {count} updates",
+      "context": "Bounded realtime buffer count",
+      "source": "proposed",
+      "placeholders": ["count"]
+    },
+    {
+      "key": "chart.options",
+      "english": "Chart options",
+      "context": "Chart overflow actions",
+      "source": "proposed"
+    },
+    {
+      "key": "editor.previewAsViewer",
+      "english": "Preview as viewer",
+      "context": "Open a viewer preview of the draft",
+      "source": "proposed"
+    },
+    {
+      "key": "editor.properties.measure",
+      "english": "Y measure",
+      "context": "Measure binding label",
+      "source": "proposed"
+    },
+    {
+      "key": "editor.library.line.name",
+      "english": "Line chart",
+      "context": "Block library line chart name",
+      "source": "proposed"
+    },
+    {
+      "key": "editor.library.line.description",
+      "english": "Trend over time or ordered groups",
+      "context": "Block library line chart description",
+      "source": "proposed"
+    },
+    {
+      "key": "editor.library.bar.name",
+      "english": "Bar chart",
+      "context": "Block library bar chart name",
+      "source": "proposed"
+    },
+    {
+      "key": "editor.library.bar.description",
+      "english": "Compare categories with a zero baseline",
+      "context": "Block library bar chart description",
+      "source": "proposed"
+    },
+    {
+      "key": "editor.library.donut.name",
+      "english": "Donut",
+      "context": "Block library donut name",
+      "source": "proposed"
+    },
+    {
+      "key": "editor.library.donut.description",
+      "english": "Part-to-whole with explicit Other",
+      "context": "Block library donut description",
+      "source": "proposed"
+    },
+    {
+      "key": "editor.library.metric.name",
+      "english": "Metric",
+      "context": "Block library metric name",
+      "source": "proposed"
+    },
+    {
+      "key": "editor.library.metric.description",
+      "english": "One number with optional comparison",
+      "context": "Block library metric description",
+      "source": "proposed"
+    },
+    {
+      "key": "editor.library.table.name",
+      "english": "Table",
+      "context": "Block library table name",
+      "source": "proposed"
+    },
+    {
+      "key": "editor.library.table.description",
+      "english": "Accessible rows with formatting and sort",
+      "context": "Block library table description",
+      "source": "proposed"
+    },
+    {
+      "key": "a11y.focusSampleAction",
+      "english": "Focus me",
+      "context": "Documentation focus sample action",
+      "source": "proposed"
+    },
+    {
+      "key": "a11y.pauseChartAnimation",
+      "english": "Pause chart animation",
+      "context": "Stop chart animation",
+      "source": "proposed"
+    },
+    {
+      "key": "a11y.showFinalState",
+      "english": "Show final state",
+      "context": "Show the final chart state without animation",
+      "source": "proposed"
+    },
+    {
+      "key": "editor.display.showTarget",
+      "english": "Show target line and label",
+      "context": "Show the target rule on a chart",
+      "source": "proposed"
+    },
+    {
+      "key": "editor.display.showReference",
+      "english": "Show prior-year reference series",
+      "context": "Show the comparison reference series",
+      "source": "proposed"
+    },
+    {
+      "key": "editor.display.showDataLabels",
+      "english": "Show data labels on every point",
+      "context": "Show point labels on a chart",
+      "source": "proposed"
+    },
+    {
+      "key": "viewer.realtime.rate",
+      "english": "{count} updates/min",
+      "context": "Current realtime update rate",
+      "source": "proposed",
+      "placeholders": ["count"]
+    },
+    {
+      "key": "chart.delta.both",
+      "english": "Absolute and percent change",
+      "context": "Combined absolute and percentage delta label",
+      "source": "proposed"
+    },
+    {
+      "key": "editor.library.close",
+      "english": "Close block library",
+      "context": "Close the block library drawer",
+      "source": "proposed"
+    },
+    {
+      "key": "viewer.meta.simulated",
+      "english": "Simulated transport",
+      "context": "Honest label for a simulated realtime transport",
+      "source": "proposed"
+    },
+    {
+      "key": "a11y.measuresRegion",
+      "english": "Key measures",
+      "context": "Accessible name for a metric strip region",
+      "source": "proposed"
+    },
+    {
+      "key": "a11y.rankingRegion",
+      "english": "Network proficiency ranking",
+      "context": "Accessible name for a ranking region",
+      "source": "proposed"
+    },
+    {
+      "key": "editor.panels",
+      "english": "Editor panels",
+      "context": "Accessible name for the narrow editor panel triggers",
+      "source": "proposed"
+    },
+    {
+      "key": "editor.drawers",
+      "english": "Editor drawers",
+      "context": "Accessible name for the block-library and inspector drawer tabs",
+      "source": "proposed"
+    },
+    {
+      "key": "editor.inspectorSections",
+      "english": "Inspector sections",
+      "context": "Accessible name for the inspector section tabs",
+      "source": "proposed"
+    },
+    {
+      "key": "editor.block.keyboardHintShort",
+      "english": "Arrow keys move · Enter applies · Escape cancels",
+      "context": "Short keyboard layout instruction",
+      "source": "proposed"
+    },
+    {
+      "key": "editor.draft.edits.one",
+      "english": "{count} edit",
+      "context": "One draft edit",
+      "source": "proposed",
+      "placeholders": ["count"]
+    },
+    {
+      "key": "editor.draft.edits.other",
+      "english": "{count} edits",
+      "context": "Multiple draft edits",
+      "source": "proposed",
+      "placeholders": ["count"]
+    },
+    {
+      "key": "editor.draft.ageMinutes.one",
+      "english": "{count} minute ago",
+      "context": "One minute since the last draft edit",
+      "source": "proposed",
+      "placeholders": ["count"]
+    },
+    {
+      "key": "editor.draft.ageMinutes.other",
+      "english": "{count} minutes ago",
+      "context": "Minutes since the last draft edit",
+      "source": "proposed",
+      "placeholders": ["count"]
+    },
+    {
+      "key": "editor.draft.change.comparisonMapping",
+      "english": "comparison mapping",
+      "context": "Draft change description for a comparison mapping edit",
+      "source": "proposed"
+    },
+    {
+      "key": "editor.library.addLine",
+      "english": "Add line chart block",
+      "context": "Add a line chart block",
+      "source": "proposed"
+    },
+    {
+      "key": "editor.library.addBar",
+      "english": "Add bar chart block",
+      "context": "Add a bar chart block",
+      "source": "proposed"
+    },
+    {
+      "key": "editor.library.addDonut",
+      "english": "Add donut block",
+      "context": "Add a donut block",
+      "source": "proposed"
+    },
+    {
+      "key": "editor.library.addMetric",
+      "english": "Add metric block",
+      "context": "Add a metric block",
+      "source": "proposed"
+    },
+    {
+      "key": "editor.library.addTable",
+      "english": "Add table block",
+      "context": "Add a table block",
+      "source": "proposed"
+    },
+    {
+      "key": "state.stale.chartSummary",
+      "english": "Last valid result remains visible, clearly marked stale",
+      "context": "Text alternative for a stale chart",
+      "source": "proposed"
+    }
+  ]
+}

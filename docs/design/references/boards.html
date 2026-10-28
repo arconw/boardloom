@@ -1,0 +1,955 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Board range · Boardloom design references</title>
+    <link rel="stylesheet" href="./reference.css" />
+  </head>
+  <body class="ref-page">
+    <header class="ref-banner">
+      <a class="ref-brand" href="./index.html">Boardloom design references</a>
+      <span class="ref-badge">Design reference - not production UI</span>
+      <nav class="ref-nav" aria-label="Design reference pages" data-doc-content="">
+        <a href="./index.html">Index</a>
+        <a href="./viewer-desktop.html">Viewer desktop</a>
+        <a href="./viewer-narrow.html">Viewer narrow</a>
+        <a href="./editor-desktop.html">Editor desktop</a>
+        <a href="./editor-narrow.html">Editor narrow</a>
+        <a href="./states.html">States</a>
+        <a href="./boards.html" aria-current="page">Boards</a>
+        <a href="./localization.html">Localization</a>
+        <a href="./accessibility.html">Accessibility</a>
+      </nav>
+    </header>
+
+    <main class="ref-main">
+      <header class="ref-intro">
+        <p class="ref-kicker">T05 · Board range</p>
+        <h1 class="ref-title">One visual language, three different working boards</h1>
+        <p class="ref-lede">
+          An assessment overview, a commercial metrics board and an operational live-monitoring
+          board share tokens, typography and state treatment while changing their composition. They
+          are design references, not invented product features or real data sources.
+        </p>
+        <div class="ref-note-grid">
+          <div class="ref-note">
+            <strong>Assessment</strong>
+            Comparison-led. Prior-year reference, school table and a district narrative. See
+            <a href="./viewer-desktop.html">viewer desktop</a>.
+          </div>
+          <div class="ref-note">
+            <strong>Commercial</strong>
+            Margin-led. A wide performance chart, a compact side comparison and a channel detail
+            table.
+          </div>
+          <div class="ref-note">
+            <strong>Operational</strong>
+            Time-led. Live status, queue health, incident rail and a dense event table. Simulated
+            transport is labeled visibly.
+          </div>
+        </div>
+      </header>
+
+      <section class="ref-artboard-section" aria-labelledby="commercial-title">
+        <div class="ref-artboard-head">
+          <h2 class="ref-artboard-title" id="commercial-title">
+            Commercial metrics · desktop light
+          </h2>
+          <span class="ref-artboard-meta"
+            >1440 px reference · synthetic orders fixture · prior-period comparison</span
+          >
+        </div>
+        <div class="ref-artboard-frame">
+          <div class="ref-artboard">
+            <div class="boardloom ref-app" data-boardloom-theme="light">
+              <div class="app-shell">
+                <header class="app-header">
+                  <div class="app-identity">
+                    <p class="app-host" data-host-content="">Lumen Foods · Commercial workspace</p>
+                    <h1 class="app-title" data-host-content="">Revenue and margin</h1>
+                    <p class="app-subtitle" data-host-content="">
+                      Channel performance for the current 90-day window, compared with the prior
+                      period.
+                    </p>
+                    <p class="app-meta">
+                      <span>Synthetic orders fixture</span><span>18,204 orders</span
+                      ><span>Updated 10:05</span><span>Times shown in UTC</span>
+                    </p>
+                  </div>
+                  <div class="app-toolbar">
+                    <div
+                      class="ui-segmented"
+                      role="group"
+                      aria-label="Board mode"
+                      data-message-key="a11y.modeNavigation"
+                    >
+                      <button
+                        class="ui-segment"
+                        type="button"
+                        aria-pressed="true"
+                        data-message-key="mode.viewer"
+                      >
+                        Viewer
+                      </button>
+                      <button
+                        class="ui-segment"
+                        type="button"
+                        aria-pressed="false"
+                        data-message-key="mode.editor"
+                      >
+                        Editor
+                      </button>
+                    </div>
+                    <button
+                      class="ui-button ui-button--ghost"
+                      type="button"
+                      data-message-key="board.export"
+                    >
+                      Export
+                    </button>
+                    <button
+                      class="ui-icon-button"
+                      type="button"
+                      aria-label="More board actions"
+                      data-message-key="board.moreActions"
+                    >
+                      ⋯
+                    </button>
+                  </div>
+                </header>
+                <div class="app-statusbar">
+                  <span
+                    class="status-pill status-pill--info"
+                    data-message-key="viewer.meta.historical"
+                    ><span class="status-icon" aria-hidden="true">i</span>Historical snapshot</span
+                  >
+                  <span class="status-pill" data-message-key="viewer.meta.window"
+                    >Current window: last 90 days</span
+                  >
+                  <button
+                    class="status-link"
+                    type="button"
+                    data-message-key="viewer.diagnostics.summary.one"
+                  >
+                    1 data warning
+                  </button>
+                </div>
+                <form
+                  class="app-filterbar"
+                  aria-label="Board filters"
+                  data-message-key="a11y.filterRegion"
+                >
+                  <span class="filter-label" data-message-key="viewer.filters.active"
+                    >Active filters</span
+                  >
+                  <span class="filter-chip"
+                    ><span
+                      class="filter-chip__origin"
+                      data-message-key="viewer.filters.origin.board"
+                      >Board</span
+                    >Period: current 90 days<button
+                      class="filter-chip__remove"
+                      type="button"
+                      aria-label="Remove filter Period current 90 days"
+                      data-message-key="viewer.filters.removeNamed"
+                    >
+                      ×
+                    </button></span
+                  >
+                  <span class="filter-chip"
+                    ><span
+                      class="filter-chip__origin"
+                      data-message-key="viewer.filters.origin.group"
+                      >Group: Direct</span
+                    >Channel group: direct channels<button
+                      class="filter-chip__remove"
+                      type="button"
+                      aria-label="Remove filter Channel group direct channels"
+                      data-message-key="viewer.filters.removeNamed"
+                    >
+                      ×
+                    </button></span
+                  >
+                  <button
+                    class="ui-button ui-button--sm"
+                    type="button"
+                    data-message-key="viewer.filters.count"
+                  >
+                    Filters (2)
+                  </button>
+                  <button
+                    class="ui-button ui-button--ghost ui-button--sm"
+                    type="button"
+                    data-message-key="viewer.filters.reset"
+                  >
+                    Reset filters
+                  </button>
+                </form>
+                <div
+                  class="app-body"
+                  role="region"
+                  aria-label="Board content"
+                  data-message-key="a11y.boardRegion"
+                >
+                  <div class="board-grid">
+                    <section
+                      class="board-panel metric-strip col-span-12"
+                      aria-label="Commercial measures"
+                      data-host-content=""
+                    >
+                      <div class="metric">
+                        <span class="metric-label" data-host-content="">Net revenue</span
+                        ><span class="metric-value" data-host-content=""
+                          >€2.84<span class="metric-unit" data-host-content="">M</span></span
+                        ><span class="metric-delta metric-delta--up" data-host-content=""
+                          >+12.4%</span
+                        ><svg
+                          class="metric-spark"
+                          viewBox="0 0 76 34"
+                          aria-hidden="true"
+                          data-host-content=""
+                        >
+                          <path d="M2 27 L16 24 L30 20 L44 18 L58 12 L74 8" />
+                        </svg>
+                      </div>
+                      <div class="metric">
+                        <span class="metric-label" data-host-content="">Gross margin</span
+                        ><span class="metric-value" data-host-content=""
+                          >41.2<span class="metric-unit" data-host-content="">%</span></span
+                        ><span class="metric-delta metric-delta--up" data-host-content=""
+                          >+1.6 pts</span
+                        ><svg
+                          class="metric-spark"
+                          viewBox="0 0 76 34"
+                          aria-hidden="true"
+                          data-host-content=""
+                        >
+                          <path d="M2 22 L16 21 L30 19 L44 17 L58 15 L74 12" />
+                        </svg>
+                      </div>
+                      <div class="metric">
+                        <span class="metric-label" data-host-content="">Orders</span
+                        ><span class="metric-value" data-host-content="">18,204</span
+                        ><span class="metric-delta metric-delta--up" data-host-content=""
+                          >+8.1%</span
+                        ><svg
+                          class="metric-spark"
+                          viewBox="0 0 76 34"
+                          aria-hidden="true"
+                          data-host-content=""
+                        >
+                          <path d="M2 26 L16 24 L30 21 L44 20 L58 15 L74 11" />
+                        </svg>
+                      </div>
+                      <div class="metric">
+                        <span class="metric-label" data-host-content="">Average order</span
+                        ><span class="metric-value" data-host-content="">€156</span
+                        ><span class="metric-delta metric-delta--flat" data-host-content=""
+                          >+0.4%</span
+                        ><svg
+                          class="metric-spark"
+                          viewBox="0 0 76 34"
+                          aria-hidden="true"
+                          data-host-content=""
+                        >
+                          <path d="M2 18 L16 17 L30 18 L44 16 L58 17 L74 15" />
+                        </svg>
+                      </div>
+                    </section>
+                    <section class="board-panel col-span-9" aria-labelledby="channel-title">
+                      <div class="panel-head">
+                        <div>
+                          <p class="panel-kicker" data-host-content="">
+                            Orders · current vs prior 90 days
+                          </p>
+                          <h2 class="panel-title" id="channel-title" data-host-content="">
+                            Revenue by channel
+                          </h2>
+                          <p class="panel-meta" data-host-content="">
+                            Net revenue in EUR · identical units required for comparison
+                          </p>
+                        </div>
+                        <button
+                          class="ui-button ui-button--sm"
+                          type="button"
+                          data-message-key="chart.viewDataTable"
+                        >
+                          View data table
+                        </button>
+                      </div>
+                      <figure class="chart-figure">
+                        <svg
+                          class="chart-svg"
+                          viewBox="0 0 760 250"
+                          role="img"
+                          aria-labelledby="channel-svg-title channel-svg-desc"
+                          data-host-content=""
+                        >
+                          <title id="channel-svg-title">
+                            Revenue by channel, current and prior period
+                          </title>
+                          <desc id="channel-svg-desc">
+                            Direct retail leads at 1.1 million euro, followed by online, partner and
+                            wholesale. Current period is above prior period in every channel shown.
+                          </desc>
+                          <line class="chart-grid-line" x1="52" y1="210" x2="740" y2="210" />
+                          <line class="chart-grid-line" x1="52" y1="150" x2="740" y2="150" />
+                          <line class="chart-grid-line" x1="52" y1="90" x2="740" y2="90" />
+                          <line class="chart-grid-line" x1="52" y1="30" x2="740" y2="30" />
+                          <text x="42" y="214" text-anchor="end">0</text>
+                          <text x="42" y="154" text-anchor="end">0.5M</text>
+                          <text x="42" y="94" text-anchor="end">1.0M</text>
+                          <text x="42" y="34" text-anchor="end">1.5M</text>
+                          <rect class="chart-bar series-1" x="92" y="58" width="42" height="152" />
+                          <rect class="chart-bar series-2" x="140" y="78" width="42" height="132" />
+                          <rect class="chart-bar series-1" x="262" y="88" width="42" height="122" />
+                          <rect
+                            class="chart-bar series-2"
+                            x="310"
+                            y="106"
+                            width="42"
+                            height="104"
+                          />
+                          <rect class="chart-bar series-1" x="432" y="126" width="42" height="84" />
+                          <rect class="chart-bar series-2" x="480" y="140" width="42" height="70" />
+                          <rect class="chart-bar series-1" x="602" y="154" width="42" height="56" />
+                          <rect class="chart-bar series-2" x="650" y="164" width="42" height="46" />
+                          <text x="137" y="232" text-anchor="middle">Retail</text>
+                          <text x="307" y="232" text-anchor="middle">Online</text>
+                          <text x="477" y="232" text-anchor="middle">Partner</text>
+                          <text x="647" y="232" text-anchor="middle">Wholesale</text>
+                        </svg>
+                        <figcaption class="chart-summary" data-message-key="chart.summary">
+                          Summary: current-period revenue is €2.84M, up 12.4% from €2.52M. Direct
+                          retail contributes the largest share. Synthetic EUR values.
+                        </figcaption>
+                        <ul
+                          class="chart-legend"
+                          data-message-key="chart.legend"
+                          aria-label="Series legend"
+                        >
+                          <li class="legend-item">
+                            <span class="legend-swatch series-1" aria-hidden="true"></span>Current
+                            90 days
+                          </li>
+                          <li class="legend-item">
+                            <span
+                              class="legend-swatch series-2 legend-swatch--dash"
+                              aria-hidden="true"
+                            ></span
+                            >Prior 90 days
+                          </li>
+                        </ul>
+                      </figure>
+                    </section>
+                    <aside class="board-panel col-span-3" aria-labelledby="margin-title">
+                      <div class="panel-head">
+                        <div>
+                          <p class="panel-kicker" data-host-content="">Comparison</p>
+                          <h2 class="panel-title" id="margin-title" data-host-content="">
+                            Margin bridge
+                          </h2>
+                          <p class="panel-meta" data-host-content="">Percent of net revenue</p>
+                        </div>
+                      </div>
+                      <div class="delta-card">
+                        <p class="delta-card__label">Gross margin change</p>
+                        <p class="delta-card__value" data-host-content="">+1.6 pts</p>
+                        <p class="delta-card__detail" data-host-content="">41.2% vs 39.6%</p>
+                      </div>
+                      <ul class="insight-list" data-host-content="">
+                        <li class="insight-item">
+                          <span class="insight-mark" aria-hidden="true">1</span>
+                          <p class="insight-text" data-host-content="">
+                            Direct retail grew 16%.<span>Current €1.10M · prior €0.95M.</span>
+                          </p>
+                        </li>
+                        <li class="insight-item">
+                          <span class="insight-mark" aria-hidden="true">2</span>
+                          <p class="insight-text" data-host-content="">
+                            Wholesale margin is flat.<span
+                              >One channel row has no prior mapping.</span
+                            >
+                          </p>
+                        </li>
+                      </ul>
+                    </aside>
+                    <section
+                      class="board-panel board-panel--flush col-span-7"
+                      aria-labelledby="channel-table-title"
+                    >
+                      <div class="panel-head" style="padding: 16px 18px 10px">
+                        <div>
+                          <p class="panel-kicker" data-host-content="">Table</p>
+                          <h2 class="panel-title" id="channel-table-title" data-host-content="">
+                            Channel detail
+                          </h2>
+                          <p class="panel-meta" data-host-content="">
+                            Net revenue and margin · current period
+                          </p>
+                        </div>
+                      </div>
+                      <div
+                        class="table-scroll"
+                        role="region"
+                        tabindex="0"
+                        aria-labelledby="table-caption-1"
+                      >
+                        <table class="data-table">
+                          <caption id="table-caption-1" class="sr-only">
+                            Channel revenue and margin
+                          </caption>
+                          <thead>
+                            <tr>
+                              <th scope="col" data-message-key="table.header.channel">Channel</th>
+                              <th
+                                scope="col"
+                                class="num"
+                                data-message-key="table.header.netRevenue"
+                              >
+                                Net revenue
+                              </th>
+                              <th scope="col" class="num" data-message-key="table.header.margin">
+                                Margin
+                              </th>
+                              <th scope="col" class="num" data-message-key="table.header.change">
+                                Change
+                              </th>
+                            </tr>
+                          </thead>
+                          <tbody data-host-content="">
+                            <tr>
+                              <th scope="row">Direct retail</th>
+                              <td class="num">€1.10M</td>
+                              <td class="num">44.1%</td>
+                              <td class="num">+16.0%</td>
+                            </tr>
+                            <tr>
+                              <th scope="row">Online</th>
+                              <td class="num">€0.88M</td>
+                              <td class="num">42.8%</td>
+                              <td class="num">+11.2%</td>
+                            </tr>
+                            <tr>
+                              <th scope="row">Partner</th>
+                              <td class="num">€0.61M</td>
+                              <td class="num">36.4%</td>
+                              <td class="num">+7.5%</td>
+                            </tr>
+                            <tr>
+                              <th scope="row">Wholesale</th>
+                              <td class="num">€0.25M</td>
+                              <td class="num">31.0%</td>
+                              <td class="num missing">Not available</td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </section>
+                    <section
+                      class="board-panel col-span-5"
+                      aria-labelledby="commercial-insight-title"
+                    >
+                      <div class="panel-head">
+                        <div>
+                          <p class="panel-kicker" data-host-content="">Reading the board</p>
+                          <h2
+                            class="panel-title"
+                            id="commercial-insight-title"
+                            data-host-content=""
+                          >
+                            What changed
+                          </h2>
+                          <p class="panel-meta" data-host-content="">
+                            Comparison and filter scope stay visible
+                          </p>
+                        </div>
+                      </div>
+                      <ul class="insight-list" data-host-content="">
+                        <li class="insight-item">
+                          <span class="insight-mark" aria-hidden="true">1</span>
+                          <p class="insight-text" data-host-content="">
+                            Retail leads growth and margin.<span
+                              >Group: Direct · current 90 days.</span
+                            >
+                          </p>
+                        </li>
+                        <li class="insight-item">
+                          <span class="insight-mark" aria-hidden="true">2</span>
+                          <p class="insight-text" data-host-content="">
+                            Online remains the second engine.<span
+                              >+11.2% revenue, margin up 0.8 points.</span
+                            >
+                          </p>
+                        </li>
+                        <li class="insight-item">
+                          <span class="insight-mark" aria-hidden="true">3</span>
+                          <p class="insight-text" data-host-content="">
+                            Wholesale has no prior-period value.<span
+                              >It is shown as unavailable, never zero.</span
+                            >
+                          </p>
+                        </li>
+                      </ul>
+                    </section>
+                  </div>
+                </div>
+                <footer class="app-foot" data-host-content="">
+                  <span>Synthetic orders fixture · no real records</span
+                  ><span>Design reference · not production UI</span>
+                </footer>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="ref-artboard-section" aria-labelledby="operational-title">
+        <div class="ref-artboard-head">
+          <h2 class="ref-artboard-title" id="operational-title">
+            Operational monitoring · desktop dark
+          </h2>
+          <span class="ref-artboard-meta"
+            >1440 px reference · synthetic dispatch fixture · simulated realtime labeled</span
+          >
+        </div>
+        <div class="ref-artboard-frame">
+          <div class="ref-artboard">
+            <div class="boardloom ref-app" data-boardloom-theme="dark">
+              <div class="app-shell">
+                <header class="app-header">
+                  <div class="app-identity">
+                    <p class="app-host" data-host-content="">Harbor Logistics · Operations</p>
+                    <h1 class="app-title" data-host-content="">Dispatch operations</h1>
+                    <p class="app-subtitle" data-host-content="">
+                      Queue health and incident response across the current shift.
+                    </p>
+                    <p class="app-meta">
+                      <span>Synthetic dispatch fixture</span><span>Shift 14:00-22:00 UTC</span
+                      ><span>Updated 14:26</span><span>Simulated transport</span>
+                    </p>
+                  </div>
+                  <div class="app-toolbar">
+                    <div
+                      class="ui-segmented"
+                      role="group"
+                      aria-label="Board mode"
+                      data-message-key="a11y.modeNavigation"
+                    >
+                      <button
+                        class="ui-segment"
+                        type="button"
+                        aria-pressed="true"
+                        data-message-key="mode.viewer"
+                      >
+                        Viewer
+                      </button>
+                      <button
+                        class="ui-segment"
+                        type="button"
+                        aria-pressed="false"
+                        data-message-key="mode.editor"
+                      >
+                        Editor
+                      </button>
+                    </div>
+                    <button
+                      class="ui-button ui-button--ghost"
+                      type="button"
+                      data-message-key="board.export"
+                    >
+                      Export
+                    </button>
+                    <button
+                      class="ui-icon-button"
+                      type="button"
+                      aria-label="More board actions"
+                      data-message-key="board.moreActions"
+                    >
+                      ⋯
+                    </button>
+                  </div>
+                </header>
+                <div class="app-statusbar">
+                  <span
+                    class="status-pill status-pill--live"
+                    data-message-key="viewer.realtime.live"
+                    ><span class="status-dot" aria-hidden="true"></span>Live · simulated</span
+                  >
+                  <span class="status-pill" data-message-key="viewer.realtime.rate"
+                    >12 updates/min</span
+                  >
+                  <button
+                    class="ui-button ui-button--sm"
+                    type="button"
+                    data-message-key="viewer.realtime.pause"
+                  >
+                    Pause updates
+                  </button>
+                  <button
+                    class="status-link"
+                    type="button"
+                    data-message-key="viewer.incidents.summary.other"
+                  >
+                    2 open incidents
+                  </button>
+                </div>
+                <form
+                  class="app-filterbar"
+                  aria-label="Board filters"
+                  data-message-key="a11y.filterRegion"
+                >
+                  <span class="filter-label" data-message-key="viewer.filters.active"
+                    >Active filters</span
+                  >
+                  <span class="filter-chip"
+                    ><span
+                      class="filter-chip__origin"
+                      data-message-key="viewer.filters.origin.board"
+                      >Board</span
+                    >Shift: 14:00-22:00<button
+                      class="filter-chip__remove"
+                      type="button"
+                      aria-label="Remove filter Shift 14:00-22:00"
+                      data-message-key="viewer.filters.removeNamed"
+                    >
+                      ×
+                    </button></span
+                  >
+                  <span class="filter-chip"
+                    ><span
+                      class="filter-chip__origin"
+                      data-message-key="viewer.filters.origin.block"
+                      >Block: North yard</span
+                    >Region: North<button
+                      class="filter-chip__remove"
+                      type="button"
+                      aria-label="Remove filter Region North"
+                      data-message-key="viewer.filters.removeNamed"
+                    >
+                      ×
+                    </button></span
+                  >
+                  <button
+                    class="ui-button ui-button--sm"
+                    type="button"
+                    data-message-key="viewer.filters.count"
+                  >
+                    Filters (2)
+                  </button>
+                </form>
+                <div
+                  class="app-body"
+                  role="region"
+                  aria-label="Board content"
+                  data-message-key="a11y.boardRegion"
+                >
+                  <div class="board-grid">
+                    <section
+                      class="board-panel metric-strip col-span-12"
+                      aria-label="Operational measures"
+                      data-host-content=""
+                    >
+                      <div class="metric">
+                        <span class="metric-label" data-host-content="">On-time dispatch</span
+                        ><span class="metric-value" data-host-content=""
+                          >96.2<span class="metric-unit" data-host-content="">%</span></span
+                        ><span class="metric-delta metric-delta--up" data-host-content=""
+                          >+1.4 pts</span
+                        ><svg
+                          class="metric-spark"
+                          viewBox="0 0 76 34"
+                          aria-hidden="true"
+                          data-host-content=""
+                        >
+                          <path d="M2 24 L16 22 L30 21 L44 16 L58 13 L74 10" />
+                        </svg>
+                      </div>
+                      <div class="metric">
+                        <span class="metric-label" data-host-content="">Queue depth</span
+                        ><span class="metric-value" data-host-content="">128</span
+                        ><span class="metric-delta metric-delta--down" data-host-content=""
+                          >-14</span
+                        ><svg
+                          class="metric-spark"
+                          viewBox="0 0 76 34"
+                          aria-hidden="true"
+                          data-host-content=""
+                        >
+                          <path d="M2 12 L16 14 L30 18 L44 17 L58 22 L74 25" />
+                        </svg>
+                      </div>
+                      <div class="metric">
+                        <span class="metric-label" data-host-content="">Open incidents</span
+                        ><span class="metric-value" data-host-content="">2</span
+                        ><span class="metric-delta metric-delta--flat" data-host-content=""
+                          >1 high</span
+                        ><svg
+                          class="metric-spark"
+                          viewBox="0 0 76 34"
+                          aria-hidden="true"
+                          data-host-content=""
+                        >
+                          <path d="M2 18 L16 18 L30 16 L44 18 L58 17 L74 18" />
+                        </svg>
+                      </div>
+                      <div class="metric">
+                        <span class="metric-label" data-host-content="">Median handling</span
+                        ><span class="metric-value" data-host-content=""
+                          >4.2<span class="metric-unit" data-host-content="">m</span></span
+                        ><span class="metric-delta metric-delta--up" data-host-content=""
+                          >-0.3m</span
+                        ><svg
+                          class="metric-spark"
+                          viewBox="0 0 76 34"
+                          aria-hidden="true"
+                          data-host-content=""
+                        >
+                          <path d="M2 10 L16 12 L30 15 L44 16 L58 20 L74 22" />
+                        </svg>
+                      </div>
+                    </section>
+                    <section class="board-panel col-span-7" aria-labelledby="queue-title">
+                      <div class="panel-head">
+                        <div>
+                          <p class="panel-kicker" data-host-content="">Live · last 60 minutes</p>
+                          <h2 class="panel-title" id="queue-title" data-host-content="">
+                            Dispatch queue
+                          </h2>
+                          <p class="panel-meta" data-host-content="">
+                            Orders waiting · 5-minute buckets · simulated stream
+                          </p>
+                        </div>
+                        <div class="panel-tools">
+                          <span
+                            class="status-pill status-pill--live"
+                            data-message-key="viewer.realtime.live"
+                            ><span class="status-dot" aria-hidden="true"></span>Updating</span
+                          ><button
+                            class="ui-icon-button"
+                            type="button"
+                            aria-label="Chart options"
+                            data-message-key="chart.options"
+                          >
+                            ⋯
+                          </button>
+                        </div>
+                      </div>
+                      <figure class="chart-figure">
+                        <svg
+                          class="chart-svg"
+                          viewBox="0 0 700 240"
+                          role="img"
+                          aria-labelledby="queue-svg-title queue-svg-desc"
+                          data-host-content=""
+                        >
+                          <title id="queue-svg-title">
+                            Dispatch queue depth over the last hour
+                          </title>
+                          <desc id="queue-svg-desc">
+                            Queue depth peaks at 148 orders, then falls to 128. The target ceiling
+                            is 140.
+                          </desc>
+                          <line class="chart-grid-line" x1="40" y1="200" x2="680" y2="200" />
+                          <line class="chart-grid-line" x1="40" y1="140" x2="680" y2="140" />
+                          <line class="chart-grid-line" x1="40" y1="80" x2="680" y2="80" />
+                          <line class="chart-grid-line" x1="40" y1="20" x2="680" y2="20" />
+                          <text x="32" y="204" text-anchor="end">0</text>
+                          <text x="32" y="124" text-anchor="end">70</text>
+                          <text x="32" y="46" text-anchor="end">140</text>
+                          <line class="chart-threshold" x1="40" y1="42" x2="680" y2="42" />
+                          <text x="680" y="34" text-anchor="end" fill="var(--bl-chart-threshold)">
+                            Ceiling 140
+                          </text>
+                          <path
+                            class="chart-line series-1"
+                            d="M48 110 L124 94 L200 72 L276 84 L352 106 L428 118 L504 126 L580 132 L672 138"
+                          />
+                          <circle class="chart-point series-1" cx="672" cy="138" r="4" />
+                          <text x="672" y="128" text-anchor="end" fill="var(--bl-chart-series-1)">
+                            128
+                          </text>
+                          <text x="48" y="222" text-anchor="start">13:30</text>
+                          <text x="672" y="222" text-anchor="end">14:30</text>
+                        </svg>
+                        <figcaption class="chart-summary" data-message-key="chart.summary">
+                          Summary: queue depth is 128 orders, 12 below the ceiling. The stream is
+                          simulated and visibly labeled. Last applied update 14:26 UTC.
+                        </figcaption>
+                      </figure>
+                    </section>
+                    <aside class="board-panel col-span-5" aria-labelledby="incidents-title">
+                      <div class="panel-head">
+                        <div>
+                          <p class="panel-kicker" data-host-content="">Attention</p>
+                          <h2 class="panel-title" id="incidents-title" data-host-content="">
+                            Open incidents
+                          </h2>
+                          <p class="panel-meta" data-host-content="">
+                            Synthetic operational fixture
+                          </p>
+                        </div>
+                      </div>
+                      <ul class="insight-list" data-host-content="">
+                        <li class="insight-item">
+                          <span
+                            class="insight-mark"
+                            aria-hidden="true"
+                            style="
+                              background: var(--bl-color-danger-surface);
+                              color: var(--bl-color-danger);
+                            "
+                            >!</span
+                          >
+                          <p class="insight-text" data-host-content="">
+                            North yard scanner delay.<span
+                              >High · started 14:08 · 18 orders affected.</span
+                            >
+                          </p>
+                        </li>
+                        <li class="insight-item">
+                          <span
+                            class="insight-mark"
+                            aria-hidden="true"
+                            style="
+                              background: var(--bl-color-warning-surface);
+                              color: var(--bl-color-warning);
+                            "
+                            >!</span
+                          >
+                          <p class="insight-text" data-host-content="">
+                            Route 12 backlog.<span
+                              >Medium · started 14:19 · queue below ceiling.</span
+                            >
+                          </p>
+                        </li>
+                      </ul>
+                      <div class="reconnect-bar" style="margin-top: 12px">
+                        <span
+                          class="status-pill status-pill--warning"
+                          data-message-key="viewer.realtime.reconnectingShort"
+                          ><span class="status-icon" aria-hidden="true">!</span>Reconnecting</span
+                        >
+                        <div class="reconnect-bar__body">
+                          <strong>Attempt 2 of 10</strong
+                          ><span
+                            >Last confirmed 14:24. Updates are buffered while the simulated socket
+                            recovers.</span
+                          >
+                        </div>
+                      </div>
+                    </aside>
+                    <section
+                      class="board-panel board-panel--flush col-span-8"
+                      aria-labelledby="events-title"
+                    >
+                      <div class="panel-head" style="padding: 16px 18px 10px">
+                        <div>
+                          <p class="panel-kicker" data-host-content="">Event table</p>
+                          <h2 class="panel-title" id="events-title" data-host-content="">
+                            Recent events
+                          </h2>
+                          <p class="panel-meta" data-host-content="">
+                            Newest first · live rows marked
+                          </p>
+                        </div>
+                      </div>
+                      <div
+                        class="table-scroll"
+                        role="region"
+                        tabindex="0"
+                        aria-labelledby="table-caption-2"
+                      >
+                        <table class="data-table">
+                          <caption id="table-caption-2" class="sr-only">
+                            Recent operational events
+                          </caption>
+                          <thead>
+                            <tr>
+                              <th scope="col" data-message-key="table.header.time">Time</th>
+                              <th scope="col" data-message-key="table.header.event">Event</th>
+                              <th scope="col" data-message-key="table.header.region">Region</th>
+                              <th scope="col" data-message-key="table.header.status">Status</th>
+                            </tr>
+                          </thead>
+                          <tbody data-host-content="">
+                            <tr>
+                              <th scope="row">14:26</th>
+                              <td>Queue below ceiling</td>
+                              <td>North</td>
+                              <td>Live</td>
+                            </tr>
+                            <tr>
+                              <th scope="row">14:24</th>
+                              <td>Scanner delay</td>
+                              <td>North</td>
+                              <td>Open</td>
+                            </tr>
+                            <tr>
+                              <th scope="row">14:19</th>
+                              <td>Route backlog</td>
+                              <td>Central</td>
+                              <td>Monitoring</td>
+                            </tr>
+                            <tr>
+                              <th scope="row">14:11</th>
+                              <td>Shift handover complete</td>
+                              <td>All</td>
+                              <td>Closed</td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </section>
+                    <section class="board-panel col-span-4" aria-labelledby="ops-note-title">
+                      <div class="panel-head">
+                        <div>
+                          <p class="panel-kicker" data-host-content="">Reading the board</p>
+                          <h2 class="panel-title" id="ops-note-title" data-host-content="">
+                            Shift note
+                          </h2>
+                        </div>
+                      </div>
+                      <p class="panel-meta" style="font-size: 12px" data-host-content="">
+                        Queue is healthy but the North scanner delay is still open. The reconnect
+                        state is separate from board health; the last confirmed data remains visible
+                        and stale policy is explicit.
+                      </p>
+                      <div class="state-actions" data-message-key="viewer.diagnostics.open">
+                        <button
+                          class="ui-button ui-button--sm"
+                          type="button"
+                          data-message-key="viewer.diagnostics.open"
+                        >
+                          Open diagnostics
+                        </button>
+                      </div>
+                    </section>
+                  </div>
+                </div>
+                <footer class="app-foot" data-host-content="">
+                  <span>Synthetic dispatch fixture · simulated realtime</span
+                  ><span>Design reference · not production UI</span>
+                </footer>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p class="ref-caption">
+          Operational boards lean on live status and incident language; the visual system stays
+          stable. Simulated transport is labeled in the header and footer, never presented as a real
+          WebSocket.
+        </p>
+      </section>
+
+      <footer class="ref-footer">
+        <p>
+          These are design references for three board compositions. They do not define invented
+          business features or real data sources; the final demo must demonstrate actual supported
+          features through public APIs.
+        </p>
+      </footer>
+    </main>
+  </body>
+</html>

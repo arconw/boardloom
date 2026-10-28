@@ -1,0 +1,629 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Localization and RTL · Boardloom design references</title>
+    <link rel="stylesheet" href="./reference.css" />
+  </head>
+  <body class="ref-page">
+    <header class="ref-banner">
+      <a class="ref-brand" href="./index.html">Boardloom design references</a>
+      <span class="ref-badge">Design reference - not production UI</span>
+      <nav class="ref-nav" aria-label="Design reference pages" data-doc-content="">
+        <a href="./index.html">Index</a>
+        <a href="./viewer-desktop.html">Viewer desktop</a>
+        <a href="./viewer-narrow.html">Viewer narrow</a>
+        <a href="./editor-desktop.html">Editor desktop</a>
+        <a href="./editor-narrow.html">Editor narrow</a>
+        <a href="./states.html">States</a>
+        <a href="./boards.html">Boards</a>
+        <a href="./localization.html" aria-current="page">Localization</a>
+        <a href="./accessibility.html">Accessibility</a>
+      </nav>
+    </header>
+
+    <main class="ref-main">
+      <header class="ref-intro">
+        <p class="ref-kicker">T05 · Localization and RTL</p>
+        <h1 class="ref-title">Copy expands; the layout and the data direction hold</h1>
+        <p class="ref-lede">
+          The design tolerates long German and Russian labels, CJK line breaking and Arabic RTL
+          without changing the host page. Numbers stay bidi-isolated, chart plots keep their data
+          direction, and every sample is a functional design reference rather than a claim of
+          linguistic certification.
+        </p>
+        <div class="ref-note-grid">
+          <div class="ref-note">
+            <strong>Stable keys</strong>
+            Each sample is annotated with the message key from
+            <a href="../message-keys.json">message-keys.json</a>. Host data labels are not
+            translated by the framework.
+          </div>
+          <div class="ref-note">
+            <strong>Logical layout</strong>
+            Spacing, borders and drawer sides use logical properties. Arabic sets
+            <code>dir="rtl"</code> only on the scoped Boardloom root.
+          </div>
+          <div class="ref-note">
+            <strong>No certification claim</strong>
+            These are functional samples. T17 records key parity, fallback, interpolation, browser
+            coverage and linguistic limitations honestly.
+          </div>
+        </div>
+      </header>
+
+      <section class="ref-artboard-section" aria-labelledby="locale-copy-title">
+        <div class="ref-artboard-head">
+          <h2 class="ref-artboard-title" id="locale-copy-title">Locale expansion samples</h2>
+          <span class="ref-artboard-meta"
+            >Same Boardloom messages · host fixture data unchanged</span
+          >
+        </div>
+        <div class="boardloom" data-boardloom-theme="light">
+          <div class="locale-grid">
+            <article class="locale-card" lang="en">
+              <div class="locale-card__head">
+                <span class="locale-card__name">English · en</span
+                ><span class="locale-card__meta">LTR · reference</span>
+              </div>
+              <div class="locale-card__body">
+                <p class="locale-sample__title" data-host-content="">
+                  District assessment overview
+                </p>
+                <p class="locale-sample__meta" data-host-content="">
+                  Synthetic fixture · updated 09:42 UTC
+                </p>
+                <div class="locale-sample__chips">
+                  <span class="filter-chip"
+                    ><span
+                      class="filter-chip__origin"
+                      data-message-key="viewer.filters.origin.board"
+                      >Board</span
+                    >Term: Fall 2026</span
+                  >
+                  <span class="filter-chip"
+                    ><span
+                      class="filter-chip__origin"
+                      data-message-key="viewer.filters.origin.group"
+                      >Group: Middle school</span
+                    >Mathematics</span
+                  >
+                </div>
+                <div class="locale-sample__actions">
+                  <button
+                    class="ui-button ui-button--primary ui-button--sm"
+                    type="button"
+                    data-message-key="common.apply"
+                  >
+                    Apply
+                  </button>
+                  <button
+                    class="ui-button ui-button--ghost ui-button--sm"
+                    type="button"
+                    data-message-key="common.cancel"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </article>
+
+            <article class="locale-card" lang="de">
+              <div class="locale-card__head">
+                <span class="locale-card__name">Deutsch · de</span
+                ><span class="locale-card__meta">LTR · long copy</span>
+              </div>
+              <div class="locale-card__body">
+                <p class="locale-sample__title" data-host-content="">
+                  Übersicht über die Bezirksbewertung
+                </p>
+                <p class="locale-sample__meta" data-host-content="">
+                  Synthetischer Datensatz · aktualisiert um 09:42 UTC
+                </p>
+                <div class="locale-sample__chips">
+                  <span class="filter-chip"
+                    ><span
+                      class="filter-chip__origin"
+                      data-message-key="viewer.filters.origin.board"
+                      >Gesamtes Board</span
+                    >Zeitraum: Herbst 2026</span
+                  >
+                  <span class="filter-chip"
+                    ><span
+                      class="filter-chip__origin"
+                      data-message-key="viewer.filters.origin.group"
+                      >Gruppe: Sekundarstufe I</span
+                    >Mathematik</span
+                  >
+                </div>
+                <div class="locale-sample__actions">
+                  <button
+                    class="ui-button ui-button--primary ui-button--sm"
+                    type="button"
+                    data-message-key="common.apply"
+                  >
+                    Übernehmen
+                  </button>
+                  <button
+                    class="ui-button ui-button--ghost ui-button--sm"
+                    type="button"
+                    data-message-key="common.cancel"
+                  >
+                    Abbrechen
+                  </button>
+                </div>
+                <p class="state-card__note">
+                  German expansion is planned for in wrapping buttons, chips and the two-line board
+                  title.
+                </p>
+              </div>
+            </article>
+
+            <article class="locale-card" lang="ru">
+              <div class="locale-card__head">
+                <span class="locale-card__name">Русский · ru</span
+                ><span class="locale-card__meta">LTR · Cyrillic</span>
+              </div>
+              <div class="locale-card__body">
+                <p class="locale-sample__title" data-host-content="">Обзор оценок района</p>
+                <p class="locale-sample__meta" data-host-content="">
+                  Синтетический набор данных · обновлено в 09:42 UTC
+                </p>
+                <div class="locale-sample__chips">
+                  <span class="filter-chip"
+                    ><span
+                      class="filter-chip__origin"
+                      data-message-key="viewer.filters.origin.board"
+                      >Вся доска</span
+                    >Срок: осень 2026</span
+                  >
+                  <span class="filter-chip"
+                    ><span
+                      class="filter-chip__origin"
+                      data-message-key="viewer.filters.origin.group"
+                      >Группа: Средняя школа</span
+                    >Математика</span
+                  >
+                </div>
+                <div class="locale-sample__actions">
+                  <button
+                    class="ui-button ui-button--primary ui-button--sm"
+                    type="button"
+                    data-message-key="common.apply"
+                  >
+                    Применить
+                  </button>
+                  <button
+                    class="ui-button ui-button--ghost ui-button--sm"
+                    type="button"
+                    data-message-key="common.cancel"
+                  >
+                    Отмена
+                  </button>
+                </div>
+                <p class="state-card__note">
+                  Cyrillic fallback keeps line height and tabular numbers stable.
+                </p>
+              </div>
+            </article>
+
+            <article class="locale-card" lang="zh-CN">
+              <div class="locale-card__head">
+                <span class="locale-card__name">简体中文 · zh-CN</span
+                ><span class="locale-card__meta">LTR · CJK</span>
+              </div>
+              <div class="locale-card__body">
+                <p class="locale-sample__title" data-host-content="">学区评估概览</p>
+                <p class="locale-sample__meta" data-host-content="">
+                  合成数据 · 更新时间 09:42 UTC
+                </p>
+                <div class="locale-sample__chips">
+                  <span class="filter-chip"
+                    ><span
+                      class="filter-chip__origin"
+                      data-message-key="viewer.filters.origin.board"
+                      >看板</span
+                    >学期：2026 秋季</span
+                  >
+                  <span class="filter-chip"
+                    ><span
+                      class="filter-chip__origin"
+                      data-message-key="viewer.filters.origin.group"
+                      >分组：初中</span
+                    >数学</span
+                  >
+                </div>
+                <div class="locale-sample__actions">
+                  <button
+                    class="ui-button ui-button--primary ui-button--sm"
+                    type="button"
+                    data-message-key="common.apply"
+                  >
+                    应用
+                  </button>
+                  <button
+                    class="ui-button ui-button--ghost ui-button--sm"
+                    type="button"
+                    data-message-key="common.cancel"
+                  >
+                    取消
+                  </button>
+                </div>
+                <p class="state-card__note">
+                  CJK line breaking and glyph fallback are checked with long labels; no remote font
+                  is required.
+                </p>
+              </div>
+            </article>
+
+            <article class="locale-card" lang="ja">
+              <div class="locale-card__head">
+                <span class="locale-card__name">日本語 · ja</span
+                ><span class="locale-card__meta">LTR · CJK</span>
+              </div>
+              <div class="locale-card__body">
+                <p class="locale-sample__title" data-host-content="">地区別評価の概要</p>
+                <p class="locale-sample__meta" data-host-content="">
+                  合成データ · 09:42 UTC に更新
+                </p>
+                <div class="locale-sample__chips">
+                  <span class="filter-chip"
+                    ><span
+                      class="filter-chip__origin"
+                      data-message-key="viewer.filters.origin.board"
+                      >ボード</span
+                    >期間: 2026年秋</span
+                  >
+                  <span class="filter-chip"
+                    ><span
+                      class="filter-chip__origin"
+                      data-message-key="viewer.filters.origin.group"
+                      >グループ: 中学校</span
+                    >数学</span
+                  >
+                </div>
+                <div class="locale-sample__actions">
+                  <button
+                    class="ui-button ui-button--primary ui-button--sm"
+                    type="button"
+                    data-message-key="common.apply"
+                  >
+                    適用
+                  </button>
+                  <button
+                    class="ui-button ui-button--ghost ui-button--sm"
+                    type="button"
+                    data-message-key="common.cancel"
+                  >
+                    キャンセル
+                  </button>
+                </div>
+                <p class="state-card__note">
+                  CJK line breaking and glyph fallback are checked with long labels; no remote font
+                  is required.
+                </p>
+              </div>
+            </article>
+
+            <article class="locale-card" lang="ko">
+              <div class="locale-card__head">
+                <span class="locale-card__name">한국어 · ko</span
+                ><span class="locale-card__meta">LTR · CJK</span>
+              </div>
+              <div class="locale-card__body">
+                <p class="locale-sample__title" data-host-content="">지역 평가 개요</p>
+                <p class="locale-sample__meta" data-host-content="">
+                  합성 데이터 · 09:42 UTC 업데이트
+                </p>
+                <div class="locale-sample__chips">
+                  <span class="filter-chip"
+                    ><span
+                      class="filter-chip__origin"
+                      data-message-key="viewer.filters.origin.board"
+                      >보드</span
+                    >기간: 2026년 가을</span
+                  >
+                  <span class="filter-chip"
+                    ><span
+                      class="filter-chip__origin"
+                      data-message-key="viewer.filters.origin.group"
+                      >그룹: 중학교</span
+                    >수학</span
+                  >
+                </div>
+                <div class="locale-sample__actions">
+                  <button
+                    class="ui-button ui-button--primary ui-button--sm"
+                    type="button"
+                    data-message-key="common.apply"
+                  >
+                    적용
+                  </button>
+                  <button
+                    class="ui-button ui-button--ghost ui-button--sm"
+                    type="button"
+                    data-message-key="common.cancel"
+                  >
+                    취소
+                  </button>
+                </div>
+                <p class="state-card__note">
+                  CJK line breaking and glyph fallback are checked with long labels; no remote font
+                  is required.
+                </p>
+              </div>
+            </article>
+
+            <article class="locale-card" lang="es">
+              <div class="locale-card__head">
+                <span class="locale-card__name">Español · es</span
+                ><span class="locale-card__meta">LTR · expansion</span>
+              </div>
+              <div class="locale-card__body">
+                <p class="locale-sample__title" data-host-content="">
+                  Resumen de evaluación del distrito
+                </p>
+                <p class="locale-sample__meta" data-host-content="">
+                  Datos sintéticos · actualizado a las 09:42 UTC
+                </p>
+                <div class="locale-sample__chips">
+                  <span class="filter-chip"
+                    ><span
+                      class="filter-chip__origin"
+                      data-message-key="viewer.filters.origin.board"
+                      >Tablero</span
+                    >Periodo: otoño 2026</span
+                  >
+                  <span class="filter-chip"
+                    ><span
+                      class="filter-chip__origin"
+                      data-message-key="viewer.filters.origin.group"
+                      >Grupo: Secundaria</span
+                    >Matemáticas</span
+                  >
+                </div>
+                <div class="locale-sample__actions">
+                  <button
+                    class="ui-button ui-button--primary ui-button--sm"
+                    type="button"
+                    data-message-key="common.apply"
+                  >
+                    Aplicar
+                  </button>
+                  <button
+                    class="ui-button ui-button--ghost ui-button--sm"
+                    type="button"
+                    data-message-key="common.cancel"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              </div>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="ref-artboard-section" aria-labelledby="rtl-title">
+        <div class="ref-artboard-head">
+          <h2 class="ref-artboard-title" id="rtl-title">
+            Arabic RTL · scoped to the board instance
+          </h2>
+          <span class="ref-artboard-meta"
+            >Host page stays LTR · board root uses dir="rtl" · numbers bidi-isolated</span
+          >
+        </div>
+        <div class="rtl-host">
+          <p class="rtl-host__label">
+            LTR host page · the board instance below sets direction only on its own root.
+          </p>
+          <div class="boardloom" data-boardloom-theme="light" lang="ar" dir="rtl">
+            <div class="app-shell" style="min-height: 0">
+              <header class="app-header" style="padding: 20px 24px 0">
+                <div class="app-identity">
+                  <p class="app-host" data-host-content="">مدارس نورث ستار · مساحة التقييم</p>
+                  <h1 class="app-title" style="font-size: 26px" data-host-content="">
+                    نظرة عامة على تقييم المنطقة
+                  </h1>
+                  <p class="app-meta">
+                    <span>بيانات تركيبية</span>
+                    <span>تم التحديث <bdi dir="ltr">09:42 UTC</bdi></span>
+                  </p>
+                </div>
+                <div class="app-toolbar">
+                  <div
+                    class="ui-segmented"
+                    role="group"
+                    aria-label="وضع اللوحة"
+                    data-message-key="a11y.modeNavigation"
+                  >
+                    <button
+                      class="ui-segment"
+                      type="button"
+                      aria-pressed="true"
+                      data-message-key="mode.viewer"
+                    >
+                      عارض
+                    </button>
+                    <button
+                      class="ui-segment"
+                      type="button"
+                      aria-pressed="false"
+                      data-message-key="mode.editor"
+                    >
+                      محرر
+                    </button>
+                  </div>
+                </div>
+              </header>
+              <div class="app-filterbar" style="margin-inline: 24px">
+                <span class="filter-label" data-message-key="viewer.filters.active"
+                  >عوامل التصفية النشطة</span
+                >
+                <span class="filter-chip">
+                  <span class="filter-chip__origin" data-message-key="viewer.filters.origin.board"
+                    >اللوحة</span
+                  >
+                  الفصل: خريف <bdi dir="ltr">2026</bdi>
+                  <button
+                    class="filter-chip__remove"
+                    type="button"
+                    aria-label="إزالة عامل التصفية الفصل خريف 2026"
+                    data-message-key="viewer.filters.removeNamed"
+                  >
+                    ×
+                  </button>
+                </span>
+                <span class="filter-chip">
+                  <span class="filter-chip__origin" data-message-key="viewer.filters.origin.group"
+                    >المجموعة: المدرسة المتوسطة</span
+                  >
+                  الرياضيات
+                  <button
+                    class="filter-chip__remove"
+                    type="button"
+                    aria-label="إزالة عامل التصفية الرياضيات"
+                    data-message-key="viewer.filters.removeNamed"
+                  >
+                    ×
+                  </button>
+                </span>
+              </div>
+              <div class="app-body" style="padding: 16px 24px 24px">
+                <div class="board-grid">
+                  <section
+                    class="board-panel metric-strip"
+                    style="grid-column: span 12"
+                    aria-label="المؤشرات الرئيسية"
+                    data-message-key="a11y.measuresRegion"
+                  >
+                    <div class="metric">
+                      <span class="metric-label" data-host-content="">الكفاءة</span
+                      ><span class="metric-value" data-host-content=""
+                        ><bdi dir="ltr">74%</bdi></span
+                      ><span class="metric-delta metric-delta--up" data-host-content=""
+                        ><bdi dir="ltr">+6 pts</bdi></span
+                      >
+                    </div>
+                    <div class="metric">
+                      <span class="metric-label" data-host-content="">الطلاب</span
+                      ><span class="metric-value" data-host-content=""
+                        ><bdi dir="ltr">12,480</bdi></span
+                      ><span class="metric-delta metric-delta--up" data-host-content=""
+                        ><bdi dir="ltr">+3.2%</bdi></span
+                      >
+                    </div>
+                    <div class="metric">
+                      <span class="metric-label" data-host-content="">الغياب المزمن</span
+                      ><span class="metric-value" data-host-content=""
+                        ><bdi dir="ltr">11.4%</bdi></span
+                      ><span class="metric-delta metric-delta--down" data-host-content=""
+                        ><bdi dir="ltr">-1.8 pts</bdi></span
+                      >
+                    </div>
+                    <div class="metric">
+                      <span class="metric-label" data-host-content="">المدارس</span
+                      ><span class="metric-value" data-host-content=""><bdi dir="ltr">24</bdi></span
+                      ><span class="metric-delta metric-delta--flat" data-host-content=""
+                        ><bdi dir="ltr">2</bdi> شبكات</span
+                      >
+                    </div>
+                  </section>
+                  <section
+                    class="board-panel"
+                    style="grid-column: span 8"
+                    aria-labelledby="rtl-chart-title"
+                  >
+                    <div class="panel-head">
+                      <div>
+                        <p class="panel-kicker" data-host-content="">الرياضيات · الصفوف 6-8</p>
+                        <h2 class="panel-title" id="rtl-chart-title" data-host-content="">
+                          اتجاه الكفاءة
+                        </h2>
+                        <p class="panel-meta" data-host-content="">
+                          النسبة المئوية · دلاء أسبوعية · اتجاه البيانات محفوظ
+                        </p>
+                      </div>
+                    </div>
+                    <figure class="chart-figure">
+                      <svg
+                        class="chart-svg"
+                        viewBox="0 0 420 150"
+                        role="img"
+                        aria-labelledby="rtl-svg-title"
+                        aria-describedby="rtl-svg-desc"
+                        data-host-content=""
+                      >
+                        <title id="rtl-svg-title">اتجاه الكفاءة من سبتمبر إلى فبراير</title>
+                        <desc id="rtl-svg-desc">
+                          ترتفع الكفاءة من 58 إلى 74 بالمئة. تبقى محاور الأرقام في اتجاه البيانات.
+                        </desc>
+                        <line class="chart-grid-line" x1="20" y1="120" x2="400" y2="120" />
+                        <line class="chart-grid-line" x1="20" y1="70" x2="400" y2="70" />
+                        <line class="chart-grid-line" x1="20" y1="20" x2="400" y2="20" />
+                        <path
+                          class="chart-line series-1"
+                          d="M30 78 L100 70 L170 66 L240 59 L310 51 L390 44"
+                        />
+                        <circle class="chart-point series-1" cx="390" cy="44" r="3" />
+                        <text x="390" y="40" text-anchor="end" fill="var(--bl-chart-series-1)">
+                          74%
+                        </text>
+                        <text x="30" y="140" text-anchor="start">سبتمبر</text>
+                        <text x="390" y="140" text-anchor="end">فبراير</text>
+                      </svg>
+                      <figcaption class="chart-summary" data-message-key="chart.summary">
+                        ملخص: الكفاءة <bdi dir="ltr">74%</bdi> في فبراير، أعلى من المرجع السابق.
+                        المحاور الرقمية تحتفظ باتجاه البيانات.
+                      </figcaption>
+                    </figure>
+                  </section>
+                  <aside
+                    class="board-panel"
+                    style="grid-column: span 4"
+                    aria-labelledby="rtl-side-title"
+                  >
+                    <p class="panel-kicker" data-host-content="">مقارنة</p>
+                    <h2 class="panel-title" id="rtl-side-title" data-host-content="">
+                      السنة السابقة
+                    </h2>
+                    <div class="delta-card">
+                      <p class="delta-card__label" data-message-key="chart.delta.percent">
+                        التغير بالنسبة المئوية
+                      </p>
+                      <p class="delta-card__value" data-host-content="">
+                        <bdi dir="ltr">+8.8%</bdi>
+                      </p>
+                      <p class="delta-card__detail" data-host-content="">
+                        <bdi dir="ltr">74%</bdi> مقابل <bdi dir="ltr">68%</bdi>
+                      </p>
+                    </div>
+                    <p class="panel-meta" style="margin-top: 10px" data-host-content="">
+                      ثلاث مدارس لديها قيم سابقة غير متاحة.
+                    </p>
+                  </aside>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p class="ref-caption">
+          The host page remains LTR. Inside the board, spacing and drawer sides follow
+          <code>dir="rtl"</code>, icons mirror only when direction-bearing, and every numeric token
+          is isolated with <code>&lt;bdi dir="ltr"&gt;</code> so signs and percent marks stay
+          attached. A Devanagari/Hindi sample is not included in T05; T17 must verify Devanagari
+          rendering and line breaking in the real browser flow.
+        </p>
+      </section>
+
+      <footer class="ref-footer">
+        <p>
+          Functional localization samples only. Full dictionaries, fallback, interpolation,
+          pluralization, state preservation and browser RTL evidence belong to T17 and are checked
+          against <a href="../LOCALIZATION.md">the localization specification</a>.
+        </p>
+      </footer>
+    </main>
+  </body>
+</html>

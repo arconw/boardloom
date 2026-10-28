@@ -23,7 +23,7 @@
     "format:check": "prettier --check .",
     "typecheck": "tsc -p tsconfig.json --noEmit && npm run typecheck --workspaces --if-present",
     "test": "npm run test:unit",
-    "test:unit": "vitest run tests/framework/boundaries.test.ts tests/framework/docs.test.ts tests/framework/foundation.test.ts tests/framework/public-surface.test.mjs tests/framework/tooling.test.ts tests/framework/core/unit",
+    "test:unit": "vitest run tests/framework/boundaries.test.ts tests/framework/design.test.ts tests/framework/docs.test.ts tests/framework/foundation.test.ts tests/framework/public-surface.test.mjs tests/framework/tooling.test.ts tests/framework/core/unit",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "test:contract": "vitest run tests/framework/core/contract",

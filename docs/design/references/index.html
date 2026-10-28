@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Reference index · Boardloom design references</title>
+    <link rel="stylesheet" href="./reference.css" />
+    <style>
+      .index-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 16px;
+        margin-top: 26px;
+      }
+      .index-card {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        padding: 18px;
+        border: 1px solid #c9c1b3;
+        border-radius: 8px;
+        background: #faf7f0;
+      }
+      .index-card h2 {
+        margin: 0;
+        font-family: "Iowan Old Style", "Palatino Linotype", "Noto Serif", Georgia, serif;
+        font-size: 24px;
+        letter-spacing: -0.02em;
+      }
+      .index-card p {
+        flex: 1;
+        margin: 0;
+        color: #44504b;
+        font-size: 14px;
+      }
+      .index-card a {
+        color: #0a5753;
+        font-weight: 600;
+        text-underline-offset: 3px;
+      }
+      .index-card__meta {
+        color: #59645f;
+        font-size: 12px;
+        font-weight: 600;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+      .index-cover {
+        display: grid;
+        grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr);
+        gap: 18px;
+        align-items: stretch;
+        margin-top: 22px;
+      }
+      .index-swatch-board {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 8px;
+        padding: 14px;
+        border: 1px solid #c9c1b3;
+        border-radius: 8px;
+        background: #faf7f0;
+      }
+      .index-swatch {
+        display: grid;
+        gap: 4px;
+        font-size: 12px;
+        color: #59645f;
+      }
+      .index-swatch span:first-child {
+        height: 44px;
+        border: 1px solid #b9b1a3;
+        border-radius: 4px;
+      }
+      @media (max-width: 980px) {
+        .index-grid,
+        .index-cover {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body class="ref-page" data-reference-kind="documentation">
+    <header class="ref-banner">
+      <a class="ref-brand" href="./index.html">Boardloom design references</a>
+      <span class="ref-badge">Design reference - not production UI</span>
+      <nav class="ref-nav" aria-label="Design reference pages" data-doc-content="">
+        <a href="./index.html" aria-current="page">Index</a>
+        <a href="./viewer-desktop.html">Viewer desktop</a>
+        <a href="./viewer-narrow.html">Viewer narrow</a>
+        <a href="./editor-desktop.html">Editor desktop</a>
+        <a href="./editor-narrow.html">Editor narrow</a>
+        <a href="./states.html">States</a>
+        <a href="./boards.html">Boards</a>
+        <a href="./localization.html">Localization</a>
+        <a href="./accessibility.html">Accessibility</a>
+      </nav>
+    </header>
+
+    <main class="ref-main">
+      <header class="ref-intro">
+        <p class="ref-kicker">T05 · Design package</p>
+        <h1 class="ref-title">Boardloom design references</h1>
+        <p class="ref-lede">
+          A reviewable design basis for the framework viewer and editor: warm light surfaces, deep
+          ink dark surfaces, a petrol accent, restrained amber emphasis and a chart palette that
+          always has a non-color companion. Every composition on this site is a static design
+          reference, not a live Boardloom build.
+        </p>
+      </header>
+
+      <div class="index-cover">
+        <section class="ref-note" aria-labelledby="direction-title">
+          <strong id="direction-title">Visual direction</strong>
+          Compact board identity and mode toolbar, one quiet filter strip, a spacious analytical
+          canvas. The editor adds a block library and a precise inspector without shrinking the
+          chart into an afterthought. Boardloom branding is documentation-only here; embedded hosts
+          keep their own identity.
+        </section>
+        <section class="index-swatch-board" aria-label="Core token palette">
+          <div class="index-swatch"><span style="background: #f4f0e8"></span>Canvas light</div>
+          <div class="index-swatch"><span style="background: #fffdf8"></span>Surface light</div>
+          <div class="index-swatch"><span style="background: #0d6964"></span>Petrol accent</div>
+          <div class="index-swatch"><span style="background: #8a4b00"></span>Focus light</div>
+          <div class="index-swatch"><span style="background: #111816"></span>Canvas dark</div>
+          <div class="index-swatch"><span style="background: #18211f"></span>Surface dark</div>
+          <div class="index-swatch"><span style="background: #5fd0c4"></span>Accent dark</div>
+          <div class="index-swatch"><span style="background: #f4c15e"></span>Focus dark</div>
+        </section>
+      </div>
+
+      <div class="index-grid">
+        <section class="index-card">
+          <span class="index-card__meta">Composition · 1440 px</span>
+          <h2>Viewer desktop</h2>
+          <p>
+            Assessment overview in light and dark, with board identity, filter origin, compact
+            metrics, a trend chart, a ranking panel and an accessible table.
+          </p>
+          <a href="./viewer-desktop.html">Open viewer desktop</a>
+        </section>
+        <section class="index-card">
+          <span class="index-card__meta">Composition · 320-768 px</span>
+          <h2>Viewer narrow</h2>
+          <p>
+            Viewer at 320, 390 and tablet widths. Filters become a drawer; charts reflow and keep
+            their data alternative; the page never scrolls horizontally.
+          </p>
+          <a href="./viewer-narrow.html">Open viewer narrow</a>
+        </section>
+        <section class="index-card">
+          <span class="index-card__meta">Composition · 1440 px</span>
+          <h2>Editor desktop</h2>
+          <p>
+            Block library, dominant canvas, property inspector, dirty draft bar and a visible
+            keyboard alternative for move and resize in light and dark themes.
+          </p>
+          <a href="./editor-desktop.html">Open editor desktop</a>
+        </section>
+        <section class="index-card">
+          <span class="index-card__meta">Composition · 320-390 px</span>
+          <h2>Editor narrow</h2>
+          <p>
+            Bottom drawer behavior for the block library and inspector, a sticky draft bar and large
+            labeled layout controls instead of drag-only editing.
+          </p>
+          <a href="./editor-narrow.html">Open editor narrow</a>
+        </section>
+        <section class="index-card">
+          <span class="index-card__meta">State gallery</span>
+          <h2>States</h2>
+          <p>
+            Loading, empty, error, stale, partial, diagnostics, filter origin, comparison, realtime
+            reconnect and plugin error, each with message-key and announcement notes.
+          </p>
+          <a href="./states.html">Open state gallery</a>
+        </section>
+        <section class="index-card">
+          <span class="index-card__meta">Three boards</span>
+          <h2>Board range</h2>
+          <p>
+            An assessment overview, a commercial metrics board and an operational live-monitoring
+            board share one visual language without copying one composition.
+          </p>
+          <a href="./boards.html">Open board range</a>
+        </section>
+        <section class="index-card">
+          <span class="index-card__meta">Locale expansion</span>
+          <h2>Localization and RTL</h2>
+          <p>
+            Long German and Russian copy, CJK samples and a scoped Arabic RTL instance inside an LTR
+            host page. Values stay bidi-isolated and chart axes keep data direction.
+          </p>
+          <a href="./localization.html">Open localization references</a>
+        </section>
+        <section class="index-card">
+          <span class="index-card__meta">Keyboard and focus</span>
+          <h2>Accessibility</h2>
+          <p>
+            Annotated focus order, landmarks, live regions and keyboard alternatives for every core
+            flow, with the reflow and reduced-motion plan.
+          </p>
+          <a href="./accessibility.html">Open accessibility annotations</a>
+        </section>
+        <section class="index-card">
+          <span class="index-card__meta">Specification</span>
+          <h2>Design system</h2>
+          <p>
+            Token tables, theme direction, component and state specifications, plus the visual
+            acceptance checklist and traceability to the task requirements.
+          </p>
+          <a href="../DESIGN_SYSTEM.md">Read the design system</a>
+          <a href="../VISUAL_ACCEPTANCE.md">Read the acceptance checklist</a>
+        </section>
+      </div>
+
+      <div class="ref-note-grid" style="margin-top: 24px">
+        <div class="ref-note">
+          <strong>What approval means</strong>
+          The direction, token layer, compositions, states, accessibility annotations, message-key
+          approach and acceptance criteria are approved for T06 and later UI work.
+        </div>
+        <div class="ref-note">
+          <strong>What it does not mean</strong>
+          No production viewer, editor, renderer, locale dictionary or runtime behavior is claimed.
+          Final UI evidence belongs to the real build.
+        </div>
+        <div class="ref-note">
+          <strong>Video</strong>
+          The independent reviewer records the required design walkthrough of viewer, editor, states
+          and narrow layouts, with every mock labeled as a design reference.
+        </div>
+      </div>
+
+      <footer class="ref-footer">
+        <p>
+          See <a href="../README.md">the design package index</a> for the documentation location,
+          theme contract and review method. Synthetic fixtures only; no real records.
+        </p>
+      </footer>
+    </main>
+  </body>
+</html>

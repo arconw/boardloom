@@ -1,0 +1,957 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Viewer narrow · Boardloom design references</title>
+    <link rel="stylesheet" href="./reference.css" />
+  </head>
+  <body class="ref-page">
+    <header class="ref-banner">
+      <a class="ref-brand" href="./index.html">Boardloom design references</a>
+      <span class="ref-badge">Design reference - not production UI</span>
+      <nav class="ref-nav" aria-label="Design reference pages" data-doc-content="">
+        <a href="./index.html">Index</a>
+        <a href="./viewer-desktop.html">Viewer desktop</a>
+        <a href="./viewer-narrow.html" aria-current="page">Viewer narrow</a>
+        <a href="./editor-desktop.html">Editor desktop</a>
+        <a href="./editor-narrow.html">Editor narrow</a>
+        <a href="./states.html">States</a>
+        <a href="./boards.html">Boards</a>
+        <a href="./localization.html">Localization</a>
+        <a href="./accessibility.html">Accessibility</a>
+      </nav>
+    </header>
+
+    <main class="ref-main">
+      <header class="ref-intro">
+        <p class="ref-kicker">T05 · Viewer composition · Narrow and tablet</p>
+        <h1 class="ref-title">One board, every width, no horizontal page scroll</h1>
+        <p class="ref-lede">
+          At narrow widths the filter strip becomes a summary and a drawer, blocks stack in one
+          column, and charts keep their summary and data table. The 320 px composition is the
+          minimum, not a squeezed desktop. The tablet composition keeps filters inline and uses the
+          8-column grid.
+        </p>
+        <div class="ref-note-grid">
+          <div class="ref-note">
+            <strong>320 px</strong>
+            Header wraps into identity and actions. Metrics become one column. Chart axes and legend
+            remain readable; the table alternative is available.
+          </div>
+          <div class="ref-note">
+            <strong>390 px</strong>
+            Two metric columns fit. Filter summary and mode controls stay reachable without covering
+            the board title.
+          </div>
+          <div class="ref-note">
+            <strong>Tablet</strong>
+            At 768 px the filter strip can stay inline and the 8-column grid gives the chart five
+            columns with a three-column side panel.
+          </div>
+        </div>
+      </header>
+
+      <section class="ref-artboard-section" aria-labelledby="narrow-320-title">
+        <div class="ref-artboard-head">
+          <h2 class="ref-artboard-title" id="narrow-320-title">Viewer · 320 px · default</h2>
+          <span class="ref-artboard-meta">Minimum width · assessment fixture · light</span>
+        </div>
+        <div class="ref-artboard-frame">
+          <div class="ref-artboard ref-artboard--320">
+            <div
+              class="boardloom ref-app app-shell--narrow app-shell--narrow-320"
+              data-boardloom-theme="light"
+            >
+              <a class="sr-only" href="#narrow-320-main" data-message-key="a11y.skipToContent"
+                >Skip to board content</a
+              >
+              <div class="narrow-header">
+                <div class="app-identity">
+                  <p class="app-host" data-host-content="">Northstar Schools</p>
+                  <h1 class="app-title" data-host-content="">District assessment overview</h1>
+                </div>
+                <div class="app-toolbar">
+                  <div
+                    class="ui-segmented"
+                    role="group"
+                    aria-label="Board mode"
+                    data-message-key="a11y.modeNavigation"
+                  >
+                    <button
+                      class="ui-segment"
+                      type="button"
+                      aria-pressed="true"
+                      data-message-key="mode.viewer"
+                    >
+                      Viewer
+                    </button>
+                    <button
+                      class="ui-segment"
+                      type="button"
+                      aria-pressed="false"
+                      data-message-key="mode.editor"
+                    >
+                      Editor
+                    </button>
+                  </div>
+                  <button
+                    class="ui-icon-button"
+                    type="button"
+                    aria-label="More board actions"
+                    data-message-key="board.moreActions"
+                  >
+                    ⋯
+                  </button>
+                </div>
+              </div>
+              <p class="narrow-meta">
+                <span>Synthetic fixture</span>
+                <span>Updated 09:42 UTC</span>
+              </p>
+              <div class="narrow-filterbar">
+                <button
+                  class="ui-button ui-button--sm"
+                  type="button"
+                  data-message-key="viewer.filters.count"
+                >
+                  Filters (3)
+                </button>
+                <span class="status-pill status-pill--live" data-message-key="viewer.realtime.live">
+                  <span class="status-dot" aria-hidden="true"></span>
+                  Live
+                </span>
+              </div>
+              <div
+                class="narrow-body"
+                id="narrow-320-main"
+                role="region"
+                aria-label="Board content"
+                data-message-key="a11y.boardRegion"
+              >
+                <div class="board-grid">
+                  <section
+                    class="board-panel metric-strip"
+                    aria-label="Key measures"
+                    data-message-key="a11y.measuresRegion"
+                  >
+                    <div class="metric">
+                      <span class="metric-label" data-host-content="">Proficiency</span>
+                      <span class="metric-value" data-host-content=""
+                        >74<span class="metric-unit" data-host-content="">%</span></span
+                      >
+                      <span class="metric-delta metric-delta--up" data-host-content="">+6 pts</span>
+                      <svg
+                        class="metric-spark"
+                        viewBox="0 0 76 34"
+                        aria-hidden="true"
+                        data-host-content=""
+                      >
+                        <path d="M2 26 L16 23 L30 22 L44 16 L58 12 L74 8" />
+                      </svg>
+                    </div>
+                    <div class="metric">
+                      <span class="metric-label" data-host-content="">Students</span>
+                      <span class="metric-value" data-host-content="">12,480</span>
+                      <span class="metric-delta metric-delta--up" data-host-content="">+3.2%</span>
+                      <svg
+                        class="metric-spark"
+                        viewBox="0 0 76 34"
+                        aria-hidden="true"
+                        data-host-content=""
+                      >
+                        <path d="M2 27 L16 25 L30 19 L44 21 L58 14 L74 10" />
+                      </svg>
+                    </div>
+                    <div class="metric">
+                      <span class="metric-label" data-host-content="">Chronic absence</span>
+                      <span class="metric-value" data-host-content=""
+                        >11.4<span class="metric-unit" data-host-content="">%</span></span
+                      >
+                      <span class="metric-delta metric-delta--down" data-host-content=""
+                        >-1.8 pts</span
+                      >
+                      <svg
+                        class="metric-spark"
+                        viewBox="0 0 76 34"
+                        aria-hidden="true"
+                        data-host-content=""
+                      >
+                        <path d="M2 9 L16 12 L30 14 L44 18 L58 21 L74 25" />
+                      </svg>
+                    </div>
+                    <div class="metric">
+                      <span class="metric-label" data-host-content="">Schools</span>
+                      <span class="metric-value" data-host-content="">24</span>
+                      <span class="metric-delta metric-delta--flat" data-host-content=""
+                        >2 networks</span
+                      >
+                      <svg
+                        class="metric-spark"
+                        viewBox="0 0 76 34"
+                        aria-hidden="true"
+                        data-host-content=""
+                      >
+                        <path d="M2 18 L16 18 L30 17 L44 18 L58 17 L74 18" />
+                      </svg>
+                    </div>
+                  </section>
+
+                  <section class="board-panel" aria-labelledby="narrow-trend-title">
+                    <div class="panel-head">
+                      <div>
+                        <p class="panel-kicker" data-host-content="">Mathematics · grades 6-8</p>
+                        <h2 class="panel-title" id="narrow-trend-title" data-host-content="">
+                          Proficiency trend
+                        </h2>
+                        <p class="panel-meta" data-host-content="">Percent · weekly buckets</p>
+                      </div>
+                      <button
+                        class="ui-icon-button"
+                        type="button"
+                        aria-label="Chart options"
+                        data-message-key="chart.options"
+                      >
+                        ⋯
+                      </button>
+                    </div>
+                    <figure class="chart-figure">
+                      <svg
+                        class="chart-svg"
+                        viewBox="0 0 280 180"
+                        role="img"
+                        aria-labelledby="narrow-chart-title narrow-chart-desc"
+                        data-host-content=""
+                      >
+                        <title id="narrow-chart-title">
+                          Mathematics proficiency trend at narrow width
+                        </title>
+                        <desc id="narrow-chart-desc">
+                          Proficiency rises from 58 percent to 74 percent. Prior-year reference
+                          rises from 54 to 68 percent. Target is 80 percent.
+                        </desc>
+                        <line class="chart-grid-line" x1="24" y1="140" x2="268" y2="140" />
+                        <line class="chart-grid-line" x1="24" y1="80" x2="268" y2="80" />
+                        <line class="chart-grid-line" x1="24" y1="20" x2="268" y2="20" />
+                        <line class="chart-threshold" x1="24" y1="32" x2="268" y2="32" />
+                        <text x="268" y="24" text-anchor="end" fill="var(--bl-chart-threshold)">
+                          Target
+                        </text>
+                        <path
+                          class="chart-line series-2 series-dash-2"
+                          d="M30 88 L77 82 L124 76 L171 74 L218 68 L262 60"
+                        />
+                        <path
+                          class="chart-line series-1"
+                          d="M30 80 L77 72 L124 68 L171 62 L218 54 L262 48"
+                        />
+                        <circle class="chart-point series-1" cx="262" cy="48" r="3" />
+                        <text x="24" y="158" text-anchor="start">Sep</text>
+                        <text x="262" y="158" text-anchor="end">Feb</text>
+                        <text x="262" y="45" text-anchor="end" fill="var(--bl-chart-series-1)">
+                          74%
+                        </text>
+                      </svg>
+                      <figcaption class="chart-summary" data-message-key="chart.summary">
+                        Chart summary: 74 percent in February, 6 points above the prior-year
+                        reference and 6 points below target. Scope: fall 2026, grades 6-8,
+                        mathematics. Synthetic values.
+                      </figcaption>
+                    </figure>
+                    <details class="chart-data">
+                      <summary data-message-key="chart.viewDataTable">View data table</summary>
+                      <div
+                        class="table-scroll"
+                        role="region"
+                        tabindex="0"
+                        aria-labelledby="table-caption-1"
+                      >
+                        <table class="data-table narrow-table">
+                          <caption id="table-caption-1" class="sr-only">
+                            Proficiency values
+                          </caption>
+                          <thead>
+                            <tr>
+                              <th scope="col" data-message-key="table.header.month">Month</th>
+                              <th scope="col" class="num" data-host-content="">Fall 2026</th>
+                              <th
+                                scope="col"
+                                class="num"
+                                data-message-key="table.header.priorPeriod"
+                              >
+                                Prior year
+                              </th>
+                            </tr>
+                          </thead>
+                          <tbody data-host-content="">
+                            <tr>
+                              <th scope="row">Sep</th>
+                              <td class="num">58%</td>
+                              <td class="num">54%</td>
+                            </tr>
+                            <tr>
+                              <th scope="row">Oct</th>
+                              <td class="num">62%</td>
+                              <td class="num">57%</td>
+                            </tr>
+                            <tr>
+                              <th scope="row">Nov</th>
+                              <td class="num">64%</td>
+                              <td class="num">60%</td>
+                            </tr>
+                            <tr>
+                              <th scope="row">Dec</th>
+                              <td class="num">67%</td>
+                              <td class="num">61%</td>
+                            </tr>
+                            <tr>
+                              <th scope="row">Jan</th>
+                              <td class="num">71%</td>
+                              <td class="num">64%</td>
+                            </tr>
+                            <tr>
+                              <th scope="row">Feb</th>
+                              <td class="num">74%</td>
+                              <td class="num">68%</td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </details>
+                  </section>
+
+                  <section
+                    class="board-panel board-panel--flush"
+                    aria-labelledby="narrow-table-title"
+                  >
+                    <div class="panel-head" style="padding: 14px 14px 8px">
+                      <div>
+                        <p class="panel-kicker" data-host-content="">Table</p>
+                        <h2 class="panel-title" id="narrow-table-title" data-host-content="">
+                          Schools
+                        </h2>
+                        <p class="panel-meta" data-host-content="">Top rows by proficiency</p>
+                      </div>
+                    </div>
+                    <div
+                      class="table-scroll"
+                      role="region"
+                      tabindex="0"
+                      aria-labelledby="table-caption-2"
+                    >
+                      <table class="data-table narrow-table">
+                        <caption id="table-caption-2" class="sr-only">
+                          Schools by proficiency, narrow layout
+                        </caption>
+                        <thead>
+                          <tr>
+                            <th scope="col" data-message-key="table.header.school">School</th>
+                            <th
+                              scope="col"
+                              class="num"
+                              data-message-key="table.header.proficiencyShort"
+                            >
+                              Prof.
+                            </th>
+                            <th scope="col" class="num" data-message-key="table.header.change">
+                              Change
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody data-host-content="">
+                          <tr>
+                            <th scope="row">Cedar Grove</th>
+                            <td class="num">84%</td>
+                            <td class="num">+9 pts</td>
+                          </tr>
+                          <tr>
+                            <th scope="row">Harbor View</th>
+                            <td class="num">81%</td>
+                            <td class="num">+7 pts</td>
+                          </tr>
+                          <tr>
+                            <th scope="row">Lakeside</th>
+                            <td class="num">77%</td>
+                            <td class="num">+6 pts</td>
+                          </tr>
+                          <tr>
+                            <th scope="row">Mesa Ridge</th>
+                            <td class="num">64%</td>
+                            <td class="num missing">Not available</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </section>
+                </div>
+              </div>
+              <footer class="app-foot" data-host-content="">
+                <span>Synthetic fixture · design reference</span>
+              </footer>
+            </div>
+          </div>
+        </div>
+        <p class="ref-caption">
+          No page-level horizontal overflow. The chart summary and table remain available; the dense
+          school table scrolls inside its own region.
+        </p>
+      </section>
+
+      <section class="ref-artboard-section" aria-labelledby="narrow-320-sheet-title">
+        <div class="ref-artboard-head">
+          <h2 class="ref-artboard-title" id="narrow-320-sheet-title">
+            Viewer · 320 px · filter drawer open
+          </h2>
+          <span class="ref-artboard-meta"
+            >Modal bottom sheet · focus returns to Filters on close</span
+          >
+        </div>
+        <div class="ref-artboard-frame">
+          <div class="ref-artboard ref-artboard--320">
+            <div
+              class="boardloom ref-app app-shell--narrow app-shell--narrow-320 narrow-stage"
+              data-boardloom-theme="light"
+            >
+              <div class="narrow-header">
+                <div class="app-identity">
+                  <p class="app-host" data-host-content="">Northstar Schools</p>
+                  <h1 class="app-title" data-host-content="">District assessment overview</h1>
+                </div>
+              </div>
+              <div
+                class="narrow-body"
+                aria-hidden="true"
+                role="region"
+                aria-label="Board content"
+                data-message-key="a11y.boardRegion"
+              >
+                <div class="board-grid">
+                  <section class="board-panel">
+                    <div class="skeleton skeleton--title"></div>
+                    <div class="skeleton skeleton--chart"></div>
+                    <div class="skeleton skeleton--line"></div>
+                  </section>
+                </div>
+              </div>
+              <div class="sheet-scrim">
+                <section
+                  class="sheet"
+                  role="dialog"
+                  aria-modal="true"
+                  aria-labelledby="filter-sheet-title"
+                >
+                  <div class="drawer-handle" aria-hidden="true"></div>
+                  <div class="sheet-head">
+                    <h2 class="sheet-title" id="filter-sheet-title">Filters</h2>
+                    <button
+                      class="ui-icon-button"
+                      type="button"
+                      aria-label="Close filters"
+                      data-message-key="viewer.filters.close"
+                    >
+                      ×
+                    </button>
+                  </div>
+                  <div class="sheet-body">
+                    <div class="ui-field">
+                      <span class="ui-label" data-message-key="viewer.filters.field.term"
+                        >Term</span
+                      >
+                      <select
+                        class="ui-select"
+                        aria-label="Term"
+                        data-message-key="viewer.filters.field.term"
+                      >
+                        <option>2026 · Fall</option>
+                        <option>2026 · Spring</option>
+                      </select>
+                    </div>
+                    <div class="ui-field">
+                      <span class="ui-label" data-message-key="viewer.filters.field.gradeBand"
+                        >Grade band</span
+                      >
+                      <select
+                        class="ui-select"
+                        aria-label="Grade band"
+                        data-message-key="viewer.filters.field.gradeBand"
+                      >
+                        <option>6-8</option>
+                        <option>9-12</option>
+                      </select>
+                    </div>
+                    <div class="ui-field">
+                      <span class="ui-label" data-message-key="viewer.filters.field.subject"
+                        >Subject</span
+                      >
+                      <select
+                        class="ui-select"
+                        aria-label="Subject"
+                        data-message-key="viewer.filters.field.subject"
+                      >
+                        <option>Mathematics</option>
+                        <option>Reading</option>
+                      </select>
+                    </div>
+                    <div class="callout">
+                      The Middle school group applies the Subject filter to 6 blocks. The origin is
+                      shown on the chip as “Group: Middle school”.
+                    </div>
+                    <div class="state-actions">
+                      <button
+                        class="ui-button ui-button--primary"
+                        type="button"
+                        data-message-key="viewer.filters.apply"
+                      >
+                        Apply filters
+                      </button>
+                      <button
+                        class="ui-button ui-button--ghost"
+                        type="button"
+                        data-message-key="viewer.filters.reset"
+                      >
+                        Reset filters
+                      </button>
+                    </div>
+                  </div>
+                </section>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p class="ref-caption">
+          The sheet is modal, traps focus, closes with Escape and returns focus to the Filters
+          button. The scrim uses the backdrop token; the board behind is not operable.
+        </p>
+      </section>
+
+      <section class="ref-artboard-section" aria-labelledby="narrow-390-title">
+        <div class="ref-artboard-head">
+          <h2 class="ref-artboard-title" id="narrow-390-title">Viewer · 390 px</h2>
+          <span class="ref-artboard-meta">Two-column metric rhythm · light</span>
+        </div>
+        <div class="ref-artboard-frame">
+          <div class="ref-artboard ref-artboard--390">
+            <div class="boardloom ref-app app-shell--narrow" data-boardloom-theme="light">
+              <div class="narrow-header">
+                <div class="app-identity">
+                  <p class="app-host" data-host-content="">Northstar Schools</p>
+                  <h1 class="app-title" data-host-content="">District assessment overview</h1>
+                </div>
+                <div class="app-toolbar">
+                  <div
+                    class="ui-segmented"
+                    role="group"
+                    aria-label="Board mode"
+                    data-message-key="a11y.modeNavigation"
+                  >
+                    <button
+                      class="ui-segment"
+                      type="button"
+                      aria-pressed="true"
+                      data-message-key="mode.viewer"
+                    >
+                      Viewer
+                    </button>
+                    <button
+                      class="ui-segment"
+                      type="button"
+                      aria-pressed="false"
+                      data-message-key="mode.editor"
+                    >
+                      Editor
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <p class="narrow-meta">
+                <span>Synthetic fixture</span><span>Updated 09:42 UTC</span>
+              </p>
+              <div class="narrow-filterbar">
+                <button
+                  class="ui-button ui-button--sm"
+                  type="button"
+                  data-message-key="viewer.filters.count"
+                >
+                  Filters (3)
+                </button>
+                <span class="status-pill status-pill--live" data-message-key="viewer.realtime.live"
+                  ><span class="status-dot" aria-hidden="true"></span>Live</span
+                >
+              </div>
+              <div
+                class="narrow-body"
+                role="region"
+                aria-label="Board content"
+                data-message-key="a11y.boardRegion"
+              >
+                <div class="board-grid">
+                  <section
+                    class="board-panel metric-strip"
+                    aria-label="Key measures"
+                    data-message-key="a11y.measuresRegion"
+                  >
+                    <div class="metric">
+                      <span class="metric-label" data-host-content="">Proficiency</span>
+                      <span class="metric-value" data-host-content=""
+                        >74<span class="metric-unit" data-host-content="">%</span></span
+                      >
+                      <span class="metric-delta metric-delta--up" data-host-content="">+6 pts</span>
+                    </div>
+                    <div class="metric">
+                      <span class="metric-label" data-host-content="">Students</span>
+                      <span class="metric-value" data-host-content="">12,480</span>
+                      <span class="metric-delta metric-delta--up" data-host-content="">+3.2%</span>
+                    </div>
+                    <div class="metric">
+                      <span class="metric-label" data-host-content="">Absence</span>
+                      <span class="metric-value" data-host-content=""
+                        >11.4<span class="metric-unit" data-host-content="">%</span></span
+                      >
+                      <span class="metric-delta metric-delta--down" data-host-content=""
+                        >-1.8 pts</span
+                      >
+                    </div>
+                    <div class="metric">
+                      <span class="metric-label" data-host-content="">Schools</span>
+                      <span class="metric-value" data-host-content="">24</span>
+                      <span class="metric-delta metric-delta--flat" data-host-content=""
+                        >2 networks</span
+                      >
+                    </div>
+                  </section>
+                  <section class="board-panel" aria-labelledby="narrow-390-chart-title">
+                    <div class="panel-head">
+                      <div>
+                        <p class="panel-kicker" data-host-content="">Mathematics · 6-8</p>
+                        <h2 class="panel-title" id="narrow-390-chart-title" data-host-content="">
+                          Proficiency trend
+                        </h2>
+                        <p class="panel-meta" data-host-content="">Percent · weekly buckets</p>
+                      </div>
+                      <button
+                        class="ui-icon-button"
+                        type="button"
+                        aria-label="Chart options"
+                        data-message-key="chart.options"
+                      >
+                        ⋯
+                      </button>
+                    </div>
+                    <figure class="chart-figure">
+                      <svg
+                        class="chart-svg"
+                        viewBox="0 0 320 170"
+                        role="img"
+                        aria-labelledby="narrow-390-chart-title"
+                        aria-describedby="narrow-390-chart-desc"
+                        data-host-content=""
+                      >
+                        <title id="narrow-390-chart-desc">Proficiency trend with target</title>
+                        <desc>
+                          Proficiency rises from 58 to 74 percent; prior year rises from 54 to 68
+                          percent; target 80 percent.
+                        </desc>
+                        <line class="chart-grid-line" x1="24" y1="132" x2="304" y2="132" />
+                        <line class="chart-grid-line" x1="24" y1="72" x2="304" y2="72" />
+                        <line class="chart-grid-line" x1="24" y1="20" x2="304" y2="20" />
+                        <line class="chart-threshold" x1="24" y1="34" x2="304" y2="34" />
+                        <path
+                          class="chart-line series-2 series-dash-2"
+                          d="M32 86 L86 80 L140 74 L194 72 L248 66 L296 58"
+                        />
+                        <path
+                          class="chart-line series-1"
+                          d="M32 78 L86 70 L140 66 L194 60 L248 52 L296 46"
+                        />
+                        <circle class="chart-point series-1" cx="296" cy="46" r="3" />
+                        <text x="24" y="150" text-anchor="start">Sep</text>
+                        <text x="296" y="150" text-anchor="end">Feb</text>
+                        <text x="296" y="43" text-anchor="end" fill="var(--bl-chart-series-1)">
+                          74%
+                        </text>
+                      </svg>
+                      <figcaption class="chart-summary" data-message-key="chart.summary">
+                        Summary: 74 percent in February, 6 points above the prior-year reference.
+                        Target 80 percent. Synthetic values; filter scope preserved.
+                      </figcaption>
+                    </figure>
+                  </section>
+                  <section class="board-panel">
+                    <div class="state-empty">
+                      <div>
+                        <span class="state-empty__mark" aria-hidden="true">i</span>
+                        <p class="state-empty__title">No breakdown selected</p>
+                        <p class="state-empty__text">
+                          Choose a network or school to compare within this scope.
+                        </p>
+                      </div>
+                    </div>
+                  </section>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="ref-artboard-section" aria-labelledby="tablet-title">
+        <div class="ref-artboard-head">
+          <h2 class="ref-artboard-title" id="tablet-title">Viewer · 768 px · tablet</h2>
+          <span class="ref-artboard-meta">8-column grid · inline filter strip · light</span>
+        </div>
+        <div class="ref-artboard-frame">
+          <div class="ref-artboard ref-artboard--768">
+            <div class="boardloom ref-app app-shell--tablet" data-boardloom-theme="light">
+              <header class="app-header">
+                <div class="app-identity">
+                  <p class="app-host" data-host-content="">Northstar Schools</p>
+                  <h1 class="app-title" data-host-content="">District assessment overview</h1>
+                  <p class="app-meta">
+                    <span>Synthetic fixture</span><span>Updated 09:42 UTC</span
+                    ><span>Times in UTC</span>
+                  </p>
+                </div>
+                <div class="app-toolbar">
+                  <div
+                    class="ui-segmented"
+                    role="group"
+                    aria-label="Board mode"
+                    data-message-key="a11y.modeNavigation"
+                  >
+                    <button
+                      class="ui-segment"
+                      type="button"
+                      aria-pressed="true"
+                      data-message-key="mode.viewer"
+                    >
+                      Viewer
+                    </button>
+                    <button
+                      class="ui-segment"
+                      type="button"
+                      aria-pressed="false"
+                      data-message-key="mode.editor"
+                    >
+                      Editor
+                    </button>
+                  </div>
+                  <button
+                    class="ui-icon-button"
+                    type="button"
+                    aria-label="More board actions"
+                    data-message-key="board.moreActions"
+                  >
+                    ⋯
+                  </button>
+                </div>
+              </header>
+              <form
+                class="app-filterbar"
+                aria-label="Board filters"
+                data-message-key="a11y.filterRegion"
+              >
+                <span class="filter-label" data-message-key="viewer.filters.active">Active</span>
+                <span class="filter-chip"
+                  ><span class="filter-chip__origin" data-message-key="viewer.filters.origin.board"
+                    >Board</span
+                  >Term: Fall 2026<button
+                    class="filter-chip__remove"
+                    type="button"
+                    aria-label="Remove filter Term Fall 2026"
+                    data-message-key="viewer.filters.removeNamed"
+                  >
+                    ×
+                  </button></span
+                >
+                <span class="filter-chip"
+                  ><span class="filter-chip__origin" data-message-key="viewer.filters.origin.group"
+                    >Group: Middle school</span
+                  >Mathematics<button
+                    class="filter-chip__remove"
+                    type="button"
+                    aria-label="Remove filter Mathematics"
+                    data-message-key="viewer.filters.removeNamed"
+                  >
+                    ×
+                  </button></span
+                >
+                <button
+                  class="ui-button ui-button--sm"
+                  type="button"
+                  data-message-key="viewer.filters.count"
+                >
+                  Filters (2)
+                </button>
+              </form>
+              <div
+                class="app-body"
+                role="region"
+                aria-label="Board content"
+                data-message-key="a11y.boardRegion"
+              >
+                <div class="board-grid">
+                  <section
+                    class="board-panel metric-strip tablet-span-8"
+                    aria-label="Key measures"
+                    data-message-key="a11y.measuresRegion"
+                  >
+                    <div class="metric">
+                      <span class="metric-label" data-host-content="">Proficiency</span>
+                      <span class="metric-value" data-host-content=""
+                        >74<span class="metric-unit" data-host-content="">%</span></span
+                      >
+                      <span class="metric-delta metric-delta--up" data-host-content="">+6 pts</span>
+                    </div>
+                    <div class="metric">
+                      <span class="metric-label" data-host-content="">Students</span>
+                      <span class="metric-value" data-host-content="">12,480</span>
+                      <span class="metric-delta metric-delta--up" data-host-content="">+3.2%</span>
+                    </div>
+                    <div class="metric">
+                      <span class="metric-label" data-host-content="">Absence</span>
+                      <span class="metric-value" data-host-content=""
+                        >11.4<span class="metric-unit" data-host-content="">%</span></span
+                      >
+                      <span class="metric-delta metric-delta--down" data-host-content=""
+                        >-1.8 pts</span
+                      >
+                    </div>
+                    <div class="metric">
+                      <span class="metric-label" data-host-content="">Schools</span>
+                      <span class="metric-value" data-host-content="">24</span>
+                      <span class="metric-delta metric-delta--flat" data-host-content=""
+                        >2 networks</span
+                      >
+                    </div>
+                  </section>
+                  <section class="board-panel tablet-span-5" aria-labelledby="tablet-chart-title">
+                    <div class="panel-head">
+                      <div>
+                        <p class="panel-kicker" data-host-content="">Mathematics · 6-8</p>
+                        <h2 class="panel-title" id="tablet-chart-title" data-host-content="">
+                          Proficiency trend
+                        </h2>
+                        <p class="panel-meta" data-host-content="">Percent · weekly buckets</p>
+                      </div>
+                    </div>
+                    <figure class="chart-figure">
+                      <svg
+                        class="chart-svg"
+                        viewBox="0 0 400 190"
+                        role="img"
+                        aria-labelledby="tablet-chart-title tablet-chart-desc"
+                        data-host-content=""
+                      >
+                        <title id="tablet-chart-desc">Tablet proficiency trend with target</title>
+                        <desc>Proficiency rises from 58 to 74 percent; target 80 percent.</desc>
+                        <line class="chart-grid-line" x1="28" y1="150" x2="380" y2="150" />
+                        <line class="chart-grid-line" x1="28" y1="86" x2="380" y2="86" />
+                        <line class="chart-grid-line" x1="28" y1="22" x2="380" y2="22" />
+                        <line class="chart-threshold" x1="28" y1="38" x2="380" y2="38" />
+                        <path
+                          class="chart-line series-1"
+                          d="M38 96 L104 82 L170 78 L236 62 L302 50 L370 42"
+                        />
+                        <circle class="chart-point series-1" cx="370" cy="42" r="3" />
+                        <text x="28" y="170" text-anchor="start">Sep</text>
+                        <text x="380" y="170" text-anchor="end">Feb</text>
+                        <text x="380" y="39" text-anchor="end" fill="var(--bl-chart-series-1)">
+                          74%
+                        </text>
+                      </svg>
+                      <figcaption class="chart-summary" data-message-key="chart.summary">
+                        Summary: 74 percent in February, target 80 percent. Synthetic fixture.
+                      </figcaption>
+                    </figure>
+                  </section>
+                  <aside class="board-panel tablet-span-3" aria-labelledby="tablet-side-title">
+                    <p class="panel-kicker" data-host-content="">Comparison</p>
+                    <h2 class="panel-title" id="tablet-side-title" data-host-content="">
+                      Prior year
+                    </h2>
+                    <div class="delta-card">
+                      <p class="delta-card__label" data-message-key="chart.delta.percent">
+                        Percent change
+                      </p>
+                      <p class="delta-card__value" data-host-content="">+8.8%</p>
+                      <p class="delta-card__detail" data-host-content="">74% vs 68%</p>
+                    </div>
+                    <p class="panel-meta" style="margin-top: 10px" data-host-content="">
+                      3 schools missing prior-year values.
+                    </p>
+                  </aside>
+                  <section class="board-panel board-panel--flush tablet-span-8">
+                    <div class="panel-head" style="padding: 14px 16px 8px">
+                      <div>
+                        <p class="panel-kicker" data-host-content="">Table</p>
+                        <h2 class="panel-title" id="tablet-table-title" data-host-content="">
+                          Schools by proficiency
+                        </h2>
+                      </div>
+                    </div>
+                    <div
+                      class="table-scroll"
+                      role="region"
+                      tabindex="0"
+                      aria-labelledby="table-caption-3"
+                    >
+                      <table class="data-table">
+                        <caption id="table-caption-3" class="sr-only">
+                          Schools by proficiency
+                        </caption>
+                        <thead>
+                          <tr>
+                            <th scope="col" data-message-key="table.header.school">School</th>
+                            <th scope="col" data-message-key="table.header.network">Network</th>
+                            <th scope="col" class="num" data-message-key="table.header.proficiency">
+                              Proficiency
+                            </th>
+                            <th scope="col" class="num" data-message-key="table.header.change">
+                              Change
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody data-host-content="">
+                          <tr>
+                            <th scope="row">Cedar Grove Middle</th>
+                            <td>North</td>
+                            <td class="num">84%</td>
+                            <td class="num">+9 pts</td>
+                          </tr>
+                          <tr>
+                            <th scope="row">Harbor View Middle</th>
+                            <td>North</td>
+                            <td class="num">81%</td>
+                            <td class="num">+7 pts</td>
+                          </tr>
+                          <tr>
+                            <th scope="row">Lakeside Middle</th>
+                            <td>Central</td>
+                            <td class="num">77%</td>
+                            <td class="num">+6 pts</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </section>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p class="ref-caption">
+          Tablet keeps filters inline and uses an eight-column placement. The chart remains primary
+          while the comparison side panel stays narrow.
+        </p>
+      </section>
+
+      <footer class="ref-footer">
+        <p>
+          These are static design references. They do not prove responsive runtime behavior; the
+          real viewer must be checked at 320 px, tablet widths and 200 percent zoom under
+          <a href="../VISUAL_ACCEPTANCE.md">the acceptance checklist</a>.
+        </p>
+      </footer>
+    </main>
+  </body>
+</html>

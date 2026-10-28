@@ -1,0 +1,577 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Editor narrow · Boardloom design references</title>
+    <link rel="stylesheet" href="./reference.css" />
+  </head>
+  <body class="ref-page">
+    <header class="ref-banner">
+      <a class="ref-brand" href="./index.html">Boardloom design references</a>
+      <span class="ref-badge">Design reference - not production UI</span>
+      <nav class="ref-nav" aria-label="Design reference pages" data-doc-content="">
+        <a href="./index.html">Index</a>
+        <a href="./viewer-desktop.html">Viewer desktop</a>
+        <a href="./viewer-narrow.html">Viewer narrow</a>
+        <a href="./editor-desktop.html">Editor desktop</a>
+        <a href="./editor-narrow.html" aria-current="page">Editor narrow</a>
+        <a href="./states.html">States</a>
+        <a href="./boards.html">Boards</a>
+        <a href="./localization.html">Localization</a>
+        <a href="./accessibility.html">Accessibility</a>
+      </nav>
+    </header>
+
+    <main class="ref-main">
+      <header class="ref-intro">
+        <p class="ref-kicker">T05 · Editor composition · Narrow</p>
+        <h1 class="ref-title">Authoring tools arrive as drawers, not as a shrunken desktop</h1>
+        <p class="ref-lede">
+          At narrow widths the canvas stays primary. Blocks and Inspect open from a bottom drawer,
+          the draft actions stay reachable, and layout controls remain labeled buttons. At 320 px
+          the inspector drawer is modal and returns focus to its trigger; at 390 px the library
+          drawer can remain non-modal while the canvas is still available.
+        </p>
+        <div class="ref-note-grid">
+          <div class="ref-note">
+            <strong>Drawer, not sidebar</strong>
+            Blocks and Inspect are tabs in one drawer. The trigger, heading, close action and focus
+            return are all explicit.
+          </div>
+          <div class="ref-note">
+            <strong>Draft remains reachable</strong>
+            Apply and Discard stay in the draft bar when non-modal and move into the modal sheet's
+            sticky footer when the drawer covers the canvas.
+          </div>
+          <div class="ref-note">
+            <strong>Keyboard first</strong>
+            Move and resize use labeled arrow controls. The canvas does not require a drag gesture
+            to be usable at 320 px.
+          </div>
+        </div>
+      </header>
+
+      <section class="ref-artboard-section" aria-labelledby="editor-narrow-320-title">
+        <div class="ref-artboard-head">
+          <h2 class="ref-artboard-title" id="editor-narrow-320-title">
+            Editor · 320 px · inspector drawer open
+          </h2>
+          <span class="ref-artboard-meta">Modal drawer · dirty draft · properties active</span>
+        </div>
+        <div class="ref-artboard-frame">
+          <div class="ref-artboard ref-artboard--320">
+            <div
+              class="boardloom ref-app app-shell--narrow app-shell--narrow-320 narrow-stage"
+              data-boardloom-theme="light"
+            >
+              <div class="narrow-header">
+                <div class="app-identity">
+                  <p class="app-host" data-host-content="">Northstar Schools</p>
+                  <h1 class="app-title" data-host-content="">District assessment overview</h1>
+                </div>
+                <div class="app-toolbar">
+                  <div
+                    class="ui-segmented"
+                    role="group"
+                    aria-label="Board mode"
+                    data-message-key="a11y.modeNavigation"
+                  >
+                    <button
+                      class="ui-segment"
+                      type="button"
+                      aria-pressed="false"
+                      data-message-key="mode.viewer"
+                    >
+                      Viewer
+                    </button>
+                    <button
+                      class="ui-segment"
+                      type="button"
+                      aria-pressed="true"
+                      data-message-key="mode.editor"
+                    >
+                      Editor
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <div class="narrow-background" inert aria-hidden="true">
+                <div
+                  class="narrow-editor-triggers"
+                  role="group"
+                  aria-label="Editor panels"
+                  data-message-key="editor.panels"
+                >
+                  <button
+                    class="ui-button ui-button--sm"
+                    type="button"
+                    data-message-key="editor.library"
+                  >
+                    Blocks
+                  </button>
+                  <button
+                    class="ui-button ui-button--sm"
+                    type="button"
+                    aria-expanded="true"
+                    aria-controls="narrow-inspector-sheet"
+                    data-message-key="editor.inspector"
+                  >
+                    Inspect
+                  </button>
+                </div>
+                <div class="editor-narrow-canvas" aria-hidden="true">
+                  <div class="narrow-canvas-grid">
+                    <div class="narrow-canvas-block narrow-canvas-block--selected">
+                      <h2 class="narrow-canvas-block__title">Proficiency trend</h2>
+                      <p class="narrow-canvas-block__meta">Line · selected</p>
+                    </div>
+                    <div class="narrow-canvas-block">
+                      <h2 class="narrow-canvas-block__title">Schools by proficiency</h2>
+                      <p class="narrow-canvas-block__meta">Table · 24 rows</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="sheet-scrim">
+                <section
+                  class="sheet"
+                  id="narrow-inspector-sheet"
+                  role="dialog"
+                  aria-modal="true"
+                  aria-labelledby="narrow-inspector-title"
+                >
+                  <div class="drawer-handle" aria-hidden="true"></div>
+                  <div class="sheet-head">
+                    <h2 class="sheet-title" id="narrow-inspector-title">Block inspector</h2>
+                    <button
+                      class="ui-icon-button"
+                      type="button"
+                      aria-label="Close inspector"
+                      data-message-key="editor.inspector.close"
+                    >
+                      ×
+                    </button>
+                  </div>
+                  <div
+                    class="drawer-tabs"
+                    role="group"
+                    aria-label="Editor drawers"
+                    data-message-key="editor.drawers"
+                  >
+                    <button
+                      class="drawer-tab"
+                      type="button"
+                      aria-pressed="false"
+                      data-message-key="editor.library"
+                    >
+                      Blocks
+                    </button>
+                    <button
+                      class="drawer-tab"
+                      type="button"
+                      aria-pressed="true"
+                      data-message-key="editor.inspector"
+                    >
+                      Inspect
+                    </button>
+                  </div>
+                  <div class="drawer-body">
+                    <div
+                      class="inspector-tabs"
+                      role="group"
+                      aria-label="Inspector sections"
+                      data-message-key="editor.inspectorSections"
+                    >
+                      <button
+                        class="inspector-tab"
+                        type="button"
+                        aria-pressed="true"
+                        data-message-key="editor.inspector.props"
+                      >
+                        Properties
+                      </button>
+                      <button
+                        class="inspector-tab"
+                        type="button"
+                        aria-pressed="false"
+                        data-message-key="editor.inspector.layout"
+                      >
+                        Layout
+                      </button>
+                      <button
+                        class="inspector-tab"
+                        type="button"
+                        aria-pressed="false"
+                        data-message-key="editor.inspector.data"
+                      >
+                        Data
+                      </button>
+                    </div>
+                    <div class="ui-field" data-message-key="editor.properties.title">
+                      <label
+                        class="ui-label"
+                        for="narrow-title"
+                        data-message-key="editor.properties.title"
+                        >Title</label
+                      >
+                      <input
+                        class="ui-input"
+                        id="narrow-title"
+                        value="Proficiency trend"
+                        data-message-key="editor.properties.title"
+                      />
+                    </div>
+                    <div class="ui-field">
+                      <label
+                        class="ui-label"
+                        for="narrow-field"
+                        data-message-key="editor.properties.measure"
+                        >Y measure</label
+                      >
+                      <select
+                        class="ui-select"
+                        id="narrow-field"
+                        data-message-key="editor.properties.measure"
+                      >
+                        <option>Proficiency · percent</option>
+                        <option>Students · count</option>
+                      </select>
+                    </div>
+                    <div class="ui-field">
+                      <label
+                        class="ui-label"
+                        for="narrow-aggregation"
+                        data-message-key="editor.properties.aggregation"
+                        >Aggregation</label
+                      >
+                      <select
+                        class="ui-select"
+                        id="narrow-aggregation"
+                        data-message-key="editor.properties.aggregation"
+                      >
+                        <option>Mean per bucket</option>
+                        <option>Sum per bucket</option>
+                      </select>
+                    </div>
+                    <div class="callout">
+                      The inspector edits the draft. The committed board stays visible in the viewer
+                      until Apply succeeds.
+                    </div>
+                    <div class="narrow-keyboard-wrap">
+                      <div
+                        class="keyboard-pad"
+                        role="group"
+                        aria-label="Move selected block"
+                        data-message-key="editor.block.move"
+                      >
+                        <button
+                          type="button"
+                          aria-label="Move up"
+                          data-message-key="editor.block.moveUp"
+                        >
+                          ↑
+                        </button>
+                        <button
+                          type="button"
+                          aria-label="Move left"
+                          data-message-key="editor.block.moveLeft"
+                        >
+                          ←
+                        </button>
+                        <button
+                          type="button"
+                          aria-label="Move down"
+                          data-message-key="editor.block.moveDown"
+                        >
+                          ↓
+                        </button>
+                        <button
+                          type="button"
+                          aria-label="Move right"
+                          data-message-key="editor.block.moveRight"
+                        >
+                          →
+                        </button>
+                      </div>
+                      <p class="keyboard-hint" data-message-key="editor.block.keyboardHintShort">
+                        Arrow keys move · Enter applies · Escape cancels
+                      </p>
+                    </div>
+                    <div class="sheet-draft">
+                      <span class="narrow-draft__status">
+                        <span class="draft-status__dot" aria-hidden="true"></span>
+                        <span data-message-key="draft.dirty">Unsaved changes</span> ·
+                        <span data-message-key="editor.draft.edits.other">2 edits</span>
+                      </span>
+                      <div class="narrow-draft__actions">
+                        <button
+                          class="ui-button ui-button--ghost ui-button--sm"
+                          type="button"
+                          data-message-key="editor.draft.discard"
+                        >
+                          Discard
+                        </button>
+                        <button
+                          class="ui-button ui-button--primary ui-button--sm"
+                          type="button"
+                          data-message-key="common.apply"
+                        >
+                          Apply
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </section>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p class="ref-caption">
+          Modal at 320 px: the scrim and inert background block the canvas, focus is trapped in the
+          drawer, and Apply/Discard live inside the sheet. Escape closes it and returns focus to the
+          visible Inspect trigger.
+        </p>
+      </section>
+
+      <section class="ref-artboard-section" aria-labelledby="editor-narrow-390-title">
+        <div class="ref-artboard-head">
+          <h2 class="ref-artboard-title" id="editor-narrow-390-title">
+            Editor · 390 px · block library drawer open
+          </h2>
+          <span class="ref-artboard-meta">Non-modal library · canvas remains visible · light</span>
+        </div>
+        <div class="ref-artboard-frame">
+          <div class="ref-artboard ref-artboard--390">
+            <div
+              class="boardloom ref-app app-shell--narrow narrow-stage"
+              data-boardloom-theme="light"
+            >
+              <div class="narrow-header">
+                <div class="app-identity">
+                  <p class="app-host" data-host-content="">Northstar Schools</p>
+                  <h1 class="app-title" data-host-content="">District assessment overview</h1>
+                </div>
+                <div class="app-toolbar">
+                  <div
+                    class="ui-segmented"
+                    role="group"
+                    aria-label="Board mode"
+                    data-message-key="a11y.modeNavigation"
+                  >
+                    <button
+                      class="ui-segment"
+                      type="button"
+                      aria-pressed="false"
+                      data-message-key="mode.viewer"
+                    >
+                      Viewer
+                    </button>
+                    <button
+                      class="ui-segment"
+                      type="button"
+                      aria-pressed="true"
+                      data-message-key="mode.editor"
+                    >
+                      Editor
+                    </button>
+                  </div>
+                  <button
+                    class="ui-icon-button"
+                    type="button"
+                    aria-label="More board actions"
+                    data-message-key="board.moreActions"
+                  >
+                    ⋯
+                  </button>
+                </div>
+              </div>
+              <div class="narrow-draft">
+                <span class="narrow-draft__status" data-message-key="draft.clean"
+                  >No unsaved changes</span
+                >
+                <div class="narrow-draft__actions">
+                  <button
+                    class="ui-button ui-button--ghost ui-button--sm"
+                    type="button"
+                    data-message-key="editor.draft.discard"
+                  >
+                    Discard
+                  </button>
+                  <button
+                    class="ui-button ui-button--primary ui-button--sm"
+                    type="button"
+                    data-message-key="common.apply"
+                  >
+                    Apply
+                  </button>
+                </div>
+              </div>
+              <div class="editor-narrow-canvas">
+                <div class="narrow-canvas-grid">
+                  <div class="narrow-canvas-block narrow-canvas-block--selected">
+                    <h2 class="narrow-canvas-block__title">Proficiency trend</h2>
+                    <p class="narrow-canvas-block__meta">
+                      Line · selected · keyboard controls available
+                    </p>
+                    <div class="narrow-keyboard-wrap">
+                      <div
+                        class="keyboard-pad"
+                        role="group"
+                        aria-label="Move selected block"
+                        data-message-key="editor.block.move"
+                      >
+                        <button
+                          type="button"
+                          aria-label="Move up"
+                          data-message-key="editor.block.moveUp"
+                        >
+                          ↑
+                        </button>
+                        <button
+                          type="button"
+                          aria-label="Move left"
+                          data-message-key="editor.block.moveLeft"
+                        >
+                          ←
+                        </button>
+                        <button
+                          type="button"
+                          aria-label="Move down"
+                          data-message-key="editor.block.moveDown"
+                        >
+                          ↓
+                        </button>
+                        <button
+                          type="button"
+                          aria-label="Move right"
+                          data-message-key="editor.block.moveRight"
+                        >
+                          →
+                        </button>
+                      </div>
+                      <p class="keyboard-hint" data-message-key="editor.block.keyboardHintShort">
+                        Arrow keys move · Enter applies · Escape cancels
+                      </p>
+                    </div>
+                  </div>
+                  <div class="narrow-canvas-block">
+                    <h2 class="narrow-canvas-block__title">Schools by proficiency</h2>
+                    <p class="narrow-canvas-block__meta">Table · 24 rows</p>
+                  </div>
+                </div>
+              </div>
+              <section class="drawer" aria-labelledby="library-drawer-title">
+                <div class="drawer-handle" aria-hidden="true"></div>
+                <div class="drawer-head">
+                  <h2 class="drawer-title" id="library-drawer-title">Add a block</h2>
+                  <button
+                    class="ui-icon-button"
+                    type="button"
+                    aria-label="Close block library"
+                    data-message-key="editor.library.close"
+                  >
+                    ×
+                  </button>
+                </div>
+                <div
+                  class="drawer-tabs"
+                  role="group"
+                  aria-label="Editor drawers"
+                  data-message-key="editor.drawers"
+                >
+                  <button
+                    class="drawer-tab"
+                    type="button"
+                    aria-pressed="true"
+                    data-message-key="editor.library"
+                  >
+                    Blocks
+                  </button>
+                  <button
+                    class="drawer-tab"
+                    type="button"
+                    aria-pressed="false"
+                    data-message-key="editor.inspector"
+                  >
+                    Inspect
+                  </button>
+                </div>
+                <div class="drawer-body">
+                  <div class="editor-search">
+                    <input
+                      type="search"
+                      placeholder="Search blocks"
+                      aria-label="Search blocks"
+                      data-message-key="editor.library.search"
+                    />
+                  </div>
+                  <button
+                    class="library-item"
+                    type="button"
+                    data-message-key="editor.library.addLine"
+                  >
+                    <span class="library-icon" aria-hidden="true">↗</span
+                    ><span data-message-key="editor.library.line.name"
+                      ><span class="library-name" data-message-key="editor.library.line.name"
+                        >Line chart</span
+                      ><span class="library-desc" data-message-key="editor.library.line.description"
+                        >Trend over time</span
+                      ></span
+                    ><span class="library-add" aria-hidden="true">+</span>
+                  </button>
+                  <button
+                    class="library-item"
+                    type="button"
+                    data-message-key="editor.library.addBar"
+                  >
+                    <span class="library-icon" aria-hidden="true">▥</span
+                    ><span data-message-key="editor.library.bar.name"
+                      ><span class="library-name" data-message-key="editor.library.bar.name"
+                        >Bar chart</span
+                      ><span class="library-desc" data-message-key="editor.library.bar.description"
+                        >Compare categories</span
+                      ></span
+                    ><span class="library-add" aria-hidden="true">+</span>
+                  </button>
+                  <button
+                    class="library-item"
+                    type="button"
+                    data-message-key="editor.library.addTable"
+                  >
+                    <span class="library-icon" aria-hidden="true">▤</span
+                    ><span data-message-key="editor.library.table.name"
+                      ><span class="library-name" data-message-key="editor.library.table.name"
+                        >Table</span
+                      ><span
+                        class="library-desc"
+                        data-message-key="editor.library.table.description"
+                        >Accessible rows</span
+                      ></span
+                    ><span class="library-add" aria-hidden="true">+</span>
+                  </button>
+                  <div class="callout">
+                    This drawer is non-modal at 390 px. Tab can leave it, and the canvas stays
+                    available.
+                  </div>
+                </div>
+              </section>
+            </div>
+          </div>
+        </div>
+        <p class="ref-caption">
+          At 390 px the library drawer is non-modal. The selected canvas block still exposes the
+          keyboard controls without opening the inspector.
+        </p>
+      </section>
+
+      <footer class="ref-footer">
+        <p>
+          Static design references only. Real drawer focus, draft state and keyboard behavior belong
+          to the editor implementation and must be verified against
+          <a href="../VISUAL_ACCEPTANCE.md">the acceptance checklist</a>.
+        </p>
+      </footer>
+    </main>
+  </body>
+</html>

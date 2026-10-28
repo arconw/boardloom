@@ -1,0 +1,1384 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Viewer desktop · Boardloom design references</title>
+    <link rel="stylesheet" href="./reference.css" />
+  </head>
+  <body class="ref-page">
+    <header class="ref-banner">
+      <a class="ref-brand" href="./index.html">Boardloom design references</a>
+      <span class="ref-badge">Design reference - not production UI</span>
+      <nav class="ref-nav" aria-label="Design reference pages" data-doc-content="">
+        <a href="./index.html">Index</a>
+        <a href="./viewer-desktop.html" aria-current="page">Viewer desktop</a>
+        <a href="./viewer-narrow.html">Viewer narrow</a>
+        <a href="./editor-desktop.html">Editor desktop</a>
+        <a href="./editor-narrow.html">Editor narrow</a>
+        <a href="./states.html">States</a>
+        <a href="./boards.html">Boards</a>
+        <a href="./localization.html">Localization</a>
+        <a href="./accessibility.html">Accessibility</a>
+      </nav>
+    </header>
+
+    <main class="ref-main">
+      <header class="ref-intro">
+        <p class="ref-kicker">T05 · Viewer composition · Desktop</p>
+        <h1 class="ref-title">A calm analytical surface, in both themes</h1>
+        <p class="ref-lede">
+          The viewer leads with board identity, provenance and filter scope. Controls stay compact;
+          the chart canvas and its data alternatives carry the visual weight. The two artboards use
+          the same synthetic assessment fixture so light and dark parity can be compared directly.
+        </p>
+        <div class="ref-note-grid">
+          <div class="ref-note">
+            <strong>Hierarchy</strong>
+            Board title, provenance and mode are one compact band. Filters sit on a single strip.
+            The canvas is not enclosed in another page-level card.
+          </div>
+          <div class="ref-note">
+            <strong>Accessibility</strong>
+            Each chart has a visible summary and a disclosure table. Filter origin is written as a
+            scope word. Status uses an icon or dot plus text.
+          </div>
+          <div class="ref-note">
+            <strong>Provenance</strong>
+            Synthetic assessment fixture, deterministic values, no real schools or records.
+            Boardloom branding is documentation chrome, never forced into an embedded host.
+          </div>
+        </div>
+      </header>
+
+      <section class="ref-artboard-section" aria-labelledby="viewer-light-title">
+        <div class="ref-artboard-head">
+          <h2 class="ref-artboard-title" id="viewer-light-title">Viewer · desktop · light</h2>
+          <span class="ref-artboard-meta"
+            >1440 px reference · assessment fixture · light token set</span
+          >
+        </div>
+        <div class="ref-artboard-frame">
+          <div class="ref-artboard">
+            <div class="boardloom ref-app" data-boardloom-theme="light">
+              <a class="sr-only" href="#viewer-light-main" data-message-key="a11y.skipToContent"
+                >Skip to board content</a
+              >
+              <div class="app-shell">
+                <header class="app-header">
+                  <div class="app-identity">
+                    <p class="app-host" data-host-content="">
+                      Northstar Schools · Assessment workspace
+                    </p>
+                    <h1 class="app-title" data-host-content="">District assessment overview</h1>
+                    <p class="app-subtitle" data-host-content="">
+                      Mathematics proficiency across the district, with the prior year shown as a
+                      reference series.
+                    </p>
+                    <p class="app-meta">
+                      <span>Synthetic assessment fixture</span>
+                      <span>12,480 rows in scope</span>
+                      <span>Updated 09:42</span>
+                      <span>Times shown in UTC</span>
+                    </p>
+                  </div>
+                  <div class="app-toolbar">
+                    <div
+                      class="ui-segmented"
+                      role="group"
+                      aria-label="Board mode"
+                      data-message-key="a11y.modeNavigation"
+                    >
+                      <button
+                        class="ui-segment"
+                        type="button"
+                        aria-pressed="true"
+                        data-message-key="mode.viewer"
+                      >
+                        Viewer
+                      </button>
+                      <button
+                        class="ui-segment"
+                        type="button"
+                        aria-pressed="false"
+                        data-message-key="mode.editor"
+                      >
+                        Editor
+                      </button>
+                    </div>
+                    <button
+                      class="ui-button ui-button--ghost"
+                      type="button"
+                      data-message-key="board.export"
+                    >
+                      Export
+                    </button>
+                    <button
+                      class="ui-icon-button"
+                      type="button"
+                      aria-label="More board actions"
+                      data-message-key="board.moreActions"
+                    >
+                      ⋯
+                    </button>
+                  </div>
+                </header>
+
+                <div class="app-statusbar">
+                  <span
+                    class="status-pill status-pill--live"
+                    data-message-key="viewer.realtime.live"
+                  >
+                    <span class="status-dot" aria-hidden="true"></span>
+                    Live
+                  </span>
+                  <span class="status-pill" data-message-key="viewer.realtime.lastUpdate"
+                    >Last update 09:42 UTC</span
+                  >
+                  <button
+                    class="status-link"
+                    type="button"
+                    data-message-key="viewer.diagnostics.summary.other"
+                  >
+                    2 data warnings
+                  </button>
+                  <span>Grade 8 algebra has 3 schools with missing prior-year values.</span>
+                </div>
+
+                <form
+                  class="app-filterbar"
+                  aria-label="Board filters"
+                  data-message-key="a11y.filterRegion"
+                >
+                  <span class="filter-label" data-message-key="viewer.filters.active"
+                    >Active filters</span
+                  >
+                  <span class="filter-chip">
+                    <span class="filter-chip__origin" data-message-key="viewer.filters.origin.board"
+                      >Board</span
+                    >
+                    Term: 2026 · Fall
+                    <button
+                      class="filter-chip__remove"
+                      type="button"
+                      aria-label="Remove filter Term 2026 Fall"
+                      data-message-key="viewer.filters.removeNamed"
+                    >
+                      ×
+                    </button>
+                  </span>
+                  <span class="filter-chip">
+                    <span class="filter-chip__origin" data-message-key="viewer.filters.origin.board"
+                      >Board</span
+                    >
+                    Grade band: 6-8
+                    <button
+                      class="filter-chip__remove"
+                      type="button"
+                      aria-label="Remove filter Grade band 6-8"
+                      data-message-key="viewer.filters.removeNamed"
+                    >
+                      ×
+                    </button>
+                  </span>
+                  <span class="filter-chip">
+                    <span class="filter-chip__origin" data-message-key="viewer.filters.origin.group"
+                      >Group: Middle school</span
+                    >
+                    Subject: Mathematics
+                    <button
+                      class="filter-chip__remove"
+                      type="button"
+                      aria-label="Remove filter Subject Mathematics"
+                      data-message-key="viewer.filters.removeNamed"
+                    >
+                      ×
+                    </button>
+                  </span>
+                  <button
+                    class="ui-button ui-button--sm"
+                    type="button"
+                    data-message-key="viewer.filters.count"
+                  >
+                    Filters (3)
+                  </button>
+                  <button
+                    class="ui-button ui-button--ghost ui-button--sm"
+                    type="button"
+                    data-message-key="viewer.filters.reset"
+                  >
+                    Reset filters
+                  </button>
+                </form>
+
+                <div
+                  class="app-body"
+                  id="viewer-light-main"
+                  role="region"
+                  aria-label="Board content"
+                  data-message-key="a11y.boardRegion"
+                >
+                  <div class="board-grid">
+                    <section
+                      class="board-panel metric-strip col-span-12"
+                      aria-label="Key measures"
+                      data-message-key="a11y.measuresRegion"
+                    >
+                      <div class="metric">
+                        <span class="metric-label" data-host-content=""
+                          >Proficiency, all grades</span
+                        >
+                        <span class="metric-value" data-host-content=""
+                          >74<span class="metric-unit" data-host-content="">%</span></span
+                        >
+                        <span class="metric-delta metric-delta--up" data-host-content=""
+                          >+6 pts vs prior year</span
+                        >
+                        <svg
+                          class="metric-spark"
+                          viewBox="0 0 76 34"
+                          aria-hidden="true"
+                          data-host-content=""
+                        >
+                          <path d="M2 26 L16 23 L30 22 L44 16 L58 12 L74 8" />
+                        </svg>
+                      </div>
+                      <div class="metric">
+                        <span class="metric-label" data-host-content="">Students assessed</span>
+                        <span class="metric-value" data-host-content="">12,480</span>
+                        <span class="metric-delta metric-delta--up" data-host-content=""
+                          >+3.2%</span
+                        >
+                        <svg
+                          class="metric-spark"
+                          viewBox="0 0 76 34"
+                          aria-hidden="true"
+                          data-host-content=""
+                        >
+                          <path d="M2 27 L16 25 L30 19 L44 21 L58 14 L74 10" />
+                        </svg>
+                      </div>
+                      <div class="metric">
+                        <span class="metric-label" data-host-content="">Chronic absence</span>
+                        <span class="metric-value" data-host-content=""
+                          >11.4<span class="metric-unit" data-host-content="">%</span></span
+                        >
+                        <span class="metric-delta metric-delta--down" data-host-content=""
+                          >-1.8 pts</span
+                        >
+                        <svg
+                          class="metric-spark"
+                          viewBox="0 0 76 34"
+                          aria-hidden="true"
+                          data-host-content=""
+                        >
+                          <path d="M2 9 L16 12 L30 14 L44 18 L58 21 L74 25" />
+                        </svg>
+                      </div>
+                      <div class="metric">
+                        <span class="metric-label" data-host-content="">Schools in view</span>
+                        <span class="metric-value" data-host-content="">24</span>
+                        <span class="metric-delta metric-delta--flat" data-host-content=""
+                          >2 networks</span
+                        >
+                        <svg
+                          class="metric-spark"
+                          viewBox="0 0 76 34"
+                          aria-hidden="true"
+                          data-host-content=""
+                        >
+                          <path d="M2 18 L16 18 L30 17 L44 18 L58 17 L74 18" />
+                        </svg>
+                      </div>
+                    </section>
+
+                    <section class="board-panel col-span-8" aria-labelledby="trend-title">
+                      <div class="panel-head">
+                        <div>
+                          <p class="panel-kicker" data-host-content="">Mathematics · grades 6-8</p>
+                          <h2 class="panel-title" id="trend-title" data-host-content="">
+                            Proficiency trend
+                          </h2>
+                          <p class="panel-meta" data-host-content="">
+                            Weekly buckets · prior year as reference · 5,000 synthetic rows
+                          </p>
+                        </div>
+                        <div class="panel-tools">
+                          <button
+                            class="ui-button ui-button--sm"
+                            type="button"
+                            data-message-key="chart.viewDataTable"
+                          >
+                            View data table
+                          </button>
+                          <button
+                            class="ui-icon-button"
+                            type="button"
+                            aria-label="Chart options"
+                            data-message-key="chart.options"
+                          >
+                            ⋯
+                          </button>
+                        </div>
+                      </div>
+                      <figure class="chart-figure">
+                        <svg
+                          class="chart-svg"
+                          viewBox="0 0 720 260"
+                          role="img"
+                          aria-labelledby="trend-svg-title trend-svg-desc"
+                          data-host-content=""
+                        >
+                          <title id="trend-svg-title">
+                            Mathematics proficiency trend, fall 2026
+                          </title>
+                          <desc id="trend-svg-desc">
+                            Proficiency rises from 58 percent in September to 74 percent in
+                            February. The prior-year reference rises from 54 to 68 percent. The
+                            target is 80 percent. Values are synthetic.
+                          </desc>
+                          <path
+                            class="chart-area series-1"
+                            d="M60 104 L184 96 L308 92 L432 86 L556 78 L680 72 L680 220 L60 220 Z"
+                          />
+                          <line class="chart-grid-line" x1="48" y1="220" x2="700" y2="220" />
+                          <line class="chart-grid-line" x1="48" y1="170" x2="700" y2="170" />
+                          <line class="chart-grid-line" x1="48" y1="120" x2="700" y2="120" />
+                          <line class="chart-grid-line" x1="48" y1="70" x2="700" y2="70" />
+                          <line class="chart-grid-line" x1="48" y1="20" x2="700" y2="20" />
+                          <text x="40" y="224" text-anchor="end">0%</text>
+                          <text x="40" y="174" text-anchor="end">25%</text>
+                          <text x="40" y="124" text-anchor="end">50%</text>
+                          <text x="40" y="74" text-anchor="end">75%</text>
+                          <text x="40" y="24" text-anchor="end">100%</text>
+                          <line class="chart-threshold" x1="48" y1="60" x2="700" y2="60" />
+                          <text x="700" y="52" text-anchor="end" fill="var(--bl-chart-threshold)">
+                            Target 80%
+                          </text>
+                          <path
+                            class="chart-line series-2 series-dash-2"
+                            d="M60 112 L184 106 L308 100 L432 98 L556 92 L680 84"
+                          />
+                          <path
+                            class="chart-line series-1"
+                            d="M60 104 L184 96 L308 92 L432 86 L556 78 L680 72"
+                          />
+                          <circle class="chart-point series-1" cx="680" cy="72" r="4" />
+                          <circle class="chart-point series-2" cx="680" cy="84" r="4" />
+                          <text x="680" y="62" text-anchor="end" fill="var(--bl-chart-series-1)">
+                            74%
+                          </text>
+                          <text x="680" y="100" text-anchor="end" fill="var(--bl-chart-series-2)">
+                            68%
+                          </text>
+                          <text x="60" y="245" text-anchor="middle">Sep</text>
+                          <text x="184" y="245" text-anchor="middle">Oct</text>
+                          <text x="308" y="245" text-anchor="middle">Nov</text>
+                          <text x="432" y="245" text-anchor="middle">Dec</text>
+                          <text x="556" y="245" text-anchor="middle">Jan</text>
+                          <text x="680" y="245" text-anchor="middle">Feb</text>
+                        </svg>
+                        <figcaption class="chart-summary" data-message-key="chart.summary">
+                          Chart summary: proficiency is 74 percent in February, 6 points above the
+                          prior-year reference. The 80 percent target is not yet met. Active scope:
+                          fall 2026, grades 6-8, mathematics. Units are percent of assessed
+                          students.
+                        </figcaption>
+                        <ul
+                          class="chart-legend"
+                          data-message-key="chart.legend"
+                          aria-label="Series legend"
+                        >
+                          <li class="legend-item">
+                            <span class="legend-swatch series-1" aria-hidden="true"></span>
+                            Fall 2026
+                          </li>
+                          <li class="legend-item">
+                            <span
+                              class="legend-swatch series-2 legend-swatch--dash"
+                              aria-hidden="true"
+                            ></span>
+                            Prior year reference
+                          </li>
+                          <li class="legend-item">
+                            <span class="legend-swatch series-1" aria-hidden="true"></span>
+                            Target 80%
+                          </li>
+                        </ul>
+                        <details class="chart-data">
+                          <summary data-message-key="chart.viewDataTable">View data table</summary>
+                          <div
+                            class="table-scroll"
+                            role="region"
+                            tabindex="0"
+                            aria-labelledby="table-caption-1"
+                          >
+                            <table class="data-table">
+                              <caption id="table-caption-1" class="sr-only">
+                                Mathematics proficiency trend values
+                              </caption>
+                              <thead>
+                                <tr>
+                                  <th scope="col" data-message-key="table.header.month">Month</th>
+                                  <th scope="col" class="num" data-host-content="">Fall 2026</th>
+                                  <th
+                                    scope="col"
+                                    class="num"
+                                    data-message-key="table.header.priorPeriod"
+                                  >
+                                    Prior year
+                                  </th>
+                                  <th
+                                    scope="col"
+                                    class="num"
+                                    data-message-key="table.header.target"
+                                  >
+                                    Target
+                                  </th>
+                                </tr>
+                              </thead>
+                              <tbody data-host-content="">
+                                <tr>
+                                  <th scope="row">Sep</th>
+                                  <td class="num">58%</td>
+                                  <td class="num">54%</td>
+                                  <td class="num">80%</td>
+                                </tr>
+                                <tr>
+                                  <th scope="row">Oct</th>
+                                  <td class="num">62%</td>
+                                  <td class="num">57%</td>
+                                  <td class="num">80%</td>
+                                </tr>
+                                <tr>
+                                  <th scope="row">Nov</th>
+                                  <td class="num">64%</td>
+                                  <td class="num">60%</td>
+                                  <td class="num">80%</td>
+                                </tr>
+                                <tr>
+                                  <th scope="row">Dec</th>
+                                  <td class="num">67%</td>
+                                  <td class="num">61%</td>
+                                  <td class="num">80%</td>
+                                </tr>
+                                <tr>
+                                  <th scope="row">Jan</th>
+                                  <td class="num">71%</td>
+                                  <td class="num">64%</td>
+                                  <td class="num">80%</td>
+                                </tr>
+                                <tr>
+                                  <th scope="row">Feb</th>
+                                  <td class="num">74%</td>
+                                  <td class="num">68%</td>
+                                  <td class="num">80%</td>
+                                </tr>
+                              </tbody>
+                            </table>
+                          </div>
+                        </details>
+                      </figure>
+                    </section>
+
+                    <aside class="board-panel col-span-4" aria-labelledby="glance-title">
+                      <div class="panel-head">
+                        <div>
+                          <p class="panel-kicker" data-host-content="">Comparison · prior year</p>
+                          <h2 class="panel-title" id="glance-title" data-host-content="">
+                            Where the gap remains
+                          </h2>
+                          <p class="panel-meta" data-host-content="">
+                            Proficiency by school network · percent
+                          </p>
+                        </div>
+                      </div>
+                      <div class="delta-card">
+                        <p class="delta-card__label" data-message-key="chart.delta.percent">
+                          Percent change
+                        </p>
+                        <p class="delta-card__value" data-host-content="">+8.8%</p>
+                        <p class="delta-card__detail" data-host-content="">
+                          Primary 74% · Reference 68% · Absolute +6 pts
+                        </p>
+                      </div>
+                      <div
+                        class="rank-list"
+                        aria-label="Network proficiency ranking"
+                        data-host-content=""
+                      >
+                        <div class="rank-item">
+                          <span class="rank-label" data-host-content="">North network</span>
+                          <span class="rank-value" data-host-content="">78%</span>
+                          <span class="rank-bar"
+                            ><span class="rank-bar__fill" style="width: 78%"></span
+                          ></span>
+                        </div>
+                        <div class="rank-item">
+                          <span class="rank-label" data-host-content="">Central network</span>
+                          <span class="rank-value" data-host-content="">74%</span>
+                          <span class="rank-bar"
+                            ><span class="rank-bar__fill" style="width: 74%"></span
+                          ></span>
+                        </div>
+                        <div class="rank-item">
+                          <span class="rank-label" data-host-content="">South network</span>
+                          <span class="rank-value" data-host-content="">69%</span>
+                          <span class="rank-bar"
+                            ><span class="rank-bar__fill" style="width: 69%"></span
+                          ></span>
+                        </div>
+                        <div class="rank-item">
+                          <span class="rank-label" data-host-content="">West network</span>
+                          <span class="rank-value" data-host-content="">61%</span>
+                          <span class="rank-bar"
+                            ><span class="rank-bar__fill" style="width: 61%"></span
+                          ></span>
+                        </div>
+                      </div>
+                      <p class="panel-meta" style="margin-top: 12px" data-host-content="">
+                        Prior-year values are missing for 3 schools in the West network. Those rows
+                        show “Not available”, never zero.
+                      </p>
+                    </aside>
+
+                    <section
+                      class="board-panel board-panel--flush col-span-7"
+                      aria-labelledby="schools-title"
+                    >
+                      <div class="panel-head" style="padding: 16px 18px 10px">
+                        <div>
+                          <p class="panel-kicker" data-host-content="">
+                            Table · accessible data alternative
+                          </p>
+                          <h2 class="panel-title" id="schools-title" data-host-content="">
+                            Schools by proficiency
+                          </h2>
+                          <p class="panel-meta" data-host-content="">
+                            Sorted by proficiency · 24 rows in scope
+                          </p>
+                        </div>
+                        <button
+                          class="ui-button ui-button--sm"
+                          type="button"
+                          data-message-key="table.sort"
+                        >
+                          Sort
+                        </button>
+                      </div>
+                      <div
+                        class="table-scroll"
+                        role="region"
+                        tabindex="0"
+                        aria-labelledby="table-caption-2"
+                      >
+                        <table class="data-table">
+                          <caption id="table-caption-2" class="sr-only">
+                            Schools by mathematics proficiency, fall 2026
+                          </caption>
+                          <thead>
+                            <tr>
+                              <th scope="col" data-message-key="table.header.school">School</th>
+                              <th scope="col" data-message-key="table.header.network">Network</th>
+                              <th
+                                scope="col"
+                                class="num"
+                                data-message-key="table.header.proficiency"
+                              >
+                                Proficiency
+                              </th>
+                              <th scope="col" class="num" data-message-key="table.header.change">
+                                Change
+                              </th>
+                              <th scope="col" class="num" data-message-key="table.header.students">
+                                Students
+                              </th>
+                            </tr>
+                          </thead>
+                          <tbody data-host-content="">
+                            <tr>
+                              <th scope="row">Cedar Grove Middle</th>
+                              <td>North</td>
+                              <td class="num">84%</td>
+                              <td class="num">+9 pts</td>
+                              <td class="num">612</td>
+                            </tr>
+                            <tr>
+                              <th scope="row">Harbor View Middle</th>
+                              <td>North</td>
+                              <td class="num">81%</td>
+                              <td class="num">+7 pts</td>
+                              <td class="num">584</td>
+                            </tr>
+                            <tr>
+                              <th scope="row">Lakeside Middle</th>
+                              <td>Central</td>
+                              <td class="num">77%</td>
+                              <td class="num">+6 pts</td>
+                              <td class="num">701</td>
+                            </tr>
+                            <tr>
+                              <th scope="row">Redwood Middle</th>
+                              <td>South</td>
+                              <td class="num">73%</td>
+                              <td class="num">+4 pts</td>
+                              <td class="num">498</td>
+                            </tr>
+                            <tr>
+                              <th scope="row">Mesa Ridge Middle</th>
+                              <td>West</td>
+                              <td class="num">64%</td>
+                              <td class="num missing">Not available</td>
+                              <td class="num">455</td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </section>
+
+                    <section class="board-panel col-span-5" aria-labelledby="insight-title">
+                      <div class="panel-head">
+                        <div>
+                          <p class="panel-kicker" data-host-content="">Reading the board</p>
+                          <h2 class="panel-title" id="insight-title" data-host-content="">
+                            What changed
+                          </h2>
+                          <p class="panel-meta" data-host-content="">
+                            Visible filter scope and comparison stay attached to the evidence
+                          </p>
+                        </div>
+                      </div>
+                      <ul class="insight-list" data-host-content="">
+                        <li class="insight-item">
+                          <span class="insight-mark" aria-hidden="true">1</span>
+                          <p class="insight-text" data-host-content="">
+                            Grade 8 algebra improved fastest, up 11 points.
+                            <span>Scope: middle school group · mathematics · fall 2026.</span>
+                          </p>
+                        </li>
+                        <li class="insight-item">
+                          <span class="insight-mark" aria-hidden="true">2</span>
+                          <p class="insight-text" data-host-content="">
+                            The West network remains 13 points below the district.
+                            <span
+                              >Prior-year values are missing for 3 schools; no zero is
+                              implied.</span
+                            >
+                          </p>
+                        </li>
+                        <li class="insight-item">
+                          <span class="insight-mark" aria-hidden="true">3</span>
+                          <p class="insight-text" data-host-content="">
+                            Two data warnings concern incomplete prior-year mappings.
+                            <span>Open diagnostics for paths and codes.</span>
+                          </p>
+                        </li>
+                      </ul>
+                    </section>
+                  </div>
+                </div>
+
+                <footer class="app-foot" data-host-content="">
+                  <span>Synthetic assessment fixture · no real records</span>
+                  <span
+                    >Design reference · not production UI · data table alternative on every
+                    chart</span
+                  >
+                </footer>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="ref-artboard-section" aria-labelledby="viewer-dark-title">
+        <div class="ref-artboard-head">
+          <h2 class="ref-artboard-title" id="viewer-dark-title">Viewer · desktop · dark</h2>
+          <span class="ref-artboard-meta"
+            >1440 px reference · same composition and fixture · dark token set</span
+          >
+        </div>
+        <div class="ref-artboard-frame">
+          <div class="ref-artboard">
+            <div class="boardloom ref-app" data-boardloom-theme="dark">
+              <div class="app-shell">
+                <header class="app-header">
+                  <div class="app-identity">
+                    <p class="app-host" data-host-content="">
+                      Northstar Schools · Assessment workspace
+                    </p>
+                    <h1 class="app-title" data-host-content="">District assessment overview</h1>
+                    <p class="app-subtitle" data-host-content="">
+                      Mathematics proficiency across the district, with the prior year shown as a
+                      reference series.
+                    </p>
+                    <p class="app-meta">
+                      <span>Synthetic assessment fixture</span>
+                      <span>12,480 rows in scope</span>
+                      <span>Updated 09:42</span>
+                      <span>Times shown in UTC</span>
+                    </p>
+                  </div>
+                  <div class="app-toolbar">
+                    <div
+                      class="ui-segmented"
+                      role="group"
+                      aria-label="Board mode"
+                      data-message-key="a11y.modeNavigation"
+                    >
+                      <button
+                        class="ui-segment"
+                        type="button"
+                        aria-pressed="true"
+                        data-message-key="mode.viewer"
+                      >
+                        Viewer
+                      </button>
+                      <button
+                        class="ui-segment"
+                        type="button"
+                        aria-pressed="false"
+                        data-message-key="mode.editor"
+                      >
+                        Editor
+                      </button>
+                    </div>
+                    <button
+                      class="ui-button ui-button--ghost"
+                      type="button"
+                      data-message-key="board.export"
+                    >
+                      Export
+                    </button>
+                    <button
+                      class="ui-icon-button"
+                      type="button"
+                      aria-label="More board actions"
+                      data-message-key="board.moreActions"
+                    >
+                      ⋯
+                    </button>
+                  </div>
+                </header>
+
+                <div class="app-statusbar">
+                  <span
+                    class="status-pill status-pill--live"
+                    data-message-key="viewer.realtime.live"
+                  >
+                    <span class="status-dot" aria-hidden="true"></span>
+                    Live
+                  </span>
+                  <span class="status-pill" data-message-key="viewer.realtime.lastUpdate"
+                    >Last update 09:42 UTC</span
+                  >
+                  <button
+                    class="status-link"
+                    type="button"
+                    data-message-key="viewer.diagnostics.summary.other"
+                  >
+                    2 data warnings
+                  </button>
+                  <span>Grade 8 algebra has 3 schools with missing prior-year values.</span>
+                </div>
+
+                <form
+                  class="app-filterbar"
+                  aria-label="Board filters"
+                  data-message-key="a11y.filterRegion"
+                >
+                  <span class="filter-label" data-message-key="viewer.filters.active"
+                    >Active filters</span
+                  >
+                  <span class="filter-chip">
+                    <span class="filter-chip__origin" data-message-key="viewer.filters.origin.board"
+                      >Board</span
+                    >
+                    Term: 2026 · Fall
+                    <button
+                      class="filter-chip__remove"
+                      type="button"
+                      aria-label="Remove filter Term 2026 Fall"
+                      data-message-key="viewer.filters.removeNamed"
+                    >
+                      ×
+                    </button>
+                  </span>
+                  <span class="filter-chip">
+                    <span class="filter-chip__origin" data-message-key="viewer.filters.origin.board"
+                      >Board</span
+                    >
+                    Grade band: 6-8
+                    <button
+                      class="filter-chip__remove"
+                      type="button"
+                      aria-label="Remove filter Grade band 6-8"
+                      data-message-key="viewer.filters.removeNamed"
+                    >
+                      ×
+                    </button>
+                  </span>
+                  <span class="filter-chip">
+                    <span class="filter-chip__origin" data-message-key="viewer.filters.origin.group"
+                      >Group: Middle school</span
+                    >
+                    Subject: Mathematics
+                    <button
+                      class="filter-chip__remove"
+                      type="button"
+                      aria-label="Remove filter Subject Mathematics"
+                      data-message-key="viewer.filters.removeNamed"
+                    >
+                      ×
+                    </button>
+                  </span>
+                  <button
+                    class="ui-button ui-button--sm"
+                    type="button"
+                    data-message-key="viewer.filters.count"
+                  >
+                    Filters (3)
+                  </button>
+                  <button
+                    class="ui-button ui-button--ghost ui-button--sm"
+                    type="button"
+                    data-message-key="viewer.filters.reset"
+                  >
+                    Reset filters
+                  </button>
+                </form>
+
+                <div
+                  class="app-body"
+                  role="region"
+                  aria-label="Board content"
+                  data-message-key="a11y.boardRegion"
+                >
+                  <div class="board-grid">
+                    <section
+                      class="board-panel metric-strip col-span-12"
+                      aria-label="Key measures"
+                      data-message-key="a11y.measuresRegion"
+                    >
+                      <div class="metric">
+                        <span class="metric-label" data-host-content=""
+                          >Proficiency, all grades</span
+                        >
+                        <span class="metric-value" data-host-content=""
+                          >74<span class="metric-unit" data-host-content="">%</span></span
+                        >
+                        <span class="metric-delta metric-delta--up" data-host-content=""
+                          >+6 pts vs prior year</span
+                        >
+                        <svg
+                          class="metric-spark"
+                          viewBox="0 0 76 34"
+                          aria-hidden="true"
+                          data-host-content=""
+                        >
+                          <path d="M2 26 L16 23 L30 22 L44 16 L58 12 L74 8" />
+                        </svg>
+                      </div>
+                      <div class="metric">
+                        <span class="metric-label" data-host-content="">Students assessed</span>
+                        <span class="metric-value" data-host-content="">12,480</span>
+                        <span class="metric-delta metric-delta--up" data-host-content=""
+                          >+3.2%</span
+                        >
+                        <svg
+                          class="metric-spark"
+                          viewBox="0 0 76 34"
+                          aria-hidden="true"
+                          data-host-content=""
+                        >
+                          <path d="M2 27 L16 25 L30 19 L44 21 L58 14 L74 10" />
+                        </svg>
+                      </div>
+                      <div class="metric">
+                        <span class="metric-label" data-host-content="">Chronic absence</span>
+                        <span class="metric-value" data-host-content=""
+                          >11.4<span class="metric-unit" data-host-content="">%</span></span
+                        >
+                        <span class="metric-delta metric-delta--down" data-host-content=""
+                          >-1.8 pts</span
+                        >
+                        <svg
+                          class="metric-spark"
+                          viewBox="0 0 76 34"
+                          aria-hidden="true"
+                          data-host-content=""
+                        >
+                          <path d="M2 9 L16 12 L30 14 L44 18 L58 21 L74 25" />
+                        </svg>
+                      </div>
+                      <div class="metric">
+                        <span class="metric-label" data-host-content="">Schools in view</span>
+                        <span class="metric-value" data-host-content="">24</span>
+                        <span class="metric-delta metric-delta--flat" data-host-content=""
+                          >2 networks</span
+                        >
+                        <svg
+                          class="metric-spark"
+                          viewBox="0 0 76 34"
+                          aria-hidden="true"
+                          data-host-content=""
+                        >
+                          <path d="M2 18 L16 18 L30 17 L44 18 L58 17 L74 18" />
+                        </svg>
+                      </div>
+                    </section>
+
+                    <section class="board-panel col-span-8" aria-labelledby="trend-dark-title">
+                      <div class="panel-head">
+                        <div>
+                          <p class="panel-kicker" data-host-content="">Mathematics · grades 6-8</p>
+                          <h2 class="panel-title" id="trend-dark-title" data-host-content="">
+                            Proficiency trend
+                          </h2>
+                          <p class="panel-meta" data-host-content="">
+                            Weekly buckets · prior year as reference · 5,000 synthetic rows
+                          </p>
+                        </div>
+                        <div class="panel-tools">
+                          <button
+                            class="ui-button ui-button--sm"
+                            type="button"
+                            data-message-key="chart.viewDataTable"
+                          >
+                            View data table
+                          </button>
+                          <button
+                            class="ui-icon-button"
+                            type="button"
+                            aria-label="Chart options"
+                            data-message-key="chart.options"
+                          >
+                            ⋯
+                          </button>
+                        </div>
+                      </div>
+                      <figure class="chart-figure">
+                        <svg
+                          class="chart-svg"
+                          viewBox="0 0 720 260"
+                          role="img"
+                          aria-labelledby="trend-dark-svg-title trend-dark-svg-desc"
+                          data-host-content=""
+                        >
+                          <title id="trend-dark-svg-title">
+                            Mathematics proficiency trend, fall 2026
+                          </title>
+                          <desc id="trend-dark-svg-desc">
+                            Proficiency rises from 58 percent in September to 74 percent in
+                            February. The prior-year reference rises from 54 to 68 percent. The
+                            target is 80 percent. Values are synthetic.
+                          </desc>
+                          <path
+                            class="chart-area series-1"
+                            d="M60 104 L184 96 L308 92 L432 86 L556 78 L680 72 L680 220 L60 220 Z"
+                          />
+                          <line class="chart-grid-line" x1="48" y1="220" x2="700" y2="220" />
+                          <line class="chart-grid-line" x1="48" y1="170" x2="700" y2="170" />
+                          <line class="chart-grid-line" x1="48" y1="120" x2="700" y2="120" />
+                          <line class="chart-grid-line" x1="48" y1="70" x2="700" y2="70" />
+                          <line class="chart-grid-line" x1="48" y1="20" x2="700" y2="20" />
+                          <text x="40" y="224" text-anchor="end">0%</text>
+                          <text x="40" y="174" text-anchor="end">25%</text>
+                          <text x="40" y="124" text-anchor="end">50%</text>
+                          <text x="40" y="74" text-anchor="end">75%</text>
+                          <text x="40" y="24" text-anchor="end">100%</text>
+                          <line class="chart-threshold" x1="48" y1="60" x2="700" y2="60" />
+                          <text x="700" y="52" text-anchor="end" fill="var(--bl-chart-threshold)">
+                            Target 80%
+                          </text>
+                          <path
+                            class="chart-line series-2 series-dash-2"
+                            d="M60 112 L184 106 L308 100 L432 98 L556 92 L680 84"
+                          />
+                          <path
+                            class="chart-line series-1"
+                            d="M60 104 L184 96 L308 92 L432 86 L556 78 L680 72"
+                          />
+                          <circle class="chart-point series-1" cx="680" cy="72" r="4" />
+                          <circle class="chart-point series-2" cx="680" cy="84" r="4" />
+                          <text x="680" y="62" text-anchor="end" fill="var(--bl-chart-series-1)">
+                            74%
+                          </text>
+                          <text x="680" y="100" text-anchor="end" fill="var(--bl-chart-series-2)">
+                            68%
+                          </text>
+                          <text x="60" y="245" text-anchor="middle">Sep</text>
+                          <text x="184" y="245" text-anchor="middle">Oct</text>
+                          <text x="308" y="245" text-anchor="middle">Nov</text>
+                          <text x="432" y="245" text-anchor="middle">Dec</text>
+                          <text x="556" y="245" text-anchor="middle">Jan</text>
+                          <text x="680" y="245" text-anchor="middle">Feb</text>
+                        </svg>
+                        <figcaption class="chart-summary" data-message-key="chart.summary">
+                          Chart summary: proficiency is 74 percent in February, 6 points above the
+                          prior-year reference. The 80 percent target is not yet met. Active scope:
+                          fall 2026, grades 6-8, mathematics. Units are percent of assessed
+                          students.
+                        </figcaption>
+                        <ul
+                          class="chart-legend"
+                          data-message-key="chart.legend"
+                          aria-label="Series legend"
+                        >
+                          <li class="legend-item">
+                            <span class="legend-swatch series-1" aria-hidden="true"></span>Fall 2026
+                          </li>
+                          <li class="legend-item">
+                            <span
+                              class="legend-swatch series-2 legend-swatch--dash"
+                              aria-hidden="true"
+                            ></span
+                            >Prior year reference
+                          </li>
+                          <li class="legend-item">
+                            <span class="legend-swatch series-1" aria-hidden="true"></span>Target
+                            80%
+                          </li>
+                        </ul>
+                        <details class="chart-data">
+                          <summary data-message-key="chart.viewDataTable">View data table</summary>
+                          <div
+                            class="table-scroll"
+                            role="region"
+                            tabindex="0"
+                            aria-labelledby="table-caption-3"
+                          >
+                            <table class="data-table">
+                              <caption id="table-caption-3" class="sr-only">
+                                Mathematics proficiency trend values
+                              </caption>
+                              <thead>
+                                <tr>
+                                  <th scope="col" data-message-key="table.header.month">Month</th>
+                                  <th scope="col" class="num" data-host-content="">Fall 2026</th>
+                                  <th
+                                    scope="col"
+                                    class="num"
+                                    data-message-key="table.header.priorPeriod"
+                                  >
+                                    Prior year
+                                  </th>
+                                  <th
+                                    scope="col"
+                                    class="num"
+                                    data-message-key="table.header.target"
+                                  >
+                                    Target
+                                  </th>
+                                </tr>
+                              </thead>
+                              <tbody data-host-content="">
+                                <tr>
+                                  <th scope="row">Sep</th>
+                                  <td class="num">58%</td>
+                                  <td class="num">54%</td>
+                                  <td class="num">80%</td>
+                                </tr>
+                                <tr>
+                                  <th scope="row">Oct</th>
+                                  <td class="num">62%</td>
+                                  <td class="num">57%</td>
+                                  <td class="num">80%</td>
+                                </tr>
+                                <tr>
+                                  <th scope="row">Nov</th>
+                                  <td class="num">64%</td>
+                                  <td class="num">60%</td>
+                                  <td class="num">80%</td>
+                                </tr>
+                                <tr>
+                                  <th scope="row">Dec</th>
+                                  <td class="num">67%</td>
+                                  <td class="num">61%</td>
+                                  <td class="num">80%</td>
+                                </tr>
+                                <tr>
+                                  <th scope="row">Jan</th>
+                                  <td class="num">71%</td>
+                                  <td class="num">64%</td>
+                                  <td class="num">80%</td>
+                                </tr>
+                                <tr>
+                                  <th scope="row">Feb</th>
+                                  <td class="num">74%</td>
+                                  <td class="num">68%</td>
+                                  <td class="num">80%</td>
+                                </tr>
+                              </tbody>
+                            </table>
+                          </div>
+                        </details>
+                      </figure>
+                    </section>
+
+                    <aside class="board-panel col-span-4" aria-labelledby="glance-dark-title">
+                      <div class="panel-head">
+                        <div>
+                          <p class="panel-kicker" data-host-content="">Comparison · prior year</p>
+                          <h2 class="panel-title" id="glance-dark-title" data-host-content="">
+                            Where the gap remains
+                          </h2>
+                          <p class="panel-meta" data-host-content="">
+                            Proficiency by school network · percent
+                          </p>
+                        </div>
+                      </div>
+                      <div class="delta-card">
+                        <p class="delta-card__label" data-message-key="chart.delta.percent">
+                          Percent change
+                        </p>
+                        <p class="delta-card__value" data-host-content="">+8.8%</p>
+                        <p class="delta-card__detail" data-host-content="">
+                          Primary 74% · Reference 68% · Absolute +6 pts
+                        </p>
+                      </div>
+                      <div
+                        class="rank-list"
+                        aria-label="Network proficiency ranking"
+                        data-host-content=""
+                      >
+                        <div class="rank-item">
+                          <span class="rank-label" data-host-content="">North network</span
+                          ><span class="rank-value" data-host-content="">78%</span
+                          ><span class="rank-bar"
+                            ><span class="rank-bar__fill" style="width: 78%"></span
+                          ></span>
+                        </div>
+                        <div class="rank-item">
+                          <span class="rank-label" data-host-content="">Central network</span
+                          ><span class="rank-value" data-host-content="">74%</span
+                          ><span class="rank-bar"
+                            ><span class="rank-bar__fill" style="width: 74%"></span
+                          ></span>
+                        </div>
+                        <div class="rank-item">
+                          <span class="rank-label" data-host-content="">South network</span
+                          ><span class="rank-value" data-host-content="">69%</span
+                          ><span class="rank-bar"
+                            ><span class="rank-bar__fill" style="width: 69%"></span
+                          ></span>
+                        </div>
+                        <div class="rank-item">
+                          <span class="rank-label" data-host-content="">West network</span
+                          ><span class="rank-value" data-host-content="">61%</span
+                          ><span class="rank-bar"
+                            ><span class="rank-bar__fill" style="width: 61%"></span
+                          ></span>
+                        </div>
+                      </div>
+                      <p class="panel-meta" style="margin-top: 12px" data-host-content="">
+                        Prior-year values are missing for 3 schools in the West network. Those rows
+                        show “Not available”, never zero.
+                      </p>
+                    </aside>
+
+                    <section
+                      class="board-panel board-panel--flush col-span-7"
+                      aria-labelledby="schools-dark-title"
+                    >
+                      <div class="panel-head" style="padding: 16px 18px 10px">
+                        <div>
+                          <p class="panel-kicker" data-host-content="">
+                            Table · accessible data alternative
+                          </p>
+                          <h2 class="panel-title" id="schools-dark-title" data-host-content="">
+                            Schools by proficiency
+                          </h2>
+                          <p class="panel-meta" data-host-content="">
+                            Sorted by proficiency · 24 rows in scope
+                          </p>
+                        </div>
+                        <button
+                          class="ui-button ui-button--sm"
+                          type="button"
+                          data-message-key="table.sort"
+                        >
+                          Sort
+                        </button>
+                      </div>
+                      <div
+                        class="table-scroll"
+                        role="region"
+                        tabindex="0"
+                        aria-labelledby="table-caption-4"
+                      >
+                        <table class="data-table">
+                          <caption id="table-caption-4" class="sr-only">
+                            Schools by mathematics proficiency, fall 2026
+                          </caption>
+                          <thead>
+                            <tr>
+                              <th scope="col" data-message-key="table.header.school">School</th>
+                              <th scope="col" data-message-key="table.header.network">Network</th>
+                              <th
+                                scope="col"
+                                class="num"
+                                data-message-key="table.header.proficiency"
+                              >
+                                Proficiency
+                              </th>
+                              <th scope="col" class="num" data-message-key="table.header.change">
+                                Change
+                              </th>
+                              <th scope="col" class="num" data-message-key="table.header.students">
+                                Students
+                              </th>
+                            </tr>
+                          </thead>
+                          <tbody data-host-content="">
+                            <tr>
+                              <th scope="row">Cedar Grove Middle</th>
+                              <td>North</td>
+                              <td class="num">84%</td>
+                              <td class="num">+9 pts</td>
+                              <td class="num">612</td>
+                            </tr>
+                            <tr>
+                              <th scope="row">Harbor View Middle</th>
+                              <td>North</td>
+                              <td class="num">81%</td>
+                              <td class="num">+7 pts</td>
+                              <td class="num">584</td>
+                            </tr>
+                            <tr>
+                              <th scope="row">Lakeside Middle</th>
+                              <td>Central</td>
+                              <td class="num">77%</td>
+                              <td class="num">+6 pts</td>
+                              <td class="num">701</td>
+                            </tr>
+                            <tr>
+                              <th scope="row">Redwood Middle</th>
+                              <td>South</td>
+                              <td class="num">73%</td>
+                              <td class="num">+4 pts</td>
+                              <td class="num">498</td>
+                            </tr>
+                            <tr>
+                              <th scope="row">Mesa Ridge Middle</th>
+                              <td>West</td>
+                              <td class="num">64%</td>
+                              <td class="num missing">Not available</td>
+                              <td class="num">455</td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </section>
+
+                    <section class="board-panel col-span-5" aria-labelledby="insight-dark-title">
+                      <div class="panel-head">
+                        <div>
+                          <p class="panel-kicker" data-host-content="">Reading the board</p>
+                          <h2 class="panel-title" id="insight-dark-title" data-host-content="">
+                            What changed
+                          </h2>
+                          <p class="panel-meta" data-host-content="">
+                            Visible filter scope and comparison stay attached to the evidence
+                          </p>
+                        </div>
+                      </div>
+                      <ul class="insight-list" data-host-content="">
+                        <li class="insight-item">
+                          <span class="insight-mark" aria-hidden="true">1</span>
+                          <p class="insight-text" data-host-content="">
+                            Grade 8 algebra improved fastest, up 11 points.<span
+                              >Scope: middle school group · mathematics · fall 2026.</span
+                            >
+                          </p>
+                        </li>
+                        <li class="insight-item">
+                          <span class="insight-mark" aria-hidden="true">2</span>
+                          <p class="insight-text" data-host-content="">
+                            The West network remains 13 points below the district.<span
+                              >Prior-year values are missing for 3 schools; no zero is
+                              implied.</span
+                            >
+                          </p>
+                        </li>
+                        <li class="insight-item">
+                          <span class="insight-mark" aria-hidden="true">3</span>
+                          <p class="insight-text" data-host-content="">
+                            Two data warnings concern incomplete prior-year mappings.<span
+                              >Open diagnostics for paths and codes.</span
+                            >
+                          </p>
+                        </li>
+                      </ul>
+                    </section>
+                  </div>
+                </div>
+
+                <footer class="app-foot" data-host-content="">
+                  <span>Synthetic assessment fixture · no real records</span>
+                  <span
+                    >Design reference · not production UI · data table alternative on every
+                    chart</span
+                  >
+                </footer>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <details class="ref-keymap">
+        <summary>Message-key annotations used on this page</summary>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th scope="col">Key</th>
+              <th scope="col">Reference copy</th>
+              <th scope="col">Use</th>
+            </tr>
+          </thead>
+          <tbody data-host-content="">
+            <tr>
+              <td><code>viewer.filters.origin.group</code></td>
+              <td>Group: {name}</td>
+              <td>Filter scope origin</td>
+            </tr>
+            <tr>
+              <td><code>viewer.filters.removeNamed</code></td>
+              <td>Remove filter: {name}</td>
+              <td>Accessible chip action</td>
+            </tr>
+            <tr>
+              <td><code>viewer.realtime.lastUpdate</code></td>
+              <td>Last update {time}</td>
+              <td>Live status</td>
+            </tr>
+            <tr>
+              <td><code>viewer.diagnostics.summary.other</code></td>
+              <td>{count} data warnings</td>
+              <td>Diagnostics entry point</td>
+            </tr>
+            <tr>
+              <td><code>chart.viewDataTable</code></td>
+              <td>View data table</td>
+              <td>Chart alternative</td>
+            </tr>
+            <tr>
+              <td><code>chart.delta.percent</code></td>
+              <td>Percent change</td>
+              <td>Comparison label</td>
+            </tr>
+          </tbody>
+        </table>
+      </details>
+
+      <footer class="ref-footer">
+        <p>
+          This page is a design reference. It is not a built Boardloom viewer, does not query a
+          provider and does not prove runtime behavior. The production UI must meet
+          <a href="../VISUAL_ACCEPTANCE.md">the visual acceptance checklist</a>.
+        </p>
+      </footer>
+    </main>
+  </body>
+</html>

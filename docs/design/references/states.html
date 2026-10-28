@@ -1,0 +1,632 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>State gallery · Boardloom design references</title>
+    <link rel="stylesheet" href="./reference.css" />
+  </head>
+  <body class="ref-page">
+    <header class="ref-banner">
+      <a class="ref-brand" href="./index.html">Boardloom design references</a>
+      <span class="ref-badge">Design reference - not production UI</span>
+      <nav class="ref-nav" aria-label="Design reference pages" data-doc-content="">
+        <a href="./index.html">Index</a>
+        <a href="./viewer-desktop.html">Viewer desktop</a>
+        <a href="./viewer-narrow.html">Viewer narrow</a>
+        <a href="./editor-desktop.html">Editor desktop</a>
+        <a href="./editor-narrow.html">Editor narrow</a>
+        <a href="./states.html" aria-current="page">States</a>
+        <a href="./boards.html">Boards</a>
+        <a href="./localization.html">Localization</a>
+        <a href="./accessibility.html">Accessibility</a>
+      </nav>
+    </header>
+
+    <main class="ref-main">
+      <header class="ref-intro">
+        <p class="ref-kicker">T05 · State gallery</p>
+        <h1 class="ref-title">States are part of the visual system</h1>
+        <p class="ref-lede">
+          Loading, empty, error, stale, partial, diagnostics, filter origin, comparison, realtime
+          reconnect and plugin failure each have a distinct composition, message keys and
+          announcement plan. No state fabricates values, hides scope or takes down the whole board.
+        </p>
+        <div class="ref-note-grid">
+          <div class="ref-note">
+            <strong>Word plus shape</strong>
+            Every state has a visible label and an icon or shape. Color supports the message but is
+            never the only carrier.
+          </div>
+          <div class="ref-note">
+            <strong>Scope stays visible</strong>
+            Empty, stale, partial and filter-origin states repeat the active scope or a route to it.
+          </div>
+          <div class="ref-note">
+            <strong>Recovery is explicit</strong>
+            Retry, reset, refresh, pause, resume, disable and remove are real labeled actions.
+          </div>
+        </div>
+      </header>
+
+      <div class="boardloom" data-boardloom-theme="light">
+        <div class="state-grid">
+          <section class="state-card" aria-labelledby="state-loading-title">
+            <div class="state-card__head">
+              <h2 class="state-card__title" id="state-loading-title">Loading</h2>
+              <span class="state-card__key">common.loading · state.loading.body.other</span>
+            </div>
+            <div class="state-card__body">
+              <p class="panel-kicker" data-host-content="">Mathematics · grades 6-8</p>
+              <p class="panel-title" data-host-content="">Proficiency trend</p>
+              <p class="panel-meta" data-message-key="state.loading.body.other">
+                Preparing 4 blocks for the active filters
+              </p>
+              <div class="skeleton skeleton--title"></div>
+              <div class="skeleton skeleton--chart"></div>
+              <div class="skeleton skeleton--line"></div>
+              <div class="skeleton skeleton--line" style="width: 64%"></div>
+              <p class="state-card__note">
+                Polite live announcement: “Loading data · 4 blocks”. Skeleton has no fake values or
+                axes. Reduced motion shows a static skeleton.
+              </p>
+            </div>
+          </section>
+
+          <section class="state-card" aria-labelledby="state-empty-title">
+            <div class="state-card__head">
+              <h2 class="state-card__title" id="state-empty-title">Empty</h2>
+              <span class="state-card__key"
+                >state.empty.title · state.empty.body · common.reset</span
+              >
+            </div>
+            <div class="state-card__body">
+              <div class="state-empty">
+                <div>
+                  <span class="state-empty__mark" aria-hidden="true">∅</span>
+                  <p class="state-empty__title" data-message-key="state.empty.title">
+                    No data for this scope
+                  </p>
+                  <p class="state-empty__text" data-message-key="state.empty.body">
+                    Fall 2026 · grades 6-8 · mathematics · Middle school group. Adjust or reset the
+                    active filters to see results.
+                  </p>
+                  <div class="state-actions" style="justify-content: center">
+                    <button
+                      class="ui-button ui-button--primary ui-button--sm"
+                      type="button"
+                      data-message-key="viewer.filters.reset"
+                    >
+                      Reset filters
+                    </button>
+                    <button
+                      class="ui-button ui-button--sm"
+                      type="button"
+                      data-message-key="viewer.filters.open"
+                    >
+                      Open filters
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <p class="state-card__note">
+                Empty is not zero. There are no fabricated axes or placeholder values. The active
+                filter scope remains attached to the message.
+              </p>
+            </div>
+          </section>
+
+          <section class="state-card" aria-labelledby="state-error-title">
+            <div class="state-card__head">
+              <h2 class="state-card__title" id="state-error-title">Error</h2>
+              <span class="state-card__key"
+                >state.error.title · state.error.body · common.retry · viewer.diagnostics.open</span
+              >
+            </div>
+            <div class="state-card__body">
+              <div class="state-error">
+                <p class="state-error__title" data-message-key="state.error.title">
+                  <span aria-hidden="true">!</span> This block could not load
+                </p>
+                <p class="state-error__text" data-message-key="state.error.body">
+                  The rest of the board is still available. The provider returned no usable result
+                  for this query.
+                </p>
+                <p class="state-error__detail">QUERY_FAILED · /blocks/trend/query · request 42</p>
+                <div class="state-actions">
+                  <button
+                    class="ui-button ui-button--sm"
+                    type="button"
+                    data-message-key="common.retry"
+                  >
+                    Retry
+                  </button>
+                  <button
+                    class="ui-button ui-button--ghost ui-button--sm"
+                    type="button"
+                    data-message-key="viewer.diagnostics.open"
+                  >
+                    View diagnostics
+                  </button>
+                </div>
+              </div>
+              <p class="state-card__note">
+                Assertive announcement once: “Block failed to load”. Sibling blocks stay usable; the
+                error is contained and offers recovery.
+              </p>
+            </div>
+          </section>
+
+          <section class="state-card" aria-labelledby="state-stale-title">
+            <div class="state-card__head">
+              <h2 class="state-card__title" id="state-stale-title">Stale</h2>
+              <span class="state-card__key"
+                >state.stale.title · state.stale.body · common.refresh</span
+              >
+            </div>
+            <div class="state-card__body">
+              <div class="state-stale">
+                <strong data-message-key="state.stale.title"
+                  ><span aria-hidden="true">◷ </span>Data may be out of date</strong
+                >
+                <span data-message-key="state.stale.body"
+                  >Last confirmed at 09:12 UTC. Showing the last valid result while
+                  reconnecting.</span
+                >
+              </div>
+              <figure class="chart-figure" style="margin-top: 12px">
+                <svg
+                  class="chart-svg"
+                  viewBox="0 0 320 120"
+                  role="img"
+                  aria-labelledby="stale-chart-title stale-chart-desc"
+                  data-host-content=""
+                >
+                  <title id="stale-chart-title">Stale proficiency trend</title>
+                  <desc id="stale-chart-desc">
+                    The last valid trend remains visible with a stale warning.
+                  </desc>
+                  <line class="chart-grid-line" x1="20" y1="100" x2="300" y2="100" />
+                  <path
+                    class="chart-line series-2 series-dash-2"
+                    d="M28 80 L80 72 L132 66 L184 61 L236 54 L292 46"
+                  />
+                  <path
+                    class="chart-line series-1"
+                    d="M28 72 L80 64 L132 60 L184 55 L236 47 L292 40"
+                  />
+                </svg>
+                <figcaption class="chart-summary" data-message-key="state.stale.chartSummary">
+                  Last valid result remains visible, clearly marked stale.
+                </figcaption>
+              </figure>
+              <div class="state-actions">
+                <button
+                  class="ui-button ui-button--sm"
+                  type="button"
+                  data-message-key="common.refresh"
+                >
+                  Refresh
+                </button>
+                <button
+                  class="ui-button ui-button--ghost ui-button--sm"
+                  type="button"
+                  data-message-key="viewer.diagnostics.open"
+                >
+                  Open diagnostics
+                </button>
+              </div>
+              <p class="state-card__note">
+                Polite announcement on the status change. The old data is never mixed with new data
+                without a visible state.
+              </p>
+            </div>
+          </section>
+
+          <section class="state-card" aria-labelledby="state-partial-title">
+            <div class="state-card__head">
+              <h2 class="state-card__title" id="state-partial-title">Partial</h2>
+              <span class="state-card__key"
+                >state.partial.title · state.partial.body.other · common.partial</span
+              >
+            </div>
+            <div class="state-card__body">
+              <div class="state-partial">
+                <strong data-message-key="state.partial.title">Partial result</strong>
+                <span data-message-key="state.partial.body.other"
+                  >Showing 18 of 24 schools. The provider reported an incomplete result.</span
+                >
+              </div>
+              <div
+                class="table-scroll"
+                style="margin-top: 10px"
+                role="region"
+                tabindex="0"
+                aria-labelledby="table-caption-1"
+              >
+                <table class="data-table">
+                  <caption id="table-caption-1" class="sr-only">
+                    Partial school result
+                  </caption>
+                  <thead>
+                    <tr>
+                      <th scope="col" data-message-key="table.header.school">School</th>
+                      <th scope="col" class="num" data-message-key="table.header.proficiency">
+                        Proficiency
+                      </th>
+                      <th scope="col" class="num" data-message-key="table.header.students">
+                        Students
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody data-host-content="">
+                    <tr>
+                      <th scope="row">Cedar Grove Middle</th>
+                      <td class="num">84%</td>
+                      <td class="num">612</td>
+                    </tr>
+                    <tr>
+                      <th scope="row">Harbor View Middle</th>
+                      <td class="num">81%</td>
+                      <td class="num">584</td>
+                    </tr>
+                    <tr>
+                      <th scope="row">Lakeside Middle</th>
+                      <td class="num">77%</td>
+                      <td class="num">701</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <p class="state-card__note">
+                The returned and total counts are stated. The UI never implies that a partial result
+                is complete; truncation diagnostics stay linked.
+              </p>
+            </div>
+          </section>
+
+          <section class="state-card state-card--wide" aria-labelledby="state-diagnostics-title">
+            <div class="state-card__head">
+              <h2 class="state-card__title" id="state-diagnostics-title">Diagnostics</h2>
+              <span class="state-card__key"
+                >state.diagnostics.title · state.diagnostics.body ·
+                viewer.diagnostics.severity.warning · viewer.diagnostics.severity.info</span
+              >
+            </div>
+            <div class="state-card__body">
+              <div class="a11y-layout" style="align-items: start">
+                <div>
+                  <p class="panel-title" data-host-content="">Board diagnostics</p>
+                  <p class="panel-meta" data-message-key="state.diagnostics.body">
+                    Grouped by severity and affected block · no raw payloads or credentials
+                  </p>
+                  <h3
+                    class="diagnostic-group-title"
+                    data-message-key="viewer.diagnostics.severity.warning"
+                  >
+                    Warnings
+                  </h3>
+                  <ul class="diagnostic-list" style="margin-top: 6px">
+                    <li class="diagnostic-item">
+                      <span class="diagnostic-item__mark" aria-hidden="true">!</span>
+                      <span>
+                        <span
+                          class="diagnostic-item__severity"
+                          data-message-key="viewer.diagnostics.severity.warning"
+                          >Warning</span
+                        >
+                        <strong>Prior-year mapping is incomplete</strong>
+                        <span class="diagnostic-item__path"
+                          >/blocks/trend/comparison/mappings/2</span
+                        >
+                        <span class="diagnostic-item__code">REFERENCE_UNVERIFIED</span>
+                      </span>
+                      <button
+                        class="ui-button ui-button--sm"
+                        type="button"
+                        data-message-key="common.review"
+                      >
+                        Review
+                      </button>
+                    </li>
+                    <li class="diagnostic-item">
+                      <span class="diagnostic-item__mark" aria-hidden="true">!</span>
+                      <span>
+                        <span
+                          class="diagnostic-item__severity"
+                          data-message-key="viewer.diagnostics.severity.warning"
+                          >Warning</span
+                        >
+                        <strong>3 rows have no prior-year value</strong>
+                        <span class="diagnostic-item__path">/blocks/table/data/rows</span>
+                        <span class="diagnostic-item__code">QUERY_RESULT_PARTIAL</span>
+                      </span>
+                      <button
+                        class="ui-button ui-button--sm"
+                        type="button"
+                        data-message-key="common.review"
+                      >
+                        Review
+                      </button>
+                    </li>
+                  </ul>
+                  <h3
+                    class="diagnostic-group-title"
+                    data-message-key="viewer.diagnostics.severity.info"
+                  >
+                    Information
+                  </h3>
+                  <ul class="diagnostic-list" style="margin-top: 6px">
+                    <li class="diagnostic-item">
+                      <span class="diagnostic-item__mark" aria-hidden="true">i</span>
+                      <span data-message-key="viewer.diagnostics.severity.info">
+                        <span
+                          class="diagnostic-item__severity diagnostic-item__severity--info"
+                          data-message-key="viewer.diagnostics.severity.info"
+                          >Information</span
+                        >
+                        <strong>Target line is configured above the current scale</strong>
+                        <span class="diagnostic-item__path">/blocks/trend/config/target</span>
+                        <span class="diagnostic-item__code">CONFIG_WARNING</span>
+                      </span>
+                      <button
+                        class="ui-button ui-button--sm"
+                        type="button"
+                        data-message-key="common.review"
+                      >
+                        Review
+                      </button>
+                    </li>
+                  </ul>
+                  <p
+                    class="panel-meta"
+                    style="margin-top: 10px"
+                    data-message-key="viewer.diagnostics.none"
+                  >
+                    No blocking errors.
+                  </p>
+                </div>
+                <div class="callout">
+                  Diagnostics are not color-only: each row has a severity word in its accessible
+                  name, a path and a code. The panel is a complementary region when open; focus
+                  returns to the diagnostics trigger on close.
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="state-card" aria-labelledby="state-origin-title">
+            <div class="state-card__head">
+              <h2 class="state-card__title" id="state-origin-title">Filter origin</h2>
+              <span class="state-card__key"
+                >viewer.filters.origin.board · viewer.filters.origin.group ·
+                viewer.filters.origin.block · viewer.filters.removeNamed</span
+              >
+            </div>
+            <div class="state-card__body">
+              <p class="panel-kicker" data-host-content="">Active filters · 3 scopes</p>
+              <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px">
+                <span class="filter-chip">
+                  <span class="filter-chip__origin" data-message-key="viewer.filters.origin.board"
+                    >Board</span
+                  >
+                  Term: 2026 · Fall
+                  <button
+                    class="filter-chip__remove"
+                    type="button"
+                    aria-label="Remove filter Term 2026 Fall from Board"
+                    data-message-key="viewer.filters.removeNamed"
+                  >
+                    ×
+                  </button>
+                </span>
+                <span class="filter-chip">
+                  <span class="filter-chip__origin" data-message-key="viewer.filters.origin.group"
+                    >Group: Middle school</span
+                  >
+                  Subject: Mathematics
+                  <button
+                    class="filter-chip__remove"
+                    type="button"
+                    aria-label="Remove filter Subject Mathematics from Group Middle school"
+                    data-message-key="viewer.filters.removeNamed"
+                  >
+                    ×
+                  </button>
+                </span>
+                <span class="filter-chip">
+                  <span class="filter-chip__origin" data-message-key="viewer.filters.origin.block"
+                    >Block: Algebra</span
+                  >
+                  Grade: 8
+                  <button
+                    class="filter-chip__remove"
+                    type="button"
+                    aria-label="Remove filter Grade 8 from Block Algebra"
+                    data-message-key="viewer.filters.removeNamed"
+                  >
+                    ×
+                  </button>
+                </span>
+              </div>
+              <div class="callout" style="margin-top: 12px">
+                The scope is written in words. Removing a chip announces the filter name and scope;
+                inherited or locked filters use a read-only treatment with an explanation.
+              </div>
+              <p class="state-card__note">
+                Origin is not encoded by color. A group filter names its group; a block filter names
+                its block.
+              </p>
+            </div>
+          </section>
+
+          <section class="state-card" aria-labelledby="state-comparison-title">
+            <div class="state-card__head">
+              <h2 class="state-card__title" id="state-comparison-title">Comparison</h2>
+              <span class="state-card__key"
+                >chart.delta.percent · chart.delta.both · chart.delta.reason.referenceZero</span
+              >
+            </div>
+            <div class="state-card__body">
+              <div class="comparison-pair">
+                <div class="comparison-box">
+                  <span class="comparison-box__label">Primary</span
+                  ><span class="comparison-box__value">74% · current</span>
+                </div>
+                <div class="comparison-box">
+                  <span class="comparison-box__label">Reference</span
+                  ><span class="comparison-box__value">68% · prior year</span>
+                </div>
+              </div>
+              <div class="delta-card">
+                <p class="delta-card__label" data-message-key="chart.delta.both">
+                  Absolute and percent change
+                </p>
+                <p class="delta-card__value" data-host-content="">+6 pts · +8.8%</p>
+                <p class="delta-card__detail" data-host-content="">
+                  Primary 74% · Reference 68% · identical percent unit
+                </p>
+              </div>
+              <div class="state-stale" style="margin-top: 10px">
+                <strong>Change not available</strong>
+                <span>The reference value is zero. No infinity or invented zero is displayed.</span>
+              </div>
+              <p class="state-card__note">
+                Primary and reference are always named. Missing pairs, null operands and zero
+                denominators show a reason. The comparison applies filters symmetrically.
+              </p>
+            </div>
+          </section>
+
+          <section class="state-card" aria-labelledby="state-reconnect-title">
+            <div class="state-card__head">
+              <h2 class="state-card__title" id="state-reconnect-title">Realtime reconnect</h2>
+              <span class="state-card__key"
+                >viewer.realtime.reconnectingShort · viewer.realtime.lastUpdate ·
+                viewer.realtime.buffered · viewer.realtime.pause</span
+              >
+            </div>
+            <div class="state-card__body">
+              <div class="reconnect-bar">
+                <span
+                  class="status-pill status-pill--warning"
+                  data-message-key="viewer.realtime.reconnectingShort"
+                  ><span class="status-icon" aria-hidden="true">!</span>Reconnecting</span
+                >
+                <div class="reconnect-bar__body">
+                  <strong>Attempt 3 of 10</strong>
+                  <span>Showing the last confirmed data while the connection recovers.</span>
+                </div>
+                <button
+                  class="ui-button ui-button--sm"
+                  type="button"
+                  data-message-key="viewer.realtime.pause"
+                >
+                  Pause updates
+                </button>
+              </div>
+              <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px">
+                <span class="status-pill" data-message-key="viewer.realtime.lastUpdate"
+                  >Last update 09:41 UTC</span
+                >
+                <span class="status-pill" data-message-key="viewer.realtime.buffered"
+                  >Buffered 18 updates</span
+                >
+                <button
+                  class="status-link"
+                  type="button"
+                  data-message-key="viewer.diagnostics.open"
+                >
+                  View diagnostics
+                </button>
+              </div>
+              <div class="callout" style="margin-top: 12px">
+                The status is visible and announced politely. Resume performs gap detection and
+                resyncs when needed; the UI never pretends the data is current.
+              </div>
+            </div>
+          </section>
+
+          <section class="state-card state-card--wide" aria-labelledby="state-plugin-title">
+            <div class="state-card__head">
+              <h2 class="state-card__title" id="state-plugin-title">Plugin error</h2>
+              <span class="state-card__key"
+                >state.pluginError.title · state.pluginError.body · state.pluginError.disable ·
+                state.pluginError.remove</span
+              >
+            </div>
+            <div class="state-card__body">
+              <div
+                style="
+                  display: grid;
+                  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+                  gap: 12px;
+                  align-items: start;
+                "
+              >
+                <div class="plugin-error">
+                  <p class="plugin-error__title" data-message-key="state.pluginError.title">
+                    <span aria-hidden="true">!</span> Block plugin failed
+                  </p>
+                  <p class="plugin-error__text" data-message-key="state.pluginError.body">
+                    Other blocks are unaffected. Disable or remove the plugin to recover.
+                  </p>
+                  <p class="plugin-error__meta">
+                    plugin: acme/heatmap@2.1.0 · EXTENSION_RENDER_FAILED · block: enrollment_heatmap
+                  </p>
+                  <div class="state-actions">
+                    <button
+                      class="ui-button ui-button--sm"
+                      type="button"
+                      data-message-key="viewer.diagnostics.open"
+                    >
+                      View diagnostics
+                    </button>
+                    <button
+                      class="ui-button ui-button--danger ui-button--sm"
+                      type="button"
+                      data-message-key="state.pluginError.disable"
+                    >
+                      Disable plugin
+                    </button>
+                    <button
+                      class="ui-button ui-button--ghost ui-button--sm"
+                      type="button"
+                      data-message-key="state.pluginError.remove"
+                    >
+                      Remove block
+                    </button>
+                  </div>
+                </div>
+                <div class="board-panel">
+                  <p class="panel-kicker" data-host-content="">Sibling block · still available</p>
+                  <p class="panel-title" data-host-content="">Proficiency trend</p>
+                  <p class="panel-meta" data-host-content="">
+                    The failed plugin is contained. The rest of the board remains interactive.
+                  </p>
+                  <div class="mini-bars" aria-hidden="true">
+                    <span style="height: 78%"></span><span style="height: 66%"></span
+                    ><span style="height: 58%"></span><span style="height: 49%"></span
+                    ><span style="height: 40%"></span>
+                  </div>
+                </div>
+              </div>
+              <p class="state-card__note">
+                Assertive announcement once. The plugin identity, stable error code and affected
+                block are visible. The host can disable or remove without corrupting other spaces.
+              </p>
+            </div>
+          </section>
+        </div>
+      </div>
+
+      <footer class="ref-footer">
+        <p>
+          Static state references only. Real state transitions, live regions and recovery actions
+          belong to the runtime and must be verified under
+          <a href="../VISUAL_ACCEPTANCE.md">the acceptance checklist</a>.
+        </p>
+      </footer>
+    </main>
+  </body>
+</html>

@@ -1,0 +1,1342 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Editor desktop · Boardloom design references</title>
+    <link rel="stylesheet" href="./reference.css" />
+  </head>
+  <body class="ref-page">
+    <header class="ref-banner">
+      <a class="ref-brand" href="./index.html">Boardloom design references</a>
+      <span class="ref-badge">Design reference - not production UI</span>
+      <nav class="ref-nav" aria-label="Design reference pages" data-doc-content="">
+        <a href="./index.html">Index</a>
+        <a href="./viewer-desktop.html">Viewer desktop</a>
+        <a href="./viewer-narrow.html">Viewer narrow</a>
+        <a href="./editor-desktop.html" aria-current="page">Editor desktop</a>
+        <a href="./editor-narrow.html">Editor narrow</a>
+        <a href="./states.html">States</a>
+        <a href="./boards.html">Boards</a>
+        <a href="./localization.html">Localization</a>
+        <a href="./accessibility.html">Accessibility</a>
+      </nav>
+    </header>
+
+    <main class="ref-main">
+      <header class="ref-intro">
+        <p class="ref-kicker">T05 · Editor composition · Desktop</p>
+        <h1 class="ref-title">Authoring at the edges, the chart still at the centre</h1>
+        <p class="ref-lede">
+          The editor adds a block library and a precise property inspector without turning the board
+          into a settings page. A persistent draft bar makes apply and discard explicit. The
+          selected block has a visible outline, pointer handles and an equally visible keyboard
+          layout path.
+        </p>
+        <div class="ref-note-grid">
+          <div class="ref-note">
+            <strong>Three regions</strong>
+            Library, canvas and inspector are peers in the layout, but the canvas keeps the widest
+            and most open region.
+          </div>
+          <div class="ref-note">
+            <strong>Draft clarity</strong>
+            Dirty status, undo, redo, apply and discard are always visible. Discard asks before
+            losing more than one change.
+          </div>
+          <div class="ref-note">
+            <strong>Keyboard parity</strong>
+            Move and resize controls are buttons near the selection, not a pointer-only gesture.
+            Arrow, Enter and Escape behavior is stated in the UI.
+          </div>
+        </div>
+      </header>
+
+      <section class="ref-artboard-section" aria-labelledby="editor-light-title">
+        <div class="ref-artboard-head">
+          <h2 class="ref-artboard-title" id="editor-light-title">Editor · desktop · light</h2>
+          <span class="ref-artboard-meta"
+            >1440 px reference · properties inspector · dirty draft</span
+          >
+        </div>
+        <div class="ref-artboard-frame">
+          <div class="ref-artboard">
+            <div class="boardloom ref-app" data-boardloom-theme="light">
+              <a class="sr-only" href="#editor-light-main" data-message-key="a11y.skipToContent"
+                >Skip to board content</a
+              >
+              <div class="app-shell editor-stage">
+                <header class="app-header">
+                  <div class="app-identity">
+                    <p class="app-host" data-host-content="">
+                      Northstar Schools · Assessment workspace
+                    </p>
+                    <h1 class="app-title" data-host-content="">District assessment overview</h1>
+                    <p class="app-subtitle" data-host-content="">
+                      Editing the fall 2026 assessment board. Viewer shows the committed revision.
+                    </p>
+                    <p class="app-meta">
+                      <span>Synthetic assessment fixture</span><span>Revision 14</span
+                      ><span>Times shown in UTC</span>
+                    </p>
+                  </div>
+                  <div class="app-toolbar">
+                    <div
+                      class="ui-segmented"
+                      role="group"
+                      aria-label="Board mode"
+                      data-message-key="a11y.modeNavigation"
+                    >
+                      <button
+                        class="ui-segment"
+                        type="button"
+                        aria-pressed="false"
+                        data-message-key="mode.viewer"
+                      >
+                        Viewer
+                      </button>
+                      <button
+                        class="ui-segment"
+                        type="button"
+                        aria-pressed="true"
+                        data-message-key="mode.editor"
+                      >
+                        Editor
+                      </button>
+                    </div>
+                    <button
+                      class="ui-button ui-button--ghost"
+                      type="button"
+                      data-message-key="editor.draft.discard"
+                    >
+                      Discard changes
+                    </button>
+                    <button
+                      class="ui-button ui-button--primary"
+                      type="button"
+                      data-message-key="common.apply"
+                    >
+                      Apply
+                    </button>
+                  </div>
+                </header>
+
+                <div class="draft-bar">
+                  <span class="draft-status">
+                    <span class="draft-status__dot" aria-hidden="true"></span>
+                    <span data-message-key="draft.dirty">Unsaved changes</span>
+                    <span class="draft-status__note"
+                      ><span data-message-key="editor.draft.edits.other">3 edits</span> ·
+                      <span data-message-key="editor.draft.ageMinutes.other"
+                        >2 minutes ago</span
+                      ></span
+                    >
+                  </span>
+                  <div class="draft-actions">
+                    <button
+                      class="ui-button ui-button--sm"
+                      type="button"
+                      data-message-key="common.undo"
+                    >
+                      Undo
+                    </button>
+                    <button
+                      class="ui-button ui-button--sm"
+                      type="button"
+                      data-message-key="common.redo"
+                    >
+                      Redo
+                    </button>
+                    <button
+                      class="ui-button ui-button--sm"
+                      type="button"
+                      data-message-key="editor.previewAsViewer"
+                    >
+                      Preview as viewer
+                    </button>
+                  </div>
+                </div>
+
+                <div class="editor-grid" id="editor-light-main">
+                  <aside class="editor-region editor-library" aria-labelledby="library-title">
+                    <h2 class="editor-region-title" id="library-title">Block library</h2>
+                    <div class="editor-search">
+                      <input
+                        type="search"
+                        placeholder="Search blocks"
+                        aria-label="Search blocks"
+                        data-message-key="editor.library.search"
+                      />
+                    </div>
+                    <div class="library-group">
+                      <h3 class="library-group-title">Charts</h3>
+                      <button
+                        class="library-item"
+                        type="button"
+                        data-message-key="editor.library.addLine"
+                      >
+                        <span class="library-icon" aria-hidden="true">↗</span>
+                        <span data-message-key="editor.library.line.name"
+                          ><span class="library-name" data-message-key="editor.library.line.name"
+                            >Line chart</span
+                          ><span
+                            class="library-desc"
+                            data-message-key="editor.library.line.description"
+                            >Trend over time or ordered groups</span
+                          ></span
+                        >
+                        <span class="library-add" aria-hidden="true">+</span>
+                      </button>
+                      <button
+                        class="library-item"
+                        type="button"
+                        data-message-key="editor.library.addBar"
+                      >
+                        <span class="library-icon" aria-hidden="true">▥</span>
+                        <span data-message-key="editor.library.bar.name"
+                          ><span class="library-name" data-message-key="editor.library.bar.name"
+                            >Bar chart</span
+                          ><span
+                            class="library-desc"
+                            data-message-key="editor.library.bar.description"
+                            >Compare categories with a zero baseline</span
+                          ></span
+                        >
+                        <span class="library-add" aria-hidden="true">+</span>
+                      </button>
+                      <button
+                        class="library-item"
+                        type="button"
+                        data-message-key="editor.library.addDonut"
+                      >
+                        <span class="library-icon" aria-hidden="true">◔</span>
+                        <span data-message-key="editor.library.donut.name"
+                          ><span class="library-name" data-message-key="editor.library.donut.name"
+                            >Donut</span
+                          ><span
+                            class="library-desc"
+                            data-message-key="editor.library.donut.description"
+                            >Part-to-whole with explicit Other</span
+                          ></span
+                        >
+                        <span class="library-add" aria-hidden="true">+</span>
+                      </button>
+                    </div>
+                    <div class="library-group">
+                      <h3 class="library-group-title">Metrics</h3>
+                      <button
+                        class="library-item"
+                        type="button"
+                        data-message-key="editor.library.addMetric"
+                      >
+                        <span class="library-icon" aria-hidden="true">◎</span>
+                        <span data-message-key="editor.library.metric.name"
+                          ><span class="library-name" data-message-key="editor.library.metric.name"
+                            >Metric</span
+                          ><span
+                            class="library-desc"
+                            data-message-key="editor.library.metric.description"
+                            >One number with optional comparison</span
+                          ></span
+                        >
+                        <span class="library-add" aria-hidden="true">+</span>
+                      </button>
+                    </div>
+                    <div class="library-group">
+                      <h3 class="library-group-title">Tables</h3>
+                      <button
+                        class="library-item"
+                        type="button"
+                        data-message-key="editor.library.addTable"
+                      >
+                        <span class="library-icon" aria-hidden="true">▤</span>
+                        <span data-message-key="editor.library.table.name"
+                          ><span class="library-name" data-message-key="editor.library.table.name"
+                            >Table</span
+                          ><span
+                            class="library-desc"
+                            data-message-key="editor.library.table.description"
+                            >Accessible rows with formatting and sort</span
+                          ></span
+                        >
+                        <span class="library-add" aria-hidden="true">+</span>
+                      </button>
+                    </div>
+                    <div class="callout" style="margin-top: 16px">
+                      Dragging is optional. Every block can be added, moved, resized and reordered
+                      from the keyboard.
+                    </div>
+                  </aside>
+
+                  <section class="editor-region editor-canvas" aria-labelledby="canvas-title">
+                    <div class="editor-canvas-head">
+                      <div>
+                        <h2 class="editor-region-title" id="canvas-title">Board canvas</h2>
+                        <p class="panel-meta" data-host-content="">
+                          12-column desktop grid · 1 block selected · 24 px gutter
+                        </p>
+                      </div>
+                      <div class="panel-tools">
+                        <button
+                          class="ui-button ui-button--sm"
+                          type="button"
+                          data-message-key="editor.block.add"
+                        >
+                          Add block
+                        </button>
+                        <button
+                          class="ui-button ui-button--sm"
+                          type="button"
+                          data-message-key="editor.filters.manage"
+                        >
+                          Manage filters
+                        </button>
+                      </div>
+                    </div>
+                    <div class="canvas-grid">
+                      <div class="canvas-block canvas-block--metric">
+                        <h3 class="canvas-block__title">Proficiency</h3>
+                        <p class="canvas-block__meta">Metric · percent</p>
+                        <p class="metric-value" style="font-size: 24px" data-host-content="">74%</p>
+                      </div>
+                      <div class="canvas-block canvas-block--metric">
+                        <h3 class="canvas-block__title">Students</h3>
+                        <p class="canvas-block__meta">Metric · count</p>
+                        <p class="metric-value" style="font-size: 24px" data-host-content="">
+                          12,480
+                        </p>
+                      </div>
+                      <div class="canvas-block canvas-block--metric">
+                        <h3 class="canvas-block__title">Absence</h3>
+                        <p class="canvas-block__meta">Metric · percent</p>
+                        <p class="metric-value" style="font-size: 24px" data-host-content="">
+                          11.4%
+                        </p>
+                      </div>
+                      <div class="canvas-block canvas-block--metric">
+                        <h3 class="canvas-block__title">Schools</h3>
+                        <p class="canvas-block__meta">Metric · count</p>
+                        <p class="metric-value" style="font-size: 24px" data-host-content="">24</p>
+                      </div>
+
+                      <div
+                        class="canvas-block canvas-block--chart canvas-block--selected"
+                        tabindex="0"
+                        aria-label="Selected block: Proficiency trend"
+                        data-message-key="editor.block.selected"
+                      >
+                        <span class="drag-handle" aria-hidden="true"></span>
+                        <span class="resize-handle" aria-hidden="true"></span>
+                        <div
+                          class="block-toolbar"
+                          role="toolbar"
+                          aria-label="Selected block actions"
+                          data-message-key="editor.block.settings"
+                        >
+                          <button
+                            class="ui-icon-button"
+                            type="button"
+                            aria-label="Duplicate block"
+                            data-message-key="editor.block.duplicate"
+                          >
+                            ⧉
+                          </button>
+                          <button
+                            class="ui-icon-button"
+                            type="button"
+                            aria-label="Move block"
+                            data-message-key="editor.block.move"
+                          >
+                            ✥
+                          </button>
+                          <button
+                            class="ui-icon-button"
+                            type="button"
+                            aria-label="Delete block"
+                            data-message-key="editor.block.delete"
+                          >
+                            ⌫
+                          </button>
+                        </div>
+                        <h3 class="canvas-block__title">Proficiency trend</h3>
+                        <p class="canvas-block__meta">
+                          Line · X: month · Y: proficiency · series: year
+                        </p>
+                        <svg
+                          class="chart-svg"
+                          viewBox="0 0 420 150"
+                          role="img"
+                          aria-labelledby="editor-chart-title editor-chart-desc"
+                          data-host-content=""
+                        >
+                          <title id="editor-chart-title">Selected proficiency trend</title>
+                          <desc id="editor-chart-desc">
+                            A rising proficiency line from 58 to 74 percent with a dashed prior-year
+                            reference.
+                          </desc>
+                          <line class="chart-grid-line" x1="20" y1="120" x2="400" y2="120" />
+                          <line class="chart-grid-line" x1="20" y1="70" x2="400" y2="70" />
+                          <line class="chart-grid-line" x1="20" y1="20" x2="400" y2="20" />
+                          <text x="14" y="124" text-anchor="end">0</text>
+                          <text x="14" y="74" text-anchor="end">50</text>
+                          <text x="14" y="24" text-anchor="end">100</text>
+                          <text x="30" y="144" text-anchor="start">Sep</text>
+                          <text x="390" y="144" text-anchor="end">Feb</text>
+                          <path
+                            class="chart-line series-2 series-dash-2"
+                            d="M30 86 L100 79 L170 73 L240 70 L310 63 L390 55"
+                          />
+                          <path
+                            class="chart-line series-1"
+                            d="M30 78 L100 70 L170 66 L240 59 L310 51 L390 44"
+                          />
+                          <circle class="chart-point series-1" cx="390" cy="44" r="3" />
+                        </svg>
+                        <div class="keyboard-hint" data-message-key="editor.block.keyboardHint">
+                          Use arrow keys to move, Enter to apply, Escape to cancel
+                        </div>
+                      </div>
+
+                      <div class="canvas-block canvas-block--side">
+                        <h3 class="canvas-block__title">Comparison</h3>
+                        <p class="canvas-block__meta">Prior year · percent change</p>
+                        <p class="delta-card__value" style="font-size: 26px" data-host-content="">
+                          +8.8%
+                        </p>
+                        <p class="panel-meta" data-host-content="">Primary 74% · Reference 68%</p>
+                        <div class="callout" style="margin-top: 8px">
+                          Reference zero shows “Change not available”, not infinity.
+                        </div>
+                      </div>
+
+                      <div class="canvas-block canvas-block--table">
+                        <h3 class="canvas-block__title">Schools by proficiency</h3>
+                        <p class="canvas-block__meta">Table · 5 columns · sorted descending</p>
+                        <div class="mini-bars" aria-hidden="true">
+                          <span style="height: 82%"></span><span style="height: 69%"></span
+                          ><span style="height: 61%"></span><span style="height: 55%"></span
+                          ><span style="height: 44%"></span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div
+                      class="narrow-keyboard-wrap"
+                      aria-label="Keyboard layout controls"
+                      data-message-key="a11y.keyboardAlternative"
+                    >
+                      <p
+                        class="editor-region-title"
+                        style="margin-bottom: 6px"
+                        data-message-key="a11y.keyboardAlternative"
+                      >
+                        Keyboard layout controls
+                      </p>
+                      <div
+                        style="
+                          display: flex;
+                          flex-wrap: wrap;
+                          gap: 10px;
+                          align-items: center;
+                          justify-content: space-between;
+                        "
+                      >
+                        <div
+                          class="keyboard-pad"
+                          role="group"
+                          aria-label="Move selected block"
+                          data-message-key="editor.block.move"
+                        >
+                          <button
+                            type="button"
+                            aria-label="Move up"
+                            data-message-key="editor.block.moveUp"
+                          >
+                            ↑
+                          </button>
+                          <button
+                            type="button"
+                            aria-label="Move left"
+                            data-message-key="editor.block.moveLeft"
+                          >
+                            ←
+                          </button>
+                          <button
+                            type="button"
+                            aria-label="Move down"
+                            data-message-key="editor.block.moveDown"
+                          >
+                            ↓
+                          </button>
+                          <button
+                            type="button"
+                            aria-label="Move right"
+                            data-message-key="editor.block.moveRight"
+                          >
+                            →
+                          </button>
+                        </div>
+                        <div style="display: flex; flex-wrap: wrap; gap: 4px">
+                          <button
+                            class="ui-button ui-button--sm"
+                            type="button"
+                            data-message-key="editor.block.narrower"
+                          >
+                            Narrower
+                          </button>
+                          <button
+                            class="ui-button ui-button--sm"
+                            type="button"
+                            data-message-key="editor.block.wider"
+                          >
+                            Wider
+                          </button>
+                          <button
+                            class="ui-button ui-button--sm"
+                            type="button"
+                            data-message-key="editor.block.shorter"
+                          >
+                            Shorter
+                          </button>
+                          <button
+                            class="ui-button ui-button--sm"
+                            type="button"
+                            data-message-key="editor.block.taller"
+                          >
+                            Taller
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </section>
+
+                  <aside class="editor-region editor-inspector" aria-labelledby="inspector-title">
+                    <div
+                      style="
+                        display: flex;
+                        align-items: center;
+                        justify-content: space-between;
+                        gap: 8px;
+                      "
+                    >
+                      <h2 class="editor-region-title" id="inspector-title">Block inspector</h2>
+                      <button
+                        class="ui-icon-button"
+                        type="button"
+                        aria-label="Close inspector"
+                        data-message-key="editor.inspector.close"
+                      >
+                        ×
+                      </button>
+                    </div>
+                    <div
+                      class="inspector-tabs"
+                      role="group"
+                      aria-label="Inspector sections"
+                      data-message-key="editor.inspectorSections"
+                    >
+                      <button
+                        class="inspector-tab"
+                        type="button"
+                        aria-pressed="true"
+                        data-message-key="editor.inspector.props"
+                      >
+                        Properties
+                      </button>
+                      <button
+                        class="inspector-tab"
+                        type="button"
+                        aria-pressed="false"
+                        data-message-key="editor.inspector.layout"
+                      >
+                        Layout
+                      </button>
+                      <button
+                        class="inspector-tab"
+                        type="button"
+                        aria-pressed="false"
+                        data-message-key="editor.inspector.data"
+                      >
+                        Data
+                      </button>
+                      <button
+                        class="inspector-tab"
+                        type="button"
+                        aria-pressed="false"
+                        data-message-key="editor.inspector.comparison"
+                      >
+                        Comparison
+                      </button>
+                    </div>
+
+                    <section class="inspector-section">
+                      <h3 class="inspector-section-title">Block</h3>
+                      <div class="ui-field" data-message-key="editor.properties.title">
+                        <label
+                          class="ui-label"
+                          for="block-title"
+                          data-message-key="editor.properties.title"
+                          >Title</label
+                        >
+                        <input
+                          class="ui-input"
+                          id="block-title"
+                          value="Proficiency trend"
+                          data-message-key="editor.properties.title"
+                        />
+                      </div>
+                      <div class="ui-field" data-message-key="editor.properties.description">
+                        <label
+                          class="ui-label"
+                          for="block-description"
+                          data-message-key="editor.properties.description"
+                          >Description</label
+                        >
+                        <input
+                          class="ui-input"
+                          id="block-description"
+                          value="Mathematics proficiency over time"
+                          data-message-key="editor.properties.description"
+                        />
+                      </div>
+                    </section>
+
+                    <section class="inspector-section">
+                      <h3 class="inspector-section-title">Binding</h3>
+                      <div class="property-row">
+                        <span class="property-row__label">X axis</span
+                        ><span class="property-row__value">Month · temporal</span>
+                      </div>
+                      <div class="property-row">
+                        <span
+                          class="property-row__label"
+                          data-message-key="editor.properties.measure"
+                          >Y measure</span
+                        ><span class="property-row__value">Proficiency · percent</span>
+                      </div>
+                      <div class="property-row">
+                        <span class="property-row__label">Series</span
+                        ><span class="property-row__value">School year · category</span>
+                      </div>
+                      <div class="property-row">
+                        <span class="property-row__label">Mode</span
+                        ><span class="property-row__value"
+                          ><span class="lock-badge">Locked binding</span></span
+                        >
+                      </div>
+                      <div class="ui-field" style="margin-top: 10px">
+                        <label
+                          class="ui-label"
+                          for="aggregation"
+                          data-message-key="editor.properties.aggregation"
+                          >Aggregation</label
+                        >
+                        <select
+                          class="ui-select"
+                          id="aggregation"
+                          data-message-key="editor.properties.aggregation"
+                        >
+                          <option>Mean per bucket</option>
+                          <option>Sum per bucket</option>
+                        </select>
+                      </div>
+                      <div class="ui-field">
+                        <label
+                          class="ui-label"
+                          for="format"
+                          data-message-key="editor.properties.format"
+                          >Format</label
+                        >
+                        <select
+                          class="ui-select"
+                          id="format"
+                          data-message-key="editor.properties.format"
+                        >
+                          <option>Percent, 0 decimals</option>
+                          <option>Percent, 1 decimal</option>
+                        </select>
+                      </div>
+                    </section>
+
+                    <section class="inspector-section">
+                      <h3 class="inspector-section-title">Display</h3>
+                      <label class="ui-check" data-message-key="editor.display.showTarget"
+                        ><input
+                          type="checkbox"
+                          checked
+                          aria-label="Show target line and label"
+                          data-message-key="editor.display.showTarget"
+                        />
+                        Show target line and label</label
+                      >
+                      <label
+                        class="ui-check"
+                        style="margin-top: 6px"
+                        data-message-key="editor.display.showReference"
+                        ><input
+                          type="checkbox"
+                          checked
+                          aria-label="Show prior-year reference series"
+                          data-message-key="editor.display.showReference"
+                        />
+                        Show prior-year reference series</label
+                      >
+                      <label
+                        class="ui-check"
+                        style="margin-top: 6px"
+                        data-message-key="editor.display.showDataLabels"
+                        ><input
+                          type="checkbox"
+                          aria-label="Show data labels on every point"
+                          data-message-key="editor.display.showDataLabels"
+                        />
+                        Show data labels on every point</label
+                      >
+                    </section>
+
+                    <section class="inspector-section">
+                      <h3 class="inspector-section-title">Inherited filters</h3>
+                      <div class="callout">
+                        Board filters (Term, Grade band) and the Middle school group filter apply to
+                        this block. Locked fields cannot be silently replaced.
+                      </div>
+                      <button
+                        class="ui-button ui-button--danger ui-button--sm"
+                        type="button"
+                        style="margin-top: 10px"
+                        data-message-key="editor.block.resetDefaults"
+                      >
+                        Reset to defaults
+                      </button>
+                    </section>
+                  </aside>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p class="ref-caption">
+          Draft state is visible in the persistent bar. Selecting the chart shows the pointer
+          handles and the labeled keyboard controls; the inspector edits the draft, not the
+          committed board.
+        </p>
+      </section>
+
+      <section class="ref-artboard-section" aria-labelledby="editor-dark-title">
+        <div class="ref-artboard-head">
+          <h2 class="ref-artboard-title" id="editor-dark-title">Editor · desktop · dark</h2>
+          <span class="ref-artboard-meta"
+            >1440 px reference · comparison inspector · dirty draft</span
+          >
+        </div>
+        <div class="ref-artboard-frame">
+          <div class="ref-artboard">
+            <div class="boardloom ref-app" data-boardloom-theme="dark">
+              <div class="app-shell editor-stage">
+                <header class="app-header">
+                  <div class="app-identity">
+                    <p class="app-host" data-host-content="">Lumen Foods · Commercial workspace</p>
+                    <h1 class="app-title" data-host-content="">Revenue and margin</h1>
+                    <p class="app-subtitle" data-host-content="">
+                      Editing the current commercial board with a prior-period comparison.
+                    </p>
+                    <p class="app-meta">
+                      <span>Synthetic commercial fixture</span><span>Revision 8</span
+                      ><span>Times shown in UTC</span>
+                    </p>
+                  </div>
+                  <div class="app-toolbar">
+                    <div
+                      class="ui-segmented"
+                      role="group"
+                      aria-label="Board mode"
+                      data-message-key="a11y.modeNavigation"
+                    >
+                      <button
+                        class="ui-segment"
+                        type="button"
+                        aria-pressed="false"
+                        data-message-key="mode.viewer"
+                      >
+                        Viewer
+                      </button>
+                      <button
+                        class="ui-segment"
+                        type="button"
+                        aria-pressed="true"
+                        data-message-key="mode.editor"
+                      >
+                        Editor
+                      </button>
+                    </div>
+                    <button
+                      class="ui-button ui-button--ghost"
+                      type="button"
+                      data-message-key="editor.draft.discard"
+                    >
+                      Discard changes
+                    </button>
+                    <button
+                      class="ui-button ui-button--primary"
+                      type="button"
+                      data-message-key="common.apply"
+                    >
+                      Apply
+                    </button>
+                  </div>
+                </header>
+
+                <div class="draft-bar">
+                  <span class="draft-status">
+                    <span class="draft-status__dot" aria-hidden="true"></span>
+                    <span data-message-key="draft.dirty">Unsaved changes</span>
+                    <span class="draft-status__note"
+                      ><span data-message-key="editor.draft.edits.one">1 edit</span> ·
+                      <span data-message-key="editor.draft.change.comparisonMapping"
+                        >comparison mapping</span
+                      ></span
+                    >
+                  </span>
+                  <div class="draft-actions">
+                    <button
+                      class="ui-button ui-button--sm"
+                      type="button"
+                      data-message-key="common.undo"
+                    >
+                      Undo
+                    </button>
+                    <button
+                      class="ui-button ui-button--sm"
+                      type="button"
+                      data-message-key="common.redo"
+                    >
+                      Redo
+                    </button>
+                  </div>
+                </div>
+
+                <div class="editor-grid">
+                  <aside class="editor-region editor-library" aria-labelledby="library-dark-title">
+                    <h2 class="editor-region-title" id="library-dark-title">Block library</h2>
+                    <div class="editor-search">
+                      <input
+                        type="search"
+                        placeholder="Search blocks"
+                        aria-label="Search blocks"
+                        data-message-key="editor.library.search"
+                      />
+                    </div>
+                    <div class="library-group">
+                      <h3 class="library-group-title">Charts</h3>
+                      <button
+                        class="library-item"
+                        type="button"
+                        data-message-key="editor.library.addLine"
+                      >
+                        <span class="library-icon" aria-hidden="true">↗</span
+                        ><span data-message-key="editor.library.line.name"
+                          ><span class="library-name" data-message-key="editor.library.line.name"
+                            >Line chart</span
+                          ><span
+                            class="library-desc"
+                            data-message-key="editor.library.line.description"
+                            >Trend over time or ordered groups</span
+                          ></span
+                        ><span class="library-add" aria-hidden="true">+</span>
+                      </button>
+                      <button
+                        class="library-item"
+                        type="button"
+                        data-message-key="editor.library.addBar"
+                      >
+                        <span class="library-icon" aria-hidden="true">▥</span
+                        ><span data-message-key="editor.library.bar.name"
+                          ><span class="library-name" data-message-key="editor.library.bar.name"
+                            >Bar chart</span
+                          ><span
+                            class="library-desc"
+                            data-message-key="editor.library.bar.description"
+                            >Compare categories with a zero baseline</span
+                          ></span
+                        ><span class="library-add" aria-hidden="true">+</span>
+                      </button>
+                    </div>
+                    <div class="library-group">
+                      <h3 class="library-group-title">Metrics</h3>
+                      <button
+                        class="library-item"
+                        type="button"
+                        data-message-key="editor.library.addMetric"
+                      >
+                        <span class="library-icon" aria-hidden="true">◎</span
+                        ><span data-message-key="editor.library.metric.name"
+                          ><span class="library-name" data-message-key="editor.library.metric.name"
+                            >Metric</span
+                          ><span
+                            class="library-desc"
+                            data-message-key="editor.library.metric.description"
+                            >One number with optional comparison</span
+                          ></span
+                        ><span class="library-add" aria-hidden="true">+</span>
+                      </button>
+                    </div>
+                    <div class="library-group">
+                      <h3 class="library-group-title">Tables</h3>
+                      <button
+                        class="library-item"
+                        type="button"
+                        data-message-key="editor.library.addTable"
+                      >
+                        <span class="library-icon" aria-hidden="true">▤</span
+                        ><span data-message-key="editor.library.table.name"
+                          ><span class="library-name" data-message-key="editor.library.table.name"
+                            >Table</span
+                          ><span
+                            class="library-desc"
+                            data-message-key="editor.library.table.description"
+                            >Accessible rows with formatting and sort</span
+                          ></span
+                        ><span class="library-add" aria-hidden="true">+</span>
+                      </button>
+                    </div>
+                    <div class="callout" style="margin-top: 16px">
+                      The library is a real button list. Drag is optional and never the only way to
+                      add or place a block.
+                    </div>
+                  </aside>
+
+                  <section class="editor-region editor-canvas" aria-labelledby="canvas-dark-title">
+                    <div class="editor-canvas-head">
+                      <div>
+                        <h2 class="editor-region-title" id="canvas-dark-title">Board canvas</h2>
+                        <p class="panel-meta" data-host-content="">
+                          12-column grid · selected revenue block
+                        </p>
+                      </div>
+                      <div class="panel-tools">
+                        <button
+                          class="ui-button ui-button--sm"
+                          type="button"
+                          data-message-key="editor.block.add"
+                        >
+                          Add block</button
+                        ><button
+                          class="ui-button ui-button--sm"
+                          type="button"
+                          data-message-key="editor.filters.manage"
+                        >
+                          Manage filters
+                        </button>
+                      </div>
+                    </div>
+                    <div class="canvas-grid">
+                      <div class="canvas-block canvas-block--metric">
+                        <h3 class="canvas-block__title">Net revenue</h3>
+                        <p class="canvas-block__meta">Metric · EUR</p>
+                        <p class="metric-value" style="font-size: 24px" data-host-content="">
+                          €2.84M
+                        </p>
+                      </div>
+                      <div class="canvas-block canvas-block--metric">
+                        <h3 class="canvas-block__title">Gross margin</h3>
+                        <p class="canvas-block__meta">Metric · percent</p>
+                        <p class="metric-value" style="font-size: 24px" data-host-content="">
+                          41.2%
+                        </p>
+                      </div>
+                      <div class="canvas-block canvas-block--metric">
+                        <h3 class="canvas-block__title">Orders</h3>
+                        <p class="canvas-block__meta">Metric · count</p>
+                        <p class="metric-value" style="font-size: 24px" data-host-content="">
+                          18,204
+                        </p>
+                      </div>
+                      <div class="canvas-block canvas-block--metric">
+                        <h3 class="canvas-block__title">Avg. order</h3>
+                        <p class="canvas-block__meta">Metric · EUR</p>
+                        <p class="metric-value" style="font-size: 24px" data-host-content="">
+                          €156
+                        </p>
+                      </div>
+                      <div
+                        class="canvas-block canvas-block--chart canvas-block--selected"
+                        tabindex="0"
+                        aria-label="Selected block: Revenue by channel"
+                        data-message-key="editor.block.selected"
+                      >
+                        <span class="drag-handle" aria-hidden="true"></span>
+                        <span class="resize-handle" aria-hidden="true"></span>
+                        <div
+                          class="block-toolbar"
+                          role="toolbar"
+                          aria-label="Selected block actions"
+                          data-message-key="editor.block.settings"
+                        >
+                          <button
+                            class="ui-icon-button"
+                            type="button"
+                            aria-label="Duplicate block"
+                            data-message-key="editor.block.duplicate"
+                          >
+                            ⧉</button
+                          ><button
+                            class="ui-icon-button"
+                            type="button"
+                            aria-label="Move block"
+                            data-message-key="editor.block.move"
+                          >
+                            ✥</button
+                          ><button
+                            class="ui-icon-button"
+                            type="button"
+                            aria-label="Delete block"
+                            data-message-key="editor.block.delete"
+                          >
+                            ⌫
+                          </button>
+                        </div>
+                        <h3 class="canvas-block__title">Revenue by channel</h3>
+                        <p class="canvas-block__meta">
+                          Bar · X: channel · Y: net revenue · series: period
+                        </p>
+                        <svg
+                          class="chart-svg"
+                          viewBox="0 0 420 150"
+                          role="img"
+                          aria-labelledby="editor-dark-chart-title editor-dark-chart-desc"
+                          data-host-content=""
+                        >
+                          <title id="editor-dark-chart-title">
+                            Revenue by channel, current and prior period
+                          </title>
+                          <desc id="editor-dark-chart-desc">
+                            Grouped bars compare four channels against the prior period. Direct
+                            retail leads.
+                          </desc>
+                          <line class="chart-grid-line" x1="20" y1="120" x2="400" y2="120" />
+                          <line class="chart-grid-line" x1="20" y1="80" x2="400" y2="80" />
+                          <line class="chart-grid-line" x1="20" y1="40" x2="400" y2="40" />
+                          <text x="14" y="124" text-anchor="end">0</text>
+                          <text x="14" y="84" text-anchor="end">1M</text>
+                          <text x="14" y="44" text-anchor="end">2M</text>
+                          <rect class="chart-bar series-1" x="34" y="48" width="24" height="72" />
+                          <rect class="chart-bar series-2" x="62" y="62" width="24" height="58" />
+                          <rect class="chart-bar series-1" x="132" y="60" width="24" height="60" />
+                          <rect class="chart-bar series-2" x="160" y="72" width="24" height="48" />
+                          <rect class="chart-bar series-1" x="230" y="78" width="24" height="42" />
+                          <rect class="chart-bar series-2" x="258" y="88" width="24" height="32" />
+                          <rect class="chart-bar series-1" x="328" y="92" width="24" height="28" />
+                          <rect class="chart-bar series-2" x="356" y="100" width="24" height="20" />
+                          <text x="48" y="138" text-anchor="middle">Retail</text>
+                          <text x="146" y="138" text-anchor="middle">Online</text>
+                          <text x="244" y="138" text-anchor="middle">Partner</text>
+                          <text x="342" y="138" text-anchor="middle">Wholesale</text>
+                        </svg>
+                        <div
+                          class="keyboard-hint"
+                          data-message-key="editor.block.keyboardHintShort"
+                        >
+                          Arrow keys move · Enter applies · Escape cancels
+                        </div>
+                      </div>
+                      <div class="canvas-block canvas-block--side">
+                        <h3 class="canvas-block__title">Comparison</h3>
+                        <p class="canvas-block__meta">Primary vs prior period</p>
+                        <p class="delta-card__value" style="font-size: 26px" data-host-content="">
+                          +12.4%
+                        </p>
+                        <p class="panel-meta" data-host-content="">
+                          Absolute +€278k · Unit policy: identical EUR
+                        </p>
+                      </div>
+                      <div class="canvas-block canvas-block--table">
+                        <h3 class="canvas-block__title">Channel detail</h3>
+                        <p class="canvas-block__meta">Table · net revenue and margin</p>
+                        <div class="mini-bars" aria-hidden="true">
+                          <span style="height: 84%"></span><span style="height: 72%"></span
+                          ><span style="height: 61%"></span><span style="height: 47%"></span
+                          ><span style="height: 38%"></span>
+                        </div>
+                      </div>
+                    </div>
+                    <div
+                      class="narrow-keyboard-wrap"
+                      aria-label="Keyboard layout controls"
+                      data-message-key="a11y.keyboardAlternative"
+                    >
+                      <p
+                        class="editor-region-title"
+                        style="margin-bottom: 6px"
+                        data-message-key="a11y.keyboardAlternative"
+                      >
+                        Keyboard layout controls
+                      </p>
+                      <div
+                        style="
+                          display: flex;
+                          flex-wrap: wrap;
+                          gap: 10px;
+                          align-items: center;
+                          justify-content: space-between;
+                        "
+                      >
+                        <div
+                          class="keyboard-pad"
+                          role="group"
+                          aria-label="Move selected block"
+                          data-message-key="editor.block.move"
+                        >
+                          <button
+                            type="button"
+                            aria-label="Move up"
+                            data-message-key="editor.block.moveUp"
+                          >
+                            ↑</button
+                          ><button
+                            type="button"
+                            aria-label="Move left"
+                            data-message-key="editor.block.moveLeft"
+                          >
+                            ←</button
+                          ><button
+                            type="button"
+                            aria-label="Move down"
+                            data-message-key="editor.block.moveDown"
+                          >
+                            ↓</button
+                          ><button
+                            type="button"
+                            aria-label="Move right"
+                            data-message-key="editor.block.moveRight"
+                          >
+                            →
+                          </button>
+                        </div>
+                        <div style="display: flex; flex-wrap: wrap; gap: 4px">
+                          <button
+                            class="ui-button ui-button--sm"
+                            type="button"
+                            data-message-key="editor.block.narrower"
+                          >
+                            Narrower</button
+                          ><button
+                            class="ui-button ui-button--sm"
+                            type="button"
+                            data-message-key="editor.block.wider"
+                          >
+                            Wider</button
+                          ><button
+                            class="ui-button ui-button--sm"
+                            type="button"
+                            data-message-key="editor.block.shorter"
+                          >
+                            Shorter</button
+                          ><button
+                            class="ui-button ui-button--sm"
+                            type="button"
+                            data-message-key="editor.block.taller"
+                          >
+                            Taller
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </section>
+
+                  <aside
+                    class="editor-region editor-inspector"
+                    aria-labelledby="inspector-dark-title"
+                  >
+                    <div
+                      style="
+                        display: flex;
+                        align-items: center;
+                        justify-content: space-between;
+                        gap: 8px;
+                      "
+                    >
+                      <h2 class="editor-region-title" id="inspector-dark-title">Block inspector</h2>
+                      <button
+                        class="ui-icon-button"
+                        type="button"
+                        aria-label="Close inspector"
+                        data-message-key="editor.inspector.close"
+                      >
+                        ×
+                      </button>
+                    </div>
+                    <div
+                      class="inspector-tabs"
+                      role="group"
+                      aria-label="Inspector sections"
+                      data-message-key="editor.inspectorSections"
+                    >
+                      <button
+                        class="inspector-tab"
+                        type="button"
+                        aria-pressed="false"
+                        data-message-key="editor.inspector.props"
+                      >
+                        Properties
+                      </button>
+                      <button
+                        class="inspector-tab"
+                        type="button"
+                        aria-pressed="false"
+                        data-message-key="editor.inspector.layout"
+                      >
+                        Layout
+                      </button>
+                      <button
+                        class="inspector-tab"
+                        type="button"
+                        aria-pressed="false"
+                        data-message-key="editor.inspector.data"
+                      >
+                        Data
+                      </button>
+                      <button
+                        class="inspector-tab"
+                        type="button"
+                        aria-pressed="true"
+                        data-message-key="editor.inspector.comparison"
+                      >
+                        Comparison
+                      </button>
+                    </div>
+                    <section class="inspector-section">
+                      <h3 class="inspector-section-title">Comparison</h3>
+                      <div class="comparison-pair">
+                        <div class="comparison-box">
+                          <span class="comparison-box__label">Primary</span
+                          ><span class="comparison-box__value">Revenue · current</span>
+                        </div>
+                        <div class="comparison-box">
+                          <span class="comparison-box__label">Reference</span
+                          ><span class="comparison-box__value">Revenue · prior period</span>
+                        </div>
+                      </div>
+                      <div class="property-row">
+                        <span class="property-row__label">Dimension</span
+                        ><span class="property-row__value">channel → channel</span>
+                      </div>
+                      <div class="property-row">
+                        <span class="property-row__label">Measure</span
+                        ><span class="property-row__value">net_revenue → net_revenue</span>
+                      </div>
+                      <div class="property-row">
+                        <span class="property-row__label">Alignment</span
+                        ><span class="property-row__value">channel · exact</span>
+                      </div>
+                      <div class="ui-field" style="margin-top: 10px">
+                        <label
+                          class="ui-label"
+                          for="display-mode"
+                          data-message-key="editor.comparison.display"
+                          >Display</label
+                        ><select
+                          class="ui-select"
+                          id="display-mode"
+                          data-message-key="editor.comparison.display"
+                        >
+                          <option>Overlay</option>
+                          <option>Side by side</option>
+                        </select>
+                      </div>
+                      <div class="ui-field">
+                        <label
+                          class="ui-label"
+                          for="delta-mode"
+                          data-message-key="editor.comparison.delta"
+                          >Delta</label
+                        ><select
+                          class="ui-select"
+                          id="delta-mode"
+                          data-message-key="editor.comparison.delta"
+                        >
+                          <option>Absolute and percent</option>
+                          <option>Absolute only</option>
+                          <option>Percent only</option>
+                        </select>
+                      </div>
+                      <div class="ui-field">
+                        <label
+                          class="ui-label"
+                          for="unit-policy"
+                          data-message-key="editor.comparison.unitPolicy"
+                          >Unit policy</label
+                        ><select
+                          class="ui-select"
+                          id="unit-policy"
+                          data-message-key="editor.comparison.unitPolicy"
+                        >
+                          <option>Identical units required</option>
+                          <option>Documented conversion</option>
+                        </select>
+                      </div>
+                      <div class="callout" style="margin-top: 10px">
+                        Reference zero or a missing pair shows “Change not available” with a reason.
+                        No infinity or fabricated zero.
+                      </div>
+                    </section>
+                    <section class="inspector-section">
+                      <h3 class="inspector-section-title">Reference input</h3>
+                      <div class="property-row">
+                        <span class="property-row__label">Dataset</span
+                        ><span class="property-row__value">orders_2025 · synthetic</span>
+                      </div>
+                      <div class="property-row">
+                        <span class="property-row__label">Slice</span
+                        ><span class="property-row__value">channel_revenue</span>
+                      </div>
+                      <div class="property-row">
+                        <span class="property-row__label">Window</span
+                        ><span class="property-row__value">Prior 90 days · UTC</span>
+                      </div>
+                      <div class="ui-error" style="margin-top: 8px">
+                        <span aria-hidden="true">!</span
+                        ><span
+                          >Two channels have no prior-period mapping. The comparison remains
+                          explicit about unavailable rows.</span
+                        >
+                      </div>
+                    </section>
+                    <section class="inspector-section">
+                      <div style="display: flex; flex-wrap: wrap; gap: 6px">
+                        <button
+                          class="ui-button ui-button--sm"
+                          type="button"
+                          data-message-key="editor.comparison.add"
+                        >
+                          Add comparison</button
+                        ><button
+                          class="ui-button ui-button--danger ui-button--sm"
+                          type="button"
+                          data-message-key="editor.comparison.remove"
+                        >
+                          Remove comparison
+                        </button>
+                      </div>
+                    </section>
+                  </aside>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p class="ref-caption">
+          The comparison tab is a draft editor, not a separate page. Unavailable deltas and missing
+          mappings are visible before Apply; the committed board remains untouched.
+        </p>
+      </section>
+
+      <footer class="ref-footer">
+        <p>
+          Static design references only. The real editor, draft, lease, validation and renderer
+          behavior are implemented in later tasks and must be verified against
+          <a href="../VISUAL_ACCEPTANCE.md">the acceptance checklist</a>.
+        </p>
+      </footer>
+    </main>
+  </body>
+</html>
