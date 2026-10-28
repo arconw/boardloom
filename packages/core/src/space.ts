@@ -1,0 +1,1036 @@
+import type { Clock } from "./clock.js";
+import {
+  documentSchemaVersion,
+  isBlockingValidation,
+  snapshotDocument,
+  validationWarnings,
+  type BoardDocument,
+  type DocumentValidator,
+} from "./document.js";
+import {
+  BoardloomError,
+  DIAGNOSTIC_CODES,
+  createDiagnostic,
+  fail,
+  ok,
+  type Diagnostic,
+  type Result,
+} from "./diagnostics.js";
+import type { SpaceEvent, SpaceEventInput, Unsubscribe } from "./events.js";
+import { EventBus } from "./events.js";
+import type { FormatterProvider } from "./formatting.js";
+import type { IdFactory } from "./ids.js";
+import { deepFreeze, jsonEqual } from "./json.js";
+import type { Logger } from "./logger.js";
+import {
+  resolveLocaleConfig,
+  type BoardloomLocale,
+  type LocaleConfig,
+  type LocaleConfigInput,
+} from "./locale.js";
+import { createMessageProvider, type MessageDictionary, type MessageProvider } from "./messages.js";
+import type {
+  AcquireEditorLeaseOptions,
+  CreateSpaceOptions,
+  CreateViewOptions,
+  DraftSnapshot,
+  EditorLease,
+  ReleaseEditorLeaseOptions,
+  SpaceSnapshot,
+  SpaceStatus,
+  SpaceSummary,
+  ViewMode,
+  ViewState,
+} from "./types.js";
+import { ViewImpl, createView, type BoardView, type ViewHost } from "./view.js";
+
+interface DraftState {
+  document: BoardDocument;
+  baseRevision: number;
+  revision: number;
+  undo: BoardDocument[];
+  redo: BoardDocument[];
+}
+
+interface CommittedDraftState {
+  readonly document: BoardDocument;
+  readonly revision: number;
+}
+
+export interface SpaceDependencies {
+  readonly idFactory: IdFactory;
+  readonly clock: Clock;
+  readonly logger: Logger;
+  readonly documentValidator: DocumentValidator;
+  readonly formatterFactory: (config: LocaleConfig) => FormatterProvider;
+  readonly messageDictionaries: Readonly<Partial<Record<BoardloomLocale, MessageDictionary>>>;
+  readonly historyLimit: number;
+  readonly forwardEvent: (event: SpaceEvent) => void;
+  readonly onDisposed: (spaceId: string, lifetimeId: string) => void;
+  readonly onTerminalDelivered: (spaceId: string, lifetimeId: string) => void;
+}
+
+export interface SpaceInitOptions extends CreateSpaceOptions {
+  readonly localeConfig: LocaleConfig;
+  readonly warnings?: readonly Diagnostic[];
+}
+
+export interface BoardSpace {
+  readonly id: string;
+  readonly lifetimeId: string;
+  readonly disposed: boolean;
+  readonly listenerCount: number;
+  readonly taskCount: number;
+  readonly viewCount: number;
+  getSnapshot(): SpaceSnapshot;
+  loadDocument(
+    document: BoardDocument,
+    options?: { readonly source?: string },
+  ): Result<SpaceSnapshot>;
+  setLocale(config: LocaleConfigInput): Result<SpaceSnapshot>;
+  getFormatters(): FormatterProvider;
+  getMessageProvider(): MessageProvider;
+  pause(): Result<SpaceSnapshot>;
+  resume(): Result<SpaceSnapshot>;
+  createView(options?: CreateViewOptions): Result<BoardView>;
+  acquireEditorLease(options?: AcquireEditorLeaseOptions): Result<EditorLease>;
+  releaseEditorLease(
+    lease: EditorLease,
+    options?: ReleaseEditorLeaseOptions,
+  ): Result<SpaceSnapshot>;
+  updateDraft(lease: EditorLease, document: BoardDocument): Result<DraftSnapshot>;
+  undoDraft(lease: EditorLease): Result<DraftSnapshot>;
+  redoDraft(lease: EditorLease): Result<DraftSnapshot>;
+  applyDraft(lease: EditorLease): Result<SpaceSnapshot>;
+  cancelDraft(lease: EditorLease): Result<SpaceSnapshot>;
+  schedule(callback: () => void, delayMs: number): Result<Unsubscribe>;
+  subscribe(listener: (event: SpaceEvent) => void): Unsubscribe;
+  dispose(): Result<void>;
+}
+
+const EMPTY_DIAGNOSTICS: readonly Diagnostic[] = Object.freeze([]);
+
+function diagnosticsEqual(left: readonly Diagnostic[], right: readonly Diagnostic[]): boolean {
+  if (left.length !== right.length) {
+    return false;
+  }
+  return left.every((diagnostic, index) => {
+    const other = right[index];
+    return (
+      other !== undefined &&
+      diagnostic.code === other.code &&
+      diagnostic.path === other.path &&
+      diagnostic.message === other.message &&
+      diagnostic.severity === other.severity
+    );
+  });
+}
+
+class SpaceImpl implements BoardSpace {
+  readonly id: string;
+  readonly lifetimeId: string;
+  private readonly deps: SpaceDependencies;
+  private readonly events: EventBus<SpaceEvent>;
+  private readonly viewHost: ViewHost;
+  private readonly views = new Map<string, ViewImpl>();
+  private readonly tasks = new Map<string, unknown>();
+  private readonly createdAt: number;
+  private updatedAt: number;
+  private committedDocument: BoardDocument;
+  private committedRevision = 1;
+  private draft: DraftState | null = null;
+  private lease: EditorLease | null = null;
+  private localeConfig: LocaleConfig;
+  private formatters: FormatterProvider;
+  private messages: MessageProvider;
+  private diagnostics: readonly Diagnostic[] = EMPTY_DIAGNOSTICS;
+  private validationDiagnostics: readonly Diagnostic[] = EMPTY_DIAGNOSTICS;
+  private status: SpaceStatus = "active";
+  private sequence = 0;
+  private disposedFlag = false;
+  private disposing = false;
+  private leaseReleaseInProgress = false;
+
+  constructor(options: SpaceInitOptions, deps: SpaceDependencies) {
+    this.id = options.id ?? deps.idFactory.createId("space");
+    this.lifetimeId = deps.idFactory.createId("lifetime");
+    this.deps = deps;
+    this.localeConfig = options.localeConfig;
+    this.formatters = deps.formatterFactory(options.localeConfig);
+    this.messages = createMessageProvider({
+      locale: options.localeConfig.locale,
+      dictionaries: deps.messageDictionaries,
+    });
+    this.committedDocument = snapshotDocument(options.document);
+    this.validationDiagnostics = deepFreeze([...(options.warnings ?? [])]);
+    this.createdAt = deps.clock.now();
+    this.updatedAt = this.createdAt;
+    this.events = new EventBus<SpaceEvent>((error) => {
+      deps.logger.error("Boardloom event listener failed", {
+        error: error instanceof Error ? error.message : String(error),
+      });
+    });
+    this.events.subscribeInternal((event) => {
+      deps.forwardEvent(event);
+    });
+    this.viewHost = {
+      spaceId: this.id,
+      createId: (namespace) => deps.idFactory.createId(namespace),
+      getState: () => this.getViewState(),
+      getLease: (leaseId) => this.getActiveLease(leaseId),
+      updateDraft: (lease, document) => this.updateDraft(lease, document),
+      undoDraft: (lease) => this.undoDraft(lease),
+      redoDraft: (lease) => this.redoDraft(lease),
+      applyDraft: (lease) => this.applyDraft(lease),
+      cancelDraft: (lease) => this.cancelDraft(lease),
+      releaseLease: (lease, decision) => this.releaseEditorLease(lease, { decision }),
+      emitModeChanged: (viewId, sessionId, from, to) => {
+        this.updatedAt = this.deps.clock.now();
+        this.emit({ type: "mode:changed", viewId, sessionId, from, to });
+      },
+      detachView: (viewId) => {
+        this.views.delete(viewId);
+        if (!this.disposedFlag && !this.disposing) {
+          this.updatedAt = this.deps.clock.now();
+        }
+      },
+    };
+  }
+
+  get disposed(): boolean {
+    return this.disposedFlag;
+  }
+
+  get listenerCount(): number {
+    return this.events.listenerCount;
+  }
+
+  get taskCount(): number {
+    return this.tasks.size;
+  }
+
+  get viewCount(): number {
+    return this.views.size;
+  }
+
+  start(): void {
+    this.emit({ type: "space:created" });
+    this.emitLoaded(this.validationDiagnostics);
+  }
+
+  getFormatters(): FormatterProvider {
+    return this.formatters;
+  }
+
+  getMessageProvider(): MessageProvider {
+    return this.messages;
+  }
+
+  getSnapshot(): SpaceSnapshot {
+    const draft = this.draft ? this.createDraftSnapshot(this.draft) : null;
+    return deepFreeze({
+      spaceId: this.id,
+      lifetimeId: this.lifetimeId,
+      status: this.status,
+      committedDocument: this.committedDocument,
+      committedRevision: this.committedRevision,
+      draft,
+      editorLease: this.lease,
+      locale: this.localeConfig.locale,
+      timezone: this.localeConfig.timezone,
+      diagnostics: this.combinedDiagnostics(),
+      views: Object.freeze([...this.views.values()].map((view) => view.describe())),
+      viewCount: this.views.size,
+      listenerCount: this.events.listenerCount,
+      taskCount: this.tasks.size,
+      createdAt: this.createdAt,
+      updatedAt: this.updatedAt,
+      sequence: this.sequence,
+    });
+  }
+
+  summary(): SpaceSummary {
+    return Object.freeze({
+      spaceId: this.id,
+      lifetimeId: this.lifetimeId,
+      status: this.status,
+      committedRevision: this.committedRevision,
+      viewCount: this.views.size,
+    });
+  }
+
+  loadDocument(
+    document: BoardDocument,
+    options: { readonly source?: string } = {},
+  ): Result<SpaceSnapshot> {
+    const blocked = this.assertActive();
+    if (blocked) {
+      return blocked;
+    }
+    const validation = this.deps.documentValidator(document);
+    if (isBlockingValidation(validation)) {
+      return this.failWith(validation.diagnostics);
+    }
+    const warnings = validationWarnings(validation);
+    const previousDiagnostics = this.combinedDiagnostics();
+    this.committedDocument = snapshotDocument(document);
+    this.committedRevision += 1;
+    this.setDiagnosticsState(warnings);
+    this.publishDiagnosticsChange(previousDiagnostics);
+    this.emit({
+      type: "document:changed",
+      document: this.committedDocument,
+      source: options.source ?? "host",
+    });
+    this.emitLoaded(warnings);
+    return ok(this.getSnapshot());
+  }
+
+  setLocale(config: LocaleConfigInput): Result<SpaceSnapshot> {
+    const blocked = this.assertActive();
+    if (blocked) {
+      return blocked;
+    }
+    const resolved = resolveLocaleConfig(config, this.localeConfig);
+    if (!resolved.ok) {
+      return this.failWith(resolved.diagnostics);
+    }
+    const next = resolved.value;
+    if (next.locale === this.localeConfig.locale && next.timezone === this.localeConfig.timezone) {
+      return ok(this.getSnapshot());
+    }
+
+    let formatters: FormatterProvider;
+    let messages: MessageProvider;
+    try {
+      formatters = this.deps.formatterFactory(next);
+      messages = createMessageProvider({
+        locale: next.locale,
+        dictionaries: this.deps.messageDictionaries,
+      });
+    } catch (error) {
+      if (error instanceof BoardloomError) {
+        return this.failWith([error.diagnostic]);
+      }
+      return this.failWith([
+        createDiagnostic(DIAGNOSTIC_CODES.FORMATTER_INIT_FAILED, "locale", {
+          message: error instanceof Error ? error.message : String(error),
+        }),
+      ]);
+    }
+
+    const previous = this.localeConfig;
+    this.localeConfig = next;
+    this.formatters = formatters;
+    this.messages = messages;
+    this.updatedAt = this.deps.clock.now();
+    this.clearDiagnostics();
+    this.emit({
+      type: "locale:changed",
+      locale: next.locale,
+      timezone: next.timezone,
+      fromLocale: previous.locale,
+      fromTimezone: previous.timezone,
+    });
+    return ok(this.getSnapshot());
+  }
+
+  pause(): Result<SpaceSnapshot> {
+    const blocked = this.assertActive();
+    if (blocked) {
+      return blocked;
+    }
+    if (this.status === "paused") {
+      return ok(this.getSnapshot());
+    }
+    this.status = "paused";
+    this.updatedAt = this.deps.clock.now();
+    return ok(this.getSnapshot());
+  }
+
+  resume(): Result<SpaceSnapshot> {
+    const blocked = this.assertActive();
+    if (blocked) {
+      return blocked;
+    }
+    if (this.status === "active") {
+      return ok(this.getSnapshot());
+    }
+    this.status = "active";
+    this.updatedAt = this.deps.clock.now();
+    return ok(this.getSnapshot());
+  }
+
+  createView(options: CreateViewOptions = {}): Result<BoardView> {
+    const blocked = this.assertActive();
+    if (blocked) {
+      return blocked;
+    }
+    const mode: ViewMode = options.mode ?? "viewer";
+    if (mode !== "viewer" && mode !== "editor") {
+      return this.failWith([
+        createDiagnostic(DIAGNOSTIC_CODES.INVALID_ARGUMENT, "mode", {
+          message: "A view mode must be viewer or editor.",
+        }),
+      ]);
+    }
+    let lease: EditorLease | null = null;
+    if (options.lease) {
+      lease = this.getActiveLease(options.lease.leaseId);
+      if (!lease) {
+        return this.failWith([createDiagnostic(DIAGNOSTIC_CODES.EDITOR_LEASE_INVALID, "lease")]);
+      }
+    }
+    if (mode === "editor" && !lease) {
+      return this.failWith([
+        createDiagnostic(DIAGNOSTIC_CODES.EDITOR_LEASE_REQUIRED, "lease", {
+          message: "Editor views require an active editor lease.",
+        }),
+      ]);
+    }
+    const view = createView(this.viewHost, { mode, lease: lease ?? undefined });
+    this.views.set(view.viewId, view as ViewImpl);
+    this.updatedAt = this.deps.clock.now();
+    return ok(view);
+  }
+
+  acquireEditorLease(options: AcquireEditorLeaseOptions = {}): Result<EditorLease> {
+    const blocked = this.assertActive();
+    if (blocked) {
+      return blocked;
+    }
+    if (this.leaseReleaseInProgress) {
+      return fail([
+        createDiagnostic(DIAGNOSTIC_CODES.EDITOR_LEASE_CONFLICT, "lease", {
+          message: "A lease release is in progress; wait for it to complete.",
+        }),
+      ]);
+    }
+    if (this.lease) {
+      const sessionId = options.sessionId ?? this.lease.sessionId;
+      const diagnostic = createDiagnostic(DIAGNOSTIC_CODES.EDITOR_LEASE_CONFLICT, "lease", {
+        relatedIds: [this.lease.leaseId],
+      });
+      this.setDiagnostics([diagnostic]);
+      this.emit({
+        type: "editor:lease-changed",
+        sessionId,
+        status: "rejected",
+        diagnostic,
+      });
+      return fail([diagnostic]);
+    }
+    if (
+      options.sessionId !== undefined &&
+      (typeof options.sessionId !== "string" || options.sessionId.trim() === "")
+    ) {
+      return this.failWith([
+        createDiagnostic(DIAGNOSTIC_CODES.INVALID_ARGUMENT, "sessionId", {
+          message: "The editor session ID must be a non-empty string.",
+        }),
+      ]);
+    }
+
+    if (!this.draft) {
+      this.draft = this.createDraft(this.committedDocument, this.committedRevision);
+    }
+    const lease: EditorLease = Object.freeze({
+      leaseId: this.deps.idFactory.createId("lease"),
+      spaceId: this.id,
+      sessionId: options.sessionId ?? this.deps.idFactory.createId("session"),
+      acquiredAt: this.deps.clock.now(),
+    });
+    this.lease = lease;
+    this.updatedAt = this.deps.clock.now();
+    this.clearDiagnostics();
+    this.emit({
+      type: "editor:lease-changed",
+      sessionId: lease.sessionId,
+      status: "acquired",
+    });
+    return ok(lease);
+  }
+
+  releaseEditorLease(
+    lease: EditorLease,
+    options: ReleaseEditorLeaseOptions = {},
+  ): Result<SpaceSnapshot> {
+    const blocked = this.assertActive();
+    if (blocked) {
+      return blocked;
+    }
+    const releasing = this.assertNotReleasing();
+    if (releasing) {
+      return releasing;
+    }
+    if (
+      options.decision !== undefined &&
+      options.decision !== "apply" &&
+      options.decision !== "cancel"
+    ) {
+      return this.failWith([
+        createDiagnostic(DIAGNOSTIC_CODES.INVALID_ARGUMENT, "decision", {
+          message: "A draft decision must be apply or cancel.",
+        }),
+      ]);
+    }
+    const active = this.requireLease(lease);
+    if (!active.ok) {
+      const diagnostic = active.diagnostics[0];
+      if (diagnostic) {
+        this.emit({
+          type: "editor:lease-changed",
+          sessionId: lease.sessionId,
+          status: "rejected",
+          diagnostic,
+        });
+      }
+      return active;
+    }
+    if (this.isDraftDirty() && options.decision === undefined) {
+      const diagnostic = createDiagnostic(DIAGNOSTIC_CODES.DRAFT_REQUIRES_DECISION, "draft");
+      this.setDiagnostics([diagnostic]);
+      this.emit({
+        type: "editor:lease-changed",
+        sessionId: active.value.sessionId,
+        status: "rejected",
+        diagnostic,
+      });
+      return fail([diagnostic]);
+    }
+
+    if (options.decision === "apply") {
+      const prepared = this.prepareDraftApply();
+      if (!prepared.ok) {
+        return prepared;
+      }
+      const previousDiagnostics = this.combinedDiagnostics();
+      this.beginLeaseRelease(active.value);
+      const committed = this.commitDraftState(prepared.value);
+      this.completeLeaseReleaseState();
+      this.publishDiagnosticsChange(previousDiagnostics);
+      if (committed) {
+        this.emitDraftCommitted(committed);
+      }
+      this.emitLeaseReleased(active.value);
+      if (!committed) {
+        return fail([createDiagnostic(DIAGNOSTIC_CODES.EDITOR_LEASE_REQUIRED, "draft")]);
+      }
+      return ok(this.getSnapshot());
+    }
+
+    if (options.decision === "cancel") {
+      const previousDiagnostics = this.combinedDiagnostics();
+      const revision = this.committedRevision;
+      this.beginLeaseRelease(active.value);
+      this.resetDraftStateFromCommitted();
+      this.completeLeaseReleaseState();
+      this.publishDiagnosticsChange(previousDiagnostics);
+      this.emitDraftCancelled(revision);
+      this.emitLeaseReleased(active.value);
+      return ok(this.getSnapshot());
+    }
+
+    const previousDiagnostics = this.combinedDiagnostics();
+    this.beginLeaseRelease(active.value);
+    this.completeLeaseReleaseState();
+    this.publishDiagnosticsChange(previousDiagnostics);
+    this.emitLeaseReleased(active.value);
+    return ok(this.getSnapshot());
+  }
+
+  updateDraft(lease: EditorLease, document: BoardDocument): Result<DraftSnapshot> {
+    const blocked = this.assertActive();
+    if (blocked) {
+      return blocked;
+    }
+    const releasing = this.assertNotReleasing();
+    if (releasing) {
+      return releasing;
+    }
+    const active = this.requireLease(lease);
+    if (!active.ok) {
+      return active;
+    }
+    const draft = this.draft;
+    if (!draft) {
+      return this.failWith([createDiagnostic(DIAGNOSTIC_CODES.EDITOR_LEASE_REQUIRED, "draft")]);
+    }
+    const validation = this.deps.documentValidator(document);
+    if (isBlockingValidation(validation)) {
+      return this.failWith([
+        createDiagnostic(DIAGNOSTIC_CODES.DRAFT_INVALID, "draft"),
+        ...validation.diagnostics,
+      ]);
+    }
+    const warnings = validationWarnings(validation);
+    const next = snapshotDocument(document);
+    if (jsonEqual(next, draft.document)) {
+      const previousDiagnostics = this.combinedDiagnostics();
+      this.setDiagnosticsState(warnings);
+      this.publishDiagnosticsChange(previousDiagnostics);
+      return ok(this.createDraftSnapshot(draft));
+    }
+
+    if (this.deps.historyLimit > 0) {
+      draft.undo.push(draft.document);
+      if (draft.undo.length > this.deps.historyLimit) {
+        draft.undo.shift();
+      }
+    }
+    draft.redo = [];
+    draft.document = next;
+    draft.revision += 1;
+    this.updatedAt = this.deps.clock.now();
+    const previousDiagnostics = this.combinedDiagnostics();
+    this.setDiagnosticsState(warnings);
+    this.publishDiagnosticsChange(previousDiagnostics);
+    this.emitDraftChanged();
+    return ok(this.createDraftSnapshot(draft));
+  }
+
+  undoDraft(lease: EditorLease): Result<DraftSnapshot> {
+    const blocked = this.assertActive();
+    if (blocked) {
+      return blocked;
+    }
+    const releasing = this.assertNotReleasing();
+    if (releasing) {
+      return releasing;
+    }
+    const active = this.requireLease(lease);
+    if (!active.ok) {
+      return active;
+    }
+    const draft = this.draft;
+    if (!draft || draft.undo.length === 0) {
+      return this.failWith([createDiagnostic(DIAGNOSTIC_CODES.DRAFT_HISTORY_EMPTY, "draft")]);
+    }
+    const previous = draft.undo.pop();
+    if (!previous) {
+      return this.failWith([createDiagnostic(DIAGNOSTIC_CODES.DRAFT_HISTORY_EMPTY, "draft")]);
+    }
+    draft.redo.push(draft.document);
+    if (draft.redo.length > this.deps.historyLimit) {
+      draft.redo.shift();
+    }
+    draft.document = previous;
+    draft.revision += 1;
+    this.updatedAt = this.deps.clock.now();
+    this.clearDiagnostics();
+    this.emitDraftChanged();
+    return ok(this.createDraftSnapshot(draft));
+  }
+
+  redoDraft(lease: EditorLease): Result<DraftSnapshot> {
+    const blocked = this.assertActive();
+    if (blocked) {
+      return blocked;
+    }
+    const releasing = this.assertNotReleasing();
+    if (releasing) {
+      return releasing;
+    }
+    const active = this.requireLease(lease);
+    if (!active.ok) {
+      return active;
+    }
+    const draft = this.draft;
+    if (!draft || draft.redo.length === 0) {
+      return this.failWith([createDiagnostic(DIAGNOSTIC_CODES.DRAFT_HISTORY_EMPTY, "draft")]);
+    }
+    const next = draft.redo.pop();
+    if (!next) {
+      return this.failWith([createDiagnostic(DIAGNOSTIC_CODES.DRAFT_HISTORY_EMPTY, "draft")]);
+    }
+    draft.undo.push(draft.document);
+    if (draft.undo.length > this.deps.historyLimit) {
+      draft.undo.shift();
+    }
+    draft.document = next;
+    draft.revision += 1;
+    this.updatedAt = this.deps.clock.now();
+    this.clearDiagnostics();
+    this.emitDraftChanged();
+    return ok(this.createDraftSnapshot(draft));
+  }
+
+  applyDraft(lease: EditorLease): Result<SpaceSnapshot> {
+    const blocked = this.assertActive();
+    if (blocked) {
+      return blocked;
+    }
+    const releasing = this.assertNotReleasing();
+    if (releasing) {
+      return releasing;
+    }
+    const active = this.requireLease(lease);
+    if (!active.ok) {
+      return active;
+    }
+    const prepared = this.prepareDraftApply();
+    if (!prepared.ok) {
+      return prepared;
+    }
+    const previousDiagnostics = this.combinedDiagnostics();
+    const committed = this.commitDraftState(prepared.value);
+    if (!committed) {
+      return fail([createDiagnostic(DIAGNOSTIC_CODES.EDITOR_LEASE_REQUIRED, "draft")]);
+    }
+    this.publishDiagnosticsChange(previousDiagnostics);
+    this.emitDraftCommitted(committed);
+    return ok(this.getSnapshot());
+  }
+
+  cancelDraft(lease: EditorLease): Result<SpaceSnapshot> {
+    const blocked = this.assertActive();
+    if (blocked) {
+      return blocked;
+    }
+    const releasing = this.assertNotReleasing();
+    if (releasing) {
+      return releasing;
+    }
+    const active = this.requireLease(lease);
+    if (!active.ok) {
+      return active;
+    }
+    if (!this.draft) {
+      return this.failWith([createDiagnostic(DIAGNOSTIC_CODES.EDITOR_LEASE_REQUIRED, "draft")]);
+    }
+    const previousDiagnostics = this.combinedDiagnostics();
+    const revision = this.committedRevision;
+    this.resetDraftStateFromCommitted();
+    this.publishDiagnosticsChange(previousDiagnostics);
+    this.emitDraftCancelled(revision);
+    return ok(this.getSnapshot());
+  }
+
+  schedule(callback: () => void, delayMs: number): Result<Unsubscribe> {
+    const blocked = this.assertActive();
+    if (blocked) {
+      return blocked;
+    }
+    if (typeof callback !== "function" || !Number.isFinite(delayMs) || delayMs < 0) {
+      return this.failWith([
+        createDiagnostic(DIAGNOSTIC_CODES.INVALID_ARGUMENT, "schedule", {
+          message: "A scheduled task requires a callback and a finite non-negative delay.",
+        }),
+      ]);
+    }
+    const taskId = this.deps.idFactory.createId("task");
+    const handle = this.deps.clock.setTimeout(() => {
+      this.tasks.delete(taskId);
+      if (this.disposedFlag || this.disposing) {
+        return;
+      }
+      try {
+        callback();
+      } catch (error) {
+        this.deps.logger.error("Boardloom scheduled task failed", {
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }, delayMs);
+    this.tasks.set(taskId, handle);
+
+    return ok(() => {
+      const activeHandle = this.tasks.get(taskId);
+      if (activeHandle === undefined) {
+        return;
+      }
+      this.tasks.delete(taskId);
+      this.deps.clock.clearTimeout(activeHandle);
+    });
+  }
+
+  subscribe(listener: (event: SpaceEvent) => void): Unsubscribe {
+    if (this.disposedFlag || this.disposing) {
+      return () => undefined;
+    }
+    return this.events.subscribe(listener);
+  }
+
+  dispose(): Result<void> {
+    if (this.disposedFlag || this.disposing) {
+      return ok(undefined);
+    }
+    this.disposing = true;
+    this.events.beginShutdown();
+
+    for (const handle of this.tasks.values()) {
+      this.deps.clock.clearTimeout(handle);
+    }
+    this.tasks.clear();
+
+    for (const view of this.views.values()) {
+      view.markDisposed();
+    }
+    this.views.clear();
+
+    this.draft = null;
+    this.lease = null;
+    this.status = "disposed";
+    this.updatedAt = this.deps.clock.now();
+    this.disposedFlag = true;
+    this.deps.onDisposed(this.id, this.lifetimeId);
+    this.emitTerminal({ type: "space:disposed" });
+    this.events.finishShutdown();
+    return ok(undefined);
+  }
+
+  private createDraft(document: BoardDocument, baseRevision: number): DraftState {
+    return {
+      document,
+      baseRevision,
+      revision: 0,
+      undo: [],
+      redo: [],
+    };
+  }
+
+  private createDraftSnapshot(draft: DraftState): DraftSnapshot {
+    return Object.freeze({
+      revision: draft.revision,
+      baseRevision: draft.baseRevision,
+      document: draft.document,
+      dirty: !jsonEqual(draft.document, this.committedDocument),
+      canUndo: draft.undo.length > 0,
+      canRedo: draft.redo.length > 0,
+    });
+  }
+
+  private getViewState(): ViewState {
+    return Object.freeze({
+      committedRevision: this.committedRevision,
+      draft: this.draft ? this.createDraftSnapshot(this.draft) : null,
+      locale: this.localeConfig.locale,
+      timezone: this.localeConfig.timezone,
+    });
+  }
+
+  private emitDraftChanged(): void {
+    if (!this.draft) {
+      return;
+    }
+    this.emit({
+      type: "draft:changed",
+      revision: this.draft.revision,
+      canUndo: this.draft.undo.length > 0,
+      canRedo: this.draft.redo.length > 0,
+    });
+  }
+
+  private emitLoaded(warnings: readonly Diagnostic[] = this.validationDiagnostics): void {
+    this.emit({
+      type: "space:loaded",
+      schemaVersion: documentSchemaVersion(this.committedDocument),
+      warnings,
+    });
+  }
+
+  private emit(input: SpaceEventInput): void {
+    if (this.disposedFlag || this.disposing) {
+      return;
+    }
+    this.events.emit(this.createEvent(input));
+  }
+
+  private emitTerminal(input: SpaceEventInput): void {
+    this.events.emitFinal(this.createEvent(input), () => {
+      this.deps.onTerminalDelivered(this.id, this.lifetimeId);
+    });
+  }
+
+  private createEvent(input: SpaceEventInput): SpaceEvent {
+    this.sequence += 1;
+    return deepFreeze({
+      ...input,
+      spaceId: this.id,
+      lifetimeId: this.lifetimeId,
+      sequence: this.sequence,
+      timestamp: this.deps.clock.now(),
+    }) as SpaceEvent;
+  }
+
+  private combinedDiagnostics(): readonly Diagnostic[] {
+    if (this.validationDiagnostics.length === 0) {
+      return this.diagnostics;
+    }
+    if (this.diagnostics.length === 0) {
+      return this.validationDiagnostics;
+    }
+    return Object.freeze([...this.validationDiagnostics, ...this.diagnostics]);
+  }
+
+  private publishDiagnosticsChange(previous: readonly Diagnostic[]): void {
+    const next = this.combinedDiagnostics();
+    if (diagnosticsEqual(previous, next)) {
+      return;
+    }
+    this.updatedAt = this.deps.clock.now();
+    this.emit({ type: "diagnostics:changed", diagnostics: next });
+  }
+
+  private setDiagnostics(diagnostics: readonly Diagnostic[]): void {
+    const previous = this.combinedDiagnostics();
+    this.diagnostics = deepFreeze([...diagnostics]);
+    this.publishDiagnosticsChange(previous);
+  }
+
+  private setDiagnosticsState(warnings: readonly Diagnostic[]): void {
+    this.validationDiagnostics = deepFreeze([...warnings]);
+    this.diagnostics = EMPTY_DIAGNOSTICS;
+    this.updatedAt = this.deps.clock.now();
+  }
+
+  private clearDiagnostics(): void {
+    if (this.diagnostics.length === 0) {
+      return;
+    }
+    const previous = this.combinedDiagnostics();
+    this.diagnostics = EMPTY_DIAGNOSTICS;
+    this.publishDiagnosticsChange(previous);
+  }
+
+  private prepareDraftApply(): Result<readonly Diagnostic[]> {
+    const draft = this.draft;
+    if (!draft) {
+      return this.failWith([createDiagnostic(DIAGNOSTIC_CODES.EDITOR_LEASE_REQUIRED, "draft")]);
+    }
+    const validation = this.deps.documentValidator(draft.document);
+    if (isBlockingValidation(validation)) {
+      return this.failWith([
+        createDiagnostic(DIAGNOSTIC_CODES.DRAFT_INVALID, "draft"),
+        ...validation.diagnostics,
+      ]);
+    }
+    if (draft.baseRevision !== this.committedRevision) {
+      const conflict = createDiagnostic(DIAGNOSTIC_CODES.REVISION_CONFLICT, "draft/baseRevision", {
+        message: `The committed revision is ${this.committedRevision}, but the draft is based on ${draft.baseRevision}.`,
+      });
+      this.failWith([conflict]);
+      this.emit({
+        type: "draft:conflict",
+        expectedRevision: draft.baseRevision,
+        actualRevision: this.committedRevision,
+        diagnostics: Object.freeze([conflict]),
+      });
+      return fail(Object.freeze([conflict]));
+    }
+    return ok(validationWarnings(validation));
+  }
+
+  private commitDraftState(warnings: readonly Diagnostic[]): CommittedDraftState | null {
+    const draft = this.draft;
+    if (!draft) {
+      return null;
+    }
+    this.committedDocument = draft.document;
+    this.committedRevision += 1;
+    this.draft = this.createDraft(this.committedDocument, this.committedRevision);
+    this.updatedAt = this.deps.clock.now();
+    this.validationDiagnostics = deepFreeze([...warnings]);
+    this.diagnostics = EMPTY_DIAGNOSTICS;
+    return Object.freeze({
+      document: this.committedDocument,
+      revision: this.committedRevision,
+    });
+  }
+
+  private resetDraftStateFromCommitted(): void {
+    const validation = this.deps.documentValidator(this.committedDocument);
+    const warnings = isBlockingValidation(validation)
+      ? EMPTY_DIAGNOSTICS
+      : validationWarnings(validation);
+    this.draft = this.createDraft(this.committedDocument, this.committedRevision);
+    this.updatedAt = this.deps.clock.now();
+    this.validationDiagnostics = deepFreeze([...warnings]);
+    this.diagnostics = EMPTY_DIAGNOSTICS;
+  }
+
+  private beginLeaseRelease(lease: EditorLease): void {
+    this.leaseReleaseInProgress = true;
+    this.lease = null;
+    for (const view of this.views.values()) {
+      view.clearLease(lease.leaseId);
+    }
+  }
+
+  private completeLeaseReleaseState(): void {
+    this.draft = null;
+    this.leaseReleaseInProgress = false;
+    this.updatedAt = this.deps.clock.now();
+    this.diagnostics = EMPTY_DIAGNOSTICS;
+  }
+
+  private emitDraftCommitted(committed: CommittedDraftState): void {
+    this.emit({
+      type: "document:changed",
+      document: committed.document,
+      source: "draft",
+    });
+    this.emit({
+      type: "draft:applied",
+      revision: committed.revision,
+      document: committed.document,
+    });
+  }
+
+  private emitDraftCancelled(revision: number): void {
+    this.emit({ type: "draft:cancelled", revision });
+  }
+
+  private emitLeaseReleased(lease: EditorLease): void {
+    this.emit({
+      type: "editor:lease-changed",
+      sessionId: lease.sessionId,
+      status: "released",
+    });
+  }
+
+  private failWith(diagnostics: readonly Diagnostic[]): Result<never> {
+    this.setDiagnostics(diagnostics);
+    return fail(diagnostics);
+  }
+
+  private assertActive(): Result<never> | null {
+    if (this.disposedFlag || this.disposing) {
+      return fail([createDiagnostic(DIAGNOSTIC_CODES.SPACE_DISPOSED, "space")]);
+    }
+    return null;
+  }
+
+  private assertNotReleasing(): Result<never> | null {
+    if (this.leaseReleaseInProgress) {
+      return fail([
+        createDiagnostic(DIAGNOSTIC_CODES.EDITOR_LEASE_INVALID, "lease", {
+          message: "The editor lease is being released; authoring is temporarily unavailable.",
+        }),
+      ]);
+    }
+    return null;
+  }
+
+  private getActiveLease(leaseId: string): EditorLease | null {
+    return this.lease && this.lease.leaseId === leaseId ? this.lease : null;
+  }
+
+  private requireLease(lease: EditorLease): Result<EditorLease> {
+    const active = this.getActiveLease(lease.leaseId);
+    if (!active || active.spaceId !== this.id || lease.spaceId !== this.id) {
+      return this.failWith([createDiagnostic(DIAGNOSTIC_CODES.EDITOR_LEASE_INVALID, "lease")]);
+    }
+    return ok(active);
+  }
+
+  private isDraftDirty(): boolean {
+    return this.draft !== null && !jsonEqual(this.draft.document, this.committedDocument);
+  }
+}
+
+export function createSpace(options: SpaceInitOptions, deps: SpaceDependencies): SpaceImpl {
+  return new SpaceImpl(options, deps);
+}
+
+export { SpaceImpl };

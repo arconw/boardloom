@@ -51,6 +51,13 @@ function runScriptIn(cwd: string, args: string[]): ScriptResult {
 }
 
 describe("foundation quality scripts", () => {
+  it("runs unit, contract and integration tiers in the public workflow", () => {
+    const workflow = readFileSync(path.join(root, ".github/workflows/quality.yml"), "utf8");
+    expect(workflow).toContain("npm run test:unit");
+    expect(workflow).toContain("npm run test:contract");
+    expect(workflow).toContain("npm run test:integration");
+  });
+
   it("passes acceptance-owner verification", () => {
     const result = runScript(["scripts/verify-acceptance-owners.mjs"]);
     expect(result.status).toBe(0);

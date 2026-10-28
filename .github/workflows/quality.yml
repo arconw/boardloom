@@ -15,7 +15,7 @@ concurrency:
 
 jobs:
   quality:
-    name: install, lint, typecheck and unit
+    name: install, lint, typecheck and tests
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -56,6 +56,12 @@ jobs:
 
       - name: Unit tests
         run: npm run test:unit
+
+      - name: Contract tests
+        run: npm run test:contract
+
+      - name: Integration tests
+        run: npm run test:integration
 
       - name: Package boundaries
         run: npm run verify:boundaries

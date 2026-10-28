@@ -87,9 +87,11 @@ describe("T01 documentation records", () => {
     expect(evidence).toContain("TypeScript 7 is not used");
   });
 
-  it("reports the T01 stage in the public status document", () => {
+  it("reports the current T02 review stage in the public status document", () => {
     const status = readDocument("docs/framework/STATUS.md");
-    expect(status).toContain("T01");
-    expect(status).toMatch(/no product feature/i);
+    expect(status).toContain("T02");
+    expect(status).toContain("headless core");
+    expect(status).toContain("No DOM runtime");
+    expect(status).toContain("not accepted");
   });
 });
