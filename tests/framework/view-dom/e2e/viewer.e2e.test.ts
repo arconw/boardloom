@@ -206,6 +206,56 @@ describe("T06 browser viewer", () => {
     expect(result.checks.breakpoint).toBe("desktop");
     expect(Number(result.checks.scrollWidth)).toBeLessThanOrEqual(Number(result.checks.innerWidth));
     expect(result.checks.missingKeys).toEqual([]);
+    const filterUi = result.checks.filterUi as {
+      readonly item: boolean;
+      readonly control: boolean;
+      readonly chip: string | null;
+      readonly resetButtons: number;
+    };
+    expect(filterUi).toMatchObject({ item: true, control: true });
+    expect(filterUi.chip).toContain("north, south");
+    expect(filterUi.resetButtons).toBeGreaterThanOrEqual(2);
+    expect(result.checks.filterActive).toMatchObject({
+      state: [{ filterId: "filter-school", value: ["east"] }],
+      chip: "east",
+    });
+    expect(Number((result.checks.filterActive as { tableRows?: number }).tableRows)).toBe(1);
+    expect(result.checks.filterReset).toEqual({
+      state: [],
+      chip: "north, south",
+    });
+    expect(result.checks.filterA11y).toMatchObject({
+      resetKey: "common.reset",
+      liveKey: "viewer.filters.reset",
+      crossPressed: "false",
+    });
+    expect(String((result.checks.filterA11y as { controlLabel?: string }).controlLabel)).toContain(
+      "School",
+    );
+    expect(String((result.checks.filterA11y as { resetLabel?: string }).resetLabel)).toContain(
+      "School",
+    );
+    expect(result.checks.crossFilterOn).toMatchObject({
+      selections: 1,
+      chips: 1,
+      pressed: "true",
+    });
+    const labelBefore = String((result.checks.filterA11y as { crossLabel?: string }).crossLabel);
+    const labelAfter = String((result.checks.crossFilterOn as { label?: string }).label);
+    expect(labelBefore).toContain("Select value");
+    expect(labelAfter).toBe(labelBefore);
+    const chipText = String((result.checks.crossFilterOn as { chipText?: string }).chipText);
+    expect(chipText).toContain("school_id");
+    expect(chipText.match(/north/g) ?? []).toHaveLength(1);
+    expect(result.checks.crossFilterOff).toEqual({ selections: 0, chips: 0 });
+    expect(result.checks.multiDatasetUnmapped).toMatchObject({
+      disabled: "disabled",
+      note: "Not included: incompatible field (no explicit field mapping)",
+    });
+    expect(result.checks.multiDatasetMapped).toMatchObject({
+      included: "included",
+      otherRows: 1,
+    });
     expect(result.checks.lightBackground).not.toBe(result.checks.darkBackground);
     expect(result.checks.bodyBackground).toBe(result.checks.bodyBackgroundAfter);
     expect(result.checks.dirAfter).toBe("rtl");
@@ -263,6 +313,14 @@ describe("T06 browser viewer", () => {
     expect(result.checks.bindingRejections).toMatchObject({
       invalidAggregation: "RENDERER_INCOMPATIBLE",
       fixedBinding: "FIXED_BINDING_LOCKED",
+    });
+    expect(result.checks.filterManager).toMatchObject({
+      present: true,
+      rowsBefore: 1,
+      rowsAfter: 2,
+      defaultAfter: ["west"],
+      filtersInDraft: 2,
+      addPresent: true,
     });
     expect(result.checks.inspectorAfterReturn).toBe(true);
     expect(result.checks.multi).toMatchObject({

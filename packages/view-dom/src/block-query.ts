@@ -1,18 +1,23 @@
 import {
   DIAGNOSTIC_CODES,
   canonicalJson,
+  composeBlockFilters,
   createDiagnostic,
+  createEmptyFilterRuntimeState,
   fail,
   isPlainObject,
   ok,
+  queryFiltersForComposition,
   selectChartBindings,
   type BindingDefinition,
   type BoardDocument,
   type BoardDocumentV1,
+  type BoardValidationCatalog,
   type BlockDefinition,
-  type FilterDefinition,
+  type Diagnostic,
+  type FilterConflict,
+  type FilterRuntimeState,
   type QueryAggregation,
-  type QueryFilter,
   type QueryGrouping,
   type QueryOrder,
   type QuerySpec,
@@ -24,6 +29,13 @@ export interface DerivedBlockQuery {
   readonly spec: QuerySpec;
   readonly valueBindingId: string | null;
   readonly valueLabel: string | null;
+  readonly filterDiagnostics: readonly Diagnostic[];
+  readonly filterConflicts: readonly FilterConflict[];
+}
+
+export interface DeriveBlockQueryOptions {
+  readonly filterState?: FilterRuntimeState;
+  readonly catalog?: BoardValidationCatalog;
 }
 
 function bindingDiagnostic(
@@ -95,43 +107,6 @@ function groupingFor(binding: BindingDefinition): QueryGrouping {
   });
 }
 
-function filterTargetsBlock(filter: FilterDefinition, block: BlockDefinition): boolean {
-  if (filter.target.kind === "board") {
-    return true;
-  }
-  if (filter.target.kind === "group") {
-    return block.groupId !== undefined && block.groupId === filter.target.groupId;
-  }
-  return filter.target.blockId === block.id;
-}
-
-function queryFilterFor(filter: FilterDefinition): QueryFilter {
-  return Object.freeze({
-    id: filter.id,
-    fieldId: filter.field.fieldId,
-    operator: filter.operator,
-    ...(filter.defaultValue === undefined ? {} : { value: filter.defaultValue }),
-    ...(filter.temporal === undefined
-      ? {}
-      : { timezone: filter.temporal.timezone, bounds: filter.temporal.bounds }),
-  });
-}
-
-function applicableFilters(
-  document: BoardDocumentV1,
-  block: BlockDefinition,
-  datasetId: string,
-): readonly QueryFilter[] {
-  const filters: QueryFilter[] = [];
-  for (const filter of document.filters) {
-    if (filter.field.datasetId !== datasetId || !filterTargetsBlock(filter, block)) {
-      continue;
-    }
-    filters.push(queryFilterFor(filter));
-  }
-  return Object.freeze(filters);
-}
-
 function firstDatasetAndSlice(
   bindings: readonly BindingDefinition[],
   block: BlockDefinition,
@@ -201,12 +176,25 @@ function buildSpec(
   document: BoardDocumentV1,
   block: BlockDefinition,
   bindings: readonly BindingDefinition[],
+  filterState: FilterRuntimeState,
+  catalog: BoardValidationCatalog | undefined,
 ): Result<DerivedBlockQuery> {
   const identity = firstDatasetAndSlice(bindings, block);
   if (!identity.ok) {
     return identity;
   }
-  const filters = applicableFilters(document, block, identity.value.datasetId);
+  const composition = composeBlockFilters(
+    document,
+    block,
+    filterState,
+    catalog === undefined ? {} : { catalog },
+  );
+  if (!composition.ok) {
+    return fail(composition.diagnostics);
+  }
+  const filters = queryFiltersForComposition(composition.value);
+  const filterDiagnostics = composition.value.diagnostics;
+  const filterConflicts = composition.value.conflicts;
   const common = {
     datasetId: identity.value.datasetId,
     ...(identity.value.sliceId === undefined ? {} : { sliceId: identity.value.sliceId }),
@@ -233,6 +221,8 @@ function buildSpec(
         spec: Object.freeze({ ...common, aggregations: Object.freeze([aggregation]) }),
         valueBindingId: measure.id,
         valueLabel: measure.label ?? null,
+        filterDiagnostics,
+        filterConflicts,
       }),
     );
   }
@@ -259,6 +249,8 @@ function buildSpec(
           }),
           valueBindingId: measured[0]?.binding.id ?? null,
           valueLabel: measured[0]?.binding.label ?? null,
+          filterDiagnostics,
+          filterConflicts,
         }),
       );
     }
@@ -280,6 +272,8 @@ function buildSpec(
         }),
         valueBindingId: null,
         valueLabel: null,
+        filterDiagnostics,
+        filterConflicts,
       }),
     );
   }
@@ -300,6 +294,8 @@ function buildSpec(
           spec: Object.freeze({ ...common, fields: Object.freeze(fields) }),
           valueBindingId: measure?.id ?? null,
           valueLabel: measure?.label ?? null,
+          filterDiagnostics,
+          filterConflicts,
         }),
       );
     }
@@ -325,6 +321,8 @@ function buildSpec(
         }),
         valueBindingId: measure.id,
         valueLabel: measure.label ?? null,
+        filterDiagnostics,
+        filterConflicts,
       }),
     );
   }
@@ -339,6 +337,7 @@ function buildSpec(
 export function deriveBlockQuery(
   document: BoardDocument,
   block: BlockDefinition,
+  options: DeriveBlockQueryOptions = {},
 ): Result<DerivedBlockQuery> {
   const bindings = (block.bindings ?? []).filter(isDataBinding);
   if (bindings.length === 0) {
@@ -347,7 +346,13 @@ export function deriveBlockQuery(
       "The block does not declare data bindings.",
     );
   }
-  return buildSpec(asDocument(document), block, bindings);
+  return buildSpec(
+    asDocument(document),
+    block,
+    bindings,
+    options.filterState ?? createEmptyFilterRuntimeState(),
+    options.catalog,
+  );
 }
 
 export function blockQueryId(viewId: string, blockId: string): string {

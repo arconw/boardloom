@@ -48,6 +48,41 @@ describe("T06 block query derivation", () => {
     });
   });
 
+  it("applies active filter values and cross-filter selections in deterministic order", () => {
+    const document = viewerFixtureDocument();
+    const derived = unwrap(
+      deriveBlockQuery(documentValue(), block(document, "block-table"), {
+        filterState: {
+          activeValues: [{ filterId: "filter-school", value: ["north"] }],
+          crossFilters: [
+            {
+              id: "selection",
+              sourceBlockId: "block-chart",
+              field: { datasetId: "assessment-results", fieldId: "subject" },
+              operator: "equals",
+              value: "math",
+            },
+          ],
+        },
+      }),
+    );
+    expect(derived.spec.filters).toEqual([
+      {
+        id: "filter-school",
+        fieldId: "school_id",
+        operator: "in",
+        value: ["north"],
+      },
+      {
+        id: "selection",
+        fieldId: "subject",
+        operator: "equals",
+        value: "math",
+      },
+    ]);
+    expect(derived.filterConflicts).toEqual([]);
+  });
+
   it("derives grouped table and chart queries with stable aggregation outputs", () => {
     const document = viewerFixtureDocument();
     const table = unwrap(deriveBlockQuery(documentValue(), block(document, "block-table")));

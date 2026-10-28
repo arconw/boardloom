@@ -4,8 +4,13 @@ import {
   THEME_MODES,
   canonicalJson,
   createDiagnostic,
+  crossFilterTargetStatus,
   describeBindingSlots,
   fail,
+  fieldCompatibilityReason,
+  documentField,
+  filterDefinitionOperators,
+  filterOperatorsForField,
   ok,
   resolveRendererColors,
   type AggregationType,
@@ -21,7 +26,13 @@ import {
   type Diagnostic,
   type EditorLease,
   type FieldReference,
+  type FieldValueType,
+  type FilterDefinition,
+  type FilterOperator,
+  type FilterRuntimeState,
+  type FilterTarget,
   type FormatterProvider,
+  type JsonValue,
   type MessageDictionary,
   type MessageProvider,
   type QueryState,
@@ -56,7 +67,7 @@ import {
   setKeyedText,
 } from "./dom.js";
 import { releaseMountedView } from "./mount-registry.js";
-import { activeFilterSummaries } from "./filter-summary.js";
+import { activeFilterChipSummaries, crossFilterSummaries } from "./filter-summary.js";
 import { createViewMessages, pluralKey, type ViewMessages } from "./messages.js";
 import { realtimeText } from "./realtime.js";
 import { renderDiagnosticList, renderErrorState } from "./states.js";
@@ -69,10 +80,11 @@ let blockSequence = 0;
 const QUERY_BLOCK_TYPES = new Set(["metric", "table", "chart"]);
 const FILTER_CONTEXT_BLOCK_TYPES = new Set(["metric", "table", "chart", "filter"]);
 
-function filterContextSignature(document: BoardDocumentV1): string {
+function filterContextSignature(document: BoardDocumentV1, state: FilterRuntimeState): string {
   return canonicalJson({
     filters: document.filters,
     filterGroups: document.filterGroups ?? [],
+    filterState: state,
     blocks: document.blocks.map((block) => ({
       id: block.id,
       title: block.title,
@@ -81,12 +93,16 @@ function filterContextSignature(document: BoardDocumentV1): string {
   } as never);
 }
 
-function blockContextSignature(block: BlockDefinition, document: BoardDocumentV1): string {
+function blockContextSignature(
+  block: BlockDefinition,
+  document: BoardDocumentV1,
+  state: FilterRuntimeState,
+): string {
   if (block.type === "text") {
     return "";
   }
   if (FILTER_CONTEXT_BLOCK_TYPES.has(String(block.type))) {
-    return filterContextSignature(document);
+    return filterContextSignature(document, state);
   }
   return canonicalJson(document as never);
 }
@@ -136,6 +152,112 @@ export function failureFrom(error: unknown, path: string): readonly Diagnostic[]
       message: error instanceof Error ? error.message : String(error),
     }),
   ]);
+}
+
+export let filterSequence = 0;
+
+function filterOperatorLabelKey(operator: FilterOperator): string {
+  return `filter.operator.${operator}`;
+}
+
+function filterDefaultFor(
+  type: FieldValueType,
+  operator: FilterOperator,
+  field: { readonly timezone?: string } | undefined,
+): {
+  readonly defaultValue?: unknown;
+  readonly temporal?: { readonly timezone: string; readonly bounds: "inclusive" };
+} {
+  if (
+    operator === "isNull" ||
+    operator === "isNotNull" ||
+    operator === "isTrue" ||
+    operator === "isFalse"
+  ) {
+    return {};
+  }
+  if (operator === "between") {
+    if (type === "date") {
+      return {
+        defaultValue: ["2026-01-01", "2026-12-31"],
+        temporal: { timezone: field?.timezone ?? "UTC", bounds: "inclusive" as const },
+      };
+    }
+    if (type === "datetime") {
+      return {
+        defaultValue: ["2026-01-01T00:00:00Z", "2026-01-01T23:59:59Z"],
+        temporal: { timezone: field?.timezone ?? "UTC", bounds: "inclusive" as const },
+      };
+    }
+    return { defaultValue: type === "number" ? [0, 0] : ["", ""] };
+  }
+  if (operator === "in" || operator === "notIn") {
+    return { defaultValue: [] };
+  }
+  if (type === "number") {
+    return { defaultValue: 0 };
+  }
+  if (type === "boolean") {
+    return { defaultValue: true };
+  }
+  if (type === "date") {
+    return {
+      defaultValue: "2026-01-01",
+      temporal: { timezone: field?.timezone ?? "UTC", bounds: "inclusive" },
+    };
+  }
+  if (type === "datetime") {
+    return {
+      defaultValue: "2026-01-01T00:00:00Z",
+      ...(operator === "before" ||
+      operator === "after" ||
+      operator === "onOrBefore" ||
+      operator === "onOrAfter"
+        ? { temporal: { timezone: field?.timezone ?? "UTC", bounds: "inclusive" as const } }
+        : {}),
+    };
+  }
+  return { defaultValue: "" };
+}
+
+function withoutUndefined<T extends Record<string, unknown>>(value: T): T {
+  const output: Record<string, unknown> = {};
+  for (const key of Object.keys(value)) {
+    if (value[key] !== undefined) {
+      output[key] = value[key];
+    }
+  }
+  return output as T;
+}
+
+function filterInputText(value: unknown): string {
+  if (value === undefined || value === null) {
+    return "";
+  }
+  if (Array.isArray(value)) {
+    return value.map((entry) => String(entry)).join(", ");
+  }
+  return String(value);
+}
+
+function parseFilterInput(text: string, type: FieldValueType, operator: FilterOperator): unknown {
+  const scalar = (entry: string): unknown => {
+    if (type === "number") {
+      return Number(entry);
+    }
+    if (type === "boolean") {
+      return entry === "true";
+    }
+    return entry;
+  };
+  if (operator === "between" || operator === "in" || operator === "notIn") {
+    return text
+      .split(",")
+      .map((entry) => entry.trim())
+      .filter((entry, index) => entry !== "" || operator === "between" || index === 0)
+      .map(scalar);
+  }
+  return scalar(text);
 }
 
 export function isThemeMode(value: unknown): value is ThemeMode {
@@ -323,6 +445,7 @@ export class ViewerHost implements BoardViewHandle {
   private messageProvider: MessageProvider;
   private messageOverrides: MessageDictionary | undefined;
   private actionDiagnostics: readonly Diagnostic[] = Object.freeze([]);
+  private readonly pendingFilters = new Map<string, FilterDefinition>();
   private unsubscribeSpace: (() => void) | null;
   private resizeObserver: ResizeObserver | null = null;
   private mountedFlag = true;
@@ -339,6 +462,76 @@ export class ViewerHost implements BoardViewHandle {
     }
     if (event.target === this.editorModeButton) {
       this.setMode("editor");
+      return;
+    }
+    const target = event.target as
+      | (EventTarget & {
+          getAttribute?: (name: string) => string | null;
+        })
+      | null;
+    if (target === null || typeof target.getAttribute !== "function") {
+      return;
+    }
+    const resetId = target.getAttribute("data-filter-reset");
+    if (resetId !== null) {
+      const result = this.applyFilterOperation("reset", () => this.spaceValue.resetFilter(resetId));
+      if (result.ok) {
+        this.scheduleRender();
+      }
+      return;
+    }
+    if (target.getAttribute("data-filter-reset-all") === "true") {
+      const result = this.applyFilterOperation("reset", () => this.spaceValue.resetAllFilters());
+      if (result.ok) {
+        this.scheduleRender();
+      }
+      return;
+    }
+    if (target.getAttribute("data-filter-reset-all-locked") === "true") {
+      const result = this.applyFilterOperation("reset", () =>
+        this.spaceValue.resetAllFilters({ allowLocked: true }),
+      );
+      if (result.ok) {
+        this.scheduleRender();
+      }
+      return;
+    }
+    const resetScope = target.getAttribute("data-filter-reset-scope");
+    if (resetScope === "board" || resetScope === "group" || resetScope === "block") {
+      const scopeId = target.getAttribute("data-filter-scope-id") ?? "";
+      const result = this.applyFilterOperation("reset", () =>
+        this.spaceValue.resetFilterScope(resetScope, scopeId === "" ? undefined : scopeId, {
+          allowLocked: true,
+        }),
+      );
+      if (result.ok) {
+        this.scheduleRender();
+      }
+      return;
+    }
+    const applyFilter = target.getAttribute("data-filter-apply");
+    if (applyFilter !== null) {
+      this.submitPendingFilter(applyFilter);
+      return;
+    }
+    const discardFilter = target.getAttribute("data-filter-discard");
+    if (discardFilter !== null) {
+      this.pendingFilters.delete(discardFilter);
+      this.resetManagerDiagnostics();
+      this.scheduleRender();
+      return;
+    }
+    if (target.getAttribute("data-filter-action") === "add") {
+      this.addFilterDefinition();
+      return;
+    }
+    if (target.getAttribute("data-cross-clear") === "true") {
+      const result = this.applyFilterOperation("cross-filter", () =>
+        this.spaceValue.clearCrossFilters(),
+      );
+      if (result.ok) {
+        this.scheduleRender();
+      }
     }
   };
 
@@ -353,6 +546,27 @@ export class ViewerHost implements BoardViewHandle {
         })
       | null;
     if (target === null || typeof target.getAttribute !== "function") {
+      return;
+    }
+    const filterControl = target.getAttribute("data-filter-control");
+    if (filterControl !== null) {
+      let row:
+        | (EventTarget & { getAttribute?: (name: string) => string | null; parentNode?: unknown })
+        | null = target;
+      while (
+        row !== null &&
+        typeof row.getAttribute === "function" &&
+        row.getAttribute("data-filter-id") === null
+      ) {
+        row = (row.parentNode ?? null) as typeof row;
+      }
+      const filterId =
+        row !== null && typeof row.getAttribute === "function"
+          ? row.getAttribute("data-filter-id")
+          : null;
+      if (filterId !== null) {
+        this.applyFilterManagerChange(filterId, filterControl, target);
+      }
       return;
     }
     const blockId = target.getAttribute("data-binding-block");
@@ -656,6 +870,9 @@ export class ViewerHost implements BoardViewHandle {
       return fail([createDiagnostic(DIAGNOSTIC_CODES.VIEW_DISPOSED, "view")]);
     }
     if (changed.ok) {
+      if (mode !== "editor") {
+        this.pendingFilters.clear();
+      }
       this.actionDiagnostics = Object.freeze([]);
       this.scheduleRender();
     } else {
@@ -744,16 +961,7 @@ export class ViewerHost implements BoardViewHandle {
     const configurable = document.blocks.filter(
       (block) => block.type === "chart" || block.type === "metric",
     );
-    if (configurable.length === 0) {
-      const empty = createElement(this.doc, "p", "bl-inspector__empty");
-      setKeyedText(
-        empty,
-        "editor.inspector.empty",
-        this.messagesValue.text("editor.inspector.empty"),
-      );
-      this.inspectorBody.append(empty);
-      return;
-    }
+    let hasContent = false;
     for (const block of configurable) {
       const described = describeBindingSlots(
         document,
@@ -771,7 +979,666 @@ export class ViewerHost implements BoardViewHandle {
         group.append(this.createBindingRow(block, slot));
       }
       this.inspectorBody.append(group);
+      hasContent = true;
     }
+    const manager = this.createFilterManager(document);
+    if (manager !== null) {
+      this.inspectorBody.append(manager);
+      hasContent = true;
+    }
+    if (!hasContent) {
+      const empty = createElement(this.doc, "p", "bl-inspector__empty");
+      setKeyedText(
+        empty,
+        "editor.inspector.empty",
+        this.messagesValue.text("editor.inspector.empty"),
+      );
+      this.inspectorBody.append(empty);
+    }
+  }
+
+  private createFilterManager(document: BoardDocumentV1): HTMLElement | null {
+    const messages = this.messagesValue;
+    const fields: Array<{
+      readonly datasetId: string;
+      readonly fieldId: string;
+      readonly label: string;
+      readonly type: FieldValueType;
+      readonly timezone?: string;
+    }> = [];
+    for (const dataset of document.datasets) {
+      for (const field of dataset.fields ?? []) {
+        fields.push({
+          datasetId: dataset.id,
+          fieldId: field.id,
+          label: field.id,
+          type: field.type,
+          ...(field.timezone === undefined ? {} : { timezone: field.timezone }),
+        });
+      }
+    }
+    if (document.datasets.length === 0) {
+      return null;
+    }
+    const group = createElement(this.doc, "fieldset", "bl-filter-manager");
+    const legend = createElement(this.doc, "legend", "bl-filter-manager__title");
+    setKeyedText(legend, "editor.filters.manage", messages.text("editor.filters.manage"));
+    group.append(legend);
+    const actions = createElement(this.doc, "div", "bl-filter-manager__actions");
+    const add = createElement(this.doc, "button", "bl-filter-manager__add");
+    add.setAttribute("type", "button");
+    add.setAttribute("data-filter-action", "add");
+    setKeyedText(add, "editor.filters.add", messages.text("editor.filters.add"));
+    if (fields.length === 0) {
+      add.disabled = true;
+      add.setAttribute("disabled", "");
+      add.setAttribute("aria-disabled", "true");
+    }
+    actions.append(add);
+    const resetAll = createElement(this.doc, "button", "bl-filter-manager__reset");
+    resetAll.setAttribute("type", "button");
+    resetAll.setAttribute("data-filter-reset-all-locked", "true");
+    setKeyedText(resetAll, "viewer.filters.reset", messages.text("viewer.filters.reset"));
+    actions.append(resetAll);
+    group.append(actions);
+    if (fields.length === 0) {
+      const none = createElement(this.doc, "p", "bl-filter-manager__empty");
+      setKeyedText(none, "editor.filters.noFields", messages.text("editor.filters.noFields"));
+      group.append(none);
+    }
+    const groupOptions = (document.filterGroups ?? []).map((entry) => ({
+      id: entry.id,
+      label: entry.label ?? entry.id,
+    }));
+    const blockOptions = document.blocks
+      .filter(
+        (block) => block.type === "chart" || block.type === "metric" || block.type === "table",
+      )
+      .map((block) => ({ id: block.id, label: block.title ?? block.id }));
+    const filterIds = [
+      ...document.filters.map((filter) => filter.id),
+      ...[...this.pendingFilters.keys()].filter(
+        (id) => !document.filters.some((filter) => filter.id === id),
+      ),
+    ];
+    for (const filterId of filterIds) {
+      const filter =
+        this.pendingFilters.get(filterId) ??
+        document.filters.find((entry) => entry.id === filterId);
+      if (filter === undefined) {
+        continue;
+      }
+      group.append(
+        this.createFilterManagerRow(document, filter, fields, groupOptions, blockOptions),
+      );
+    }
+    return group;
+  }
+
+  private createFilterManagerRow(
+    document: BoardDocumentV1,
+    filter: FilterDefinition,
+    fields: readonly {
+      readonly datasetId: string;
+      readonly fieldId: string;
+      readonly label: string;
+      readonly type: FieldValueType;
+      readonly timezone?: string;
+    }[],
+    groups: readonly { readonly id: string; readonly label: string }[],
+    blocks: readonly { readonly id: string; readonly label: string }[],
+  ): HTMLElement {
+    const messages = this.messagesValue;
+    const row = createElement(this.doc, "div", "bl-filter-row");
+    row.setAttribute("data-filter-id", filter.id);
+    row.setAttribute("data-filter-scope", filter.target.kind);
+    const makeLabel = (key: string, text: string, control: HTMLElement): HTMLElement => {
+      const label = createElement(this.doc, "label", "bl-filter-row__label");
+      label.setAttribute("for", control.id);
+      setKeyedText(label, key, text);
+      return label;
+    };
+    const fieldSelect = createElement(this.doc, "select", "bl-filter-control");
+    fieldSelect.id = `${this.root.id}-filter-${filter.id}-field`.replace(/[^A-Za-z0-9_-]/g, "-");
+    fieldSelect.setAttribute("data-filter-control", "field");
+    for (const field of fields) {
+      const option = createElement(this.doc, "option");
+      option.value = JSON.stringify([field.datasetId, field.fieldId]);
+      option.textContent = `${field.datasetId}: ${field.fieldId}`;
+      fieldSelect.append(option);
+    }
+    fieldSelect.value = JSON.stringify([filter.field.datasetId, filter.field.fieldId]);
+    row.append(makeLabel("filter.field", messages.text("filter.field"), fieldSelect), fieldSelect);
+    const descriptor = fields.find(
+      (entry) =>
+        entry.datasetId === filter.field.datasetId && entry.fieldId === filter.field.fieldId,
+    );
+    const operatorSelect = createElement(this.doc, "select", "bl-filter-control");
+    operatorSelect.id = `${this.root.id}-filter-${filter.id}-operator`.replace(
+      /[^A-Za-z0-9_-]/g,
+      "-",
+    );
+    operatorSelect.setAttribute("data-filter-control", "operator");
+    const operators =
+      descriptor === undefined
+        ? []
+        : filterDefinitionOperators(document, filter, this.spaceValue.getValidationCatalog());
+    for (const operator of operators) {
+      const option = createElement(this.doc, "option");
+      option.value = operator;
+      option.textContent = messages.text(filterOperatorLabelKey(operator));
+      operatorSelect.append(option);
+    }
+    operatorSelect.value = filter.operator;
+    row.append(
+      makeLabel(
+        "editor.filters.operator",
+        messages.text("editor.filters.operator"),
+        operatorSelect,
+      ),
+      operatorSelect,
+    );
+    const parameterless =
+      filter.operator === "isNull" ||
+      filter.operator === "isNotNull" ||
+      filter.operator === "isTrue" ||
+      filter.operator === "isFalse";
+    if (!parameterless) {
+      const valueInput = createElement(this.doc, "input", "bl-filter-control");
+      valueInput.id = `${this.root.id}-filter-${filter.id}-default`.replace(/[^A-Za-z0-9_-]/g, "-");
+      valueInput.setAttribute("data-filter-control", "default");
+      valueInput.setAttribute("type", "text");
+      valueInput.value = filterInputText(filter.defaultValue);
+      row.append(
+        makeLabel("filter.defaultValue", messages.text("filter.defaultValue"), valueInput),
+        valueInput,
+      );
+    }
+    const targetSelect = createElement(this.doc, "select", "bl-filter-control");
+    targetSelect.id = `${this.root.id}-filter-${filter.id}-target`.replace(/[^A-Za-z0-9_-]/g, "-");
+    targetSelect.setAttribute("data-filter-control", "target");
+    const boardOption = createElement(this.doc, "option");
+    boardOption.value = "board";
+    boardOption.textContent = messages.text("filter.scope.board");
+    targetSelect.append(boardOption);
+    for (const groupOption of groups) {
+      const option = createElement(this.doc, "option");
+      option.value = `group:${groupOption.id}`;
+      option.textContent = `${messages.text("filter.scope.group")}: ${groupOption.label}`;
+      targetSelect.append(option);
+    }
+    for (const blockOption of blocks) {
+      const option = createElement(this.doc, "option");
+      option.value = `block:${blockOption.id}`;
+      option.textContent = `${messages.text("filter.scope.block")}: ${blockOption.label}`;
+      targetSelect.append(option);
+    }
+    targetSelect.value =
+      filter.target.kind === "board"
+        ? "board"
+        : filter.target.kind === "group"
+          ? `group:${filter.target.groupId}`
+          : `block:${filter.target.blockId}`;
+    row.append(
+      makeLabel("editor.filters.target", messages.text("editor.filters.target"), targetSelect),
+      targetSelect,
+    );
+    const editable = createElement(this.doc, "input", "bl-filter-control");
+    editable.id = `${this.root.id}-filter-${filter.id}-editable`.replace(/[^A-Za-z0-9_-]/g, "-");
+    editable.setAttribute("data-filter-control", "viewerEditable");
+    editable.setAttribute("type", "checkbox");
+    (editable as unknown as { checked: boolean }).checked = filter.viewerEditable === true;
+    row.append(
+      makeLabel(
+        "editor.filters.viewerEditable",
+        messages.text("editor.filters.viewerEditable"),
+        editable,
+      ),
+      editable,
+    );
+    for (const dataset of document.datasets) {
+      if (dataset.id === filter.field.datasetId) {
+        continue;
+      }
+      const mapping = createElement(this.doc, "select", "bl-filter-control");
+      mapping.id = `${this.root.id}-filter-${filter.id}-mapping-${dataset.id}`.replace(
+        /[^A-Za-z0-9_-]/g,
+        "-",
+      );
+      mapping.setAttribute("data-filter-control", "mapping");
+      mapping.setAttribute("data-filter-dataset", dataset.id);
+      const none = createElement(this.doc, "option");
+      none.value = "";
+      none.textContent = messages.text("editor.binding.none");
+      mapping.append(none);
+      for (const field of dataset.fields ?? []) {
+        const option = createElement(this.doc, "option");
+        option.value = field.id;
+        option.textContent = field.id;
+        mapping.append(option);
+      }
+      const current = filter.mappings?.find(
+        (entry) =>
+          entry.source.datasetId === filter.field.datasetId &&
+          entry.source.fieldId === filter.field.fieldId &&
+          entry.target.datasetId === dataset.id,
+      );
+      mapping.value = current?.target.fieldId ?? "";
+      row.append(
+        makeLabel(
+          "editor.filters.mapping",
+          messages.text("editor.filters.mapping", { dataset: dataset.id }),
+          mapping,
+        ),
+        mapping,
+      );
+    }
+    const resetScope = createElement(this.doc, "button", "bl-filter-row__reset");
+    resetScope.setAttribute("type", "button");
+    resetScope.setAttribute("data-filter-reset-scope", filter.target.kind);
+    resetScope.setAttribute(
+      "data-filter-scope-id",
+      filter.target.kind === "group"
+        ? filter.target.groupId
+        : filter.target.kind === "block"
+          ? filter.target.blockId
+          : "",
+    );
+    setKeyedText(
+      resetScope,
+      "viewer.filters.resetScope",
+      messages.text("viewer.filters.resetScope"),
+    );
+    const reset = createElement(this.doc, "button", "bl-filter-row__reset");
+    reset.setAttribute("type", "button");
+    reset.setAttribute("data-filter-reset", filter.id);
+    setKeyedText(reset, "viewer.filters.reset", messages.text("viewer.filters.reset"));
+    row.append(resetScope, reset);
+    if (this.pendingFilters.has(filter.id)) {
+      row.setAttribute("data-filter-pending", "true");
+      const apply = createElement(this.doc, "button", "bl-filter-row__apply");
+      apply.setAttribute("type", "button");
+      apply.setAttribute("data-filter-apply", filter.id);
+      setKeyedText(apply, "common.apply", messages.text("common.apply"));
+      const discard = createElement(this.doc, "button", "bl-filter-row__discard");
+      discard.setAttribute("type", "button");
+      discard.setAttribute("data-filter-discard", filter.id);
+      setKeyedText(discard, "common.cancel", messages.text("common.cancel"));
+      row.append(apply, discard);
+    }
+    return row;
+  }
+
+  private filterById(document: BoardDocumentV1, filterId: string): FilterDefinition | undefined {
+    return (
+      this.pendingFilters.get(filterId) ?? document.filters.find((entry) => entry.id === filterId)
+    );
+  }
+
+  private withResolvedOperator(
+    document: BoardDocumentV1,
+    filter: FilterDefinition,
+  ): FilterDefinition {
+    const operators = filterDefinitionOperators(
+      document,
+      filter,
+      this.spaceValue.getValidationCatalog(),
+    );
+    if (operators.length === 0 || operators.includes(filter.operator)) {
+      return filter;
+    }
+    const operator = operators[0] as FilterOperator;
+    const descriptor = documentField(document, filter.field);
+    const defaults = filterDefaultFor(descriptor?.type ?? "string", operator, descriptor);
+    return withoutUndefined({
+      ...filter,
+      operator,
+      defaultValue: "defaultValue" in defaults ? (defaults.defaultValue as never) : undefined,
+      temporal: "temporal" in defaults ? defaults.temporal : undefined,
+    });
+  }
+
+  private proposedFieldChange(
+    document: BoardDocumentV1,
+    filter: FilterDefinition,
+    field: FieldReference,
+  ): FilterDefinition {
+    const descriptor = documentField(document, field);
+    const mappings = (filter.mappings ?? [])
+      .filter((mapping) => {
+        const target = documentField(document, mapping.target);
+        return target !== undefined && fieldCompatibilityReason(descriptor, target) === null;
+      })
+      .map((mapping) => ({
+        source: { ...field },
+        target: { ...mapping.target },
+      }));
+    const base = withoutUndefined({
+      ...filter,
+      field,
+      mappings: mappings.length === 0 ? undefined : mappings,
+      defaultValue: undefined,
+      temporal: undefined,
+    });
+    const operators = filterDefinitionOperators(
+      document,
+      base,
+      this.spaceValue.getValidationCatalog(),
+    );
+    const fallback = filterOperatorsForField(
+      document,
+      field,
+      this.spaceValue.getValidationCatalog(),
+    );
+    const operator = operators[0] ?? fallback[0] ?? filter.operator;
+    const defaults = filterDefaultFor(descriptor?.type ?? "string", operator, descriptor);
+    return withoutUndefined({
+      ...base,
+      operator,
+      defaultValue: "defaultValue" in defaults ? (defaults.defaultValue as never) : undefined,
+      temporal: "temporal" in defaults ? defaults.temporal : undefined,
+    });
+  }
+
+  private mappingChange(
+    filter: FilterDefinition,
+    datasetId: string,
+    fieldId: string,
+  ): FilterDefinition {
+    const mappings = (filter.mappings ?? []).filter(
+      (mapping) => mapping.target.datasetId !== datasetId,
+    );
+    if (fieldId !== "") {
+      mappings.push({
+        source: { ...filter.field },
+        target: { datasetId, fieldId },
+      });
+    }
+    return withoutUndefined({
+      ...filter,
+      mappings: mappings.length === 0 ? undefined : mappings,
+    });
+  }
+
+  private targetChange(filter: FilterDefinition, value: string): FilterDefinition | null {
+    let target: FilterTarget;
+    if (value === "board") {
+      target = { kind: "board" };
+    } else if (value.startsWith("group:")) {
+      target = { kind: "group", groupId: value.slice("group:".length) };
+    } else if (value.startsWith("block:")) {
+      target = { kind: "block", blockId: value.slice("block:".length) };
+    } else {
+      return null;
+    }
+    return { ...filter, target };
+  }
+
+  private resetManagerDiagnostics(): void {
+    this.actionDiagnostics = Object.freeze([]);
+    const snapshot = this.safeSnapshot();
+    if (snapshot?.draft !== null && snapshot?.draft !== undefined) {
+      this.viewValue.commands.updateDraft(snapshot.draft.document);
+    }
+  }
+
+  private submitPendingFilter(filterId: string): void {
+    const pending = this.pendingFilters.get(filterId);
+    if (pending === undefined) {
+      return;
+    }
+    const updated = this.updateFilterDocument((document) => {
+      const exists = document.filters.some((entry) => entry.id === filterId);
+      if (exists) {
+        return {
+          ...document,
+          filters: document.filters.map((entry) => (entry.id === filterId ? pending : entry)),
+        } as BoardDocumentV1;
+      }
+      return {
+        ...document,
+        filters: [...document.filters, pending],
+        blocks: document.blocks.map((block) => {
+          if (block.type !== "filter") {
+            return block;
+          }
+          const config = block.config as { readonly filterIds?: readonly string[] };
+          const filterIds = Array.isArray(config.filterIds)
+            ? [...config.filterIds, filterId]
+            : [filterId];
+          return { ...block, config: { ...block.config, filterIds } };
+        }),
+      } as BoardDocumentV1;
+    });
+    if (updated) {
+      this.pendingFilters.delete(filterId);
+    }
+  }
+
+  private applyFilterManagerChange(
+    filterId: string,
+    control: string,
+    target: EventTarget & {
+      readonly value?: string;
+      readonly checked?: boolean;
+      getAttribute?: (name: string) => string | null;
+    },
+  ): void {
+    const value = typeof target.value === "string" ? target.value : "";
+    const checked = target.checked === true;
+    const datasetId = target.getAttribute?.("data-filter-dataset") ?? null;
+    const snapshot = this.safeSnapshot();
+    if (snapshot === null) {
+      return;
+    }
+    const document = (snapshot.draft?.document ??
+      snapshot.committedDocument) as unknown as BoardDocumentV1;
+    const current = this.filterById(document, filterId);
+    if (current === undefined) {
+      return;
+    }
+    const pending = this.pendingFilters.has(filterId);
+    const setPending = (filter: FilterDefinition): void => {
+      this.pendingFilters.set(filterId, this.withResolvedOperator(document, filter));
+      this.resetManagerDiagnostics();
+      this.scheduleRender();
+    };
+    if (control === "field") {
+      const field = parseBindingFieldValue(value);
+      if (field === null) {
+        return;
+      }
+      setPending(this.proposedFieldChange(document, current, field));
+      return;
+    }
+    if (control === "target") {
+      const changed = this.targetChange(current, value);
+      if (changed === null) {
+        return;
+      }
+      setPending(changed);
+      return;
+    }
+    if (control === "mapping") {
+      if (datasetId === null) {
+        return;
+      }
+      setPending(this.mappingChange(current, datasetId, value));
+      return;
+    }
+    if (control === "viewerEditable") {
+      if (pending) {
+        setPending({ ...current, viewerEditable: checked });
+        return;
+      }
+      this.updateFilterDocument(
+        (draft) =>
+          ({
+            ...draft,
+            filters: draft.filters.map((entry) =>
+              entry.id === filterId ? { ...entry, viewerEditable: checked } : entry,
+            ),
+          }) as BoardDocumentV1,
+      );
+      return;
+    }
+    const descriptor = documentField(document, current.field);
+    if (control === "operator") {
+      const operator = value as FilterOperator;
+      const defaults = filterDefaultFor(descriptor?.type ?? "string", operator, descriptor);
+      const changed = withoutUndefined({
+        ...current,
+        operator,
+        defaultValue: "defaultValue" in defaults ? (defaults.defaultValue as never) : undefined,
+        temporal: "temporal" in defaults ? defaults.temporal : undefined,
+      });
+      if (pending) {
+        setPending(changed);
+        return;
+      }
+      this.updateFilterDocument(
+        (draft) =>
+          ({
+            ...draft,
+            filters: draft.filters.map((entry) => (entry.id === filterId ? changed : entry)),
+          }) as BoardDocumentV1,
+      );
+      return;
+    }
+    if (control === "default") {
+      const parsed = parseFilterInput(value, descriptor?.type ?? "string", current.operator);
+      const changed = withoutUndefined({
+        ...current,
+        defaultValue: parsed as never,
+      });
+      if (pending) {
+        setPending(changed);
+        return;
+      }
+      this.updateFilterDocument(
+        (draft) =>
+          ({
+            ...draft,
+            filters: draft.filters.map((entry) => (entry.id === filterId ? changed : entry)),
+          }) as BoardDocumentV1,
+      );
+    }
+  }
+
+  private addFilterDefinition(): void {
+    const snapshot = this.safeSnapshot();
+    if (snapshot === null) {
+      return;
+    }
+    const document = (snapshot.draft?.document ??
+      snapshot.committedDocument) as unknown as BoardDocumentV1;
+    const dataBlocks = document.blocks.filter(
+      (block) => block.type === "chart" || block.type === "metric" || block.type === "table",
+    );
+    let selected: {
+      readonly datasetId: string;
+      readonly field: NonNullable<(typeof document.datasets)[number]["fields"]>[number];
+    } | null = null;
+    let target: FilterTarget = { kind: "board" };
+    for (const block of dataBlocks) {
+      for (const binding of block.bindings ?? []) {
+        const field = documentField(document, binding.field);
+        if (field !== undefined) {
+          selected = { datasetId: binding.field.datasetId, field };
+          target = { kind: "block", blockId: block.id };
+          break;
+        }
+      }
+      if (selected !== null) {
+        break;
+      }
+    }
+    if (selected === null) {
+      for (const dataset of document.datasets) {
+        const field = dataset.fields?.[0];
+        if (field !== undefined) {
+          selected = { datasetId: dataset.id, field };
+          break;
+        }
+      }
+    }
+    if (selected === null) {
+      return;
+    }
+    const existing = new Set([
+      ...document.filters.map((filter) => filter.id),
+      ...this.pendingFilters.keys(),
+    ]);
+    let id = `filter-${++filterSequence}`;
+    while (existing.has(id)) {
+      id = `filter-${++filterSequence}`;
+    }
+    const operators = filterOperatorsForField(
+      document,
+      { datasetId: selected.datasetId, fieldId: selected.field.id },
+      this.spaceValue.getValidationCatalog(),
+    );
+    const operator = operators[0] ?? "equals";
+    const defaults = filterDefaultFor(selected.field.type, operator, selected.field);
+    let filter: FilterDefinition = {
+      id,
+      label: selected.field.id,
+      field: { datasetId: selected.datasetId, fieldId: selected.field.id },
+      operator,
+      ...("defaultValue" in defaults ? { defaultValue: defaults.defaultValue as never } : {}),
+      ...("temporal" in defaults ? { temporal: defaults.temporal } : {}),
+      viewerEditable: true,
+      target,
+    };
+    const resolvedOperators = filterDefinitionOperators(
+      document,
+      filter,
+      this.spaceValue.getValidationCatalog(),
+    );
+    const resolvedOperator = resolvedOperators[0] ?? operator;
+    if (resolvedOperator !== operator) {
+      const resolvedDefaults = filterDefaultFor(
+        selected.field.type,
+        resolvedOperator,
+        selected.field,
+      );
+      filter = withoutUndefined({
+        ...filter,
+        operator: resolvedOperator,
+        defaultValue:
+          "defaultValue" in resolvedDefaults ? (resolvedDefaults.defaultValue as never) : undefined,
+        temporal: "temporal" in resolvedDefaults ? resolvedDefaults.temporal : undefined,
+      });
+    }
+    this.pendingFilters.set(id, filter);
+    this.resetManagerDiagnostics();
+    this.scheduleRender();
+  }
+
+  private updateFilterDocument(
+    mutate: (document: BoardDocumentV1) => BoardDocumentV1 | null,
+  ): boolean {
+    const snapshot = this.safeSnapshot();
+    if (snapshot === null) {
+      return false;
+    }
+    const source = (snapshot.draft?.document ??
+      snapshot.committedDocument) as unknown as BoardDocumentV1;
+    const copy = JSON.parse(JSON.stringify(source)) as BoardDocumentV1;
+    const next = mutate(copy);
+    if (next === null) {
+      return false;
+    }
+    const result = this.viewValue.commands.updateDraft(next);
+    if (result.ok) {
+      this.actionDiagnostics = Object.freeze([]);
+      this.scheduleRender();
+      return true;
+    }
+    this.actionDiagnostics = result.diagnostics;
+    this.announceDiagnostics(result.diagnostics);
+    this.renderNow();
+    return false;
   }
 
   private createBindingRow(
@@ -1132,14 +1999,18 @@ export class ViewerHost implements BoardViewHandle {
     renderDiagnosticList(this.diagnosticsPanel, messages, diagnostics);
 
     clearElement(this.filterChips);
-    const filters = activeFilterSummaries(document, messages);
-    if (filters.length === 0) {
+    const state = snapshot.filterState;
+    const filters = activeFilterChipSummaries(document, messages, state);
+    const selections = crossFilterSummaries(document, messages, state);
+    if (filters.length === 0 && selections.length === 0) {
       const none = createElement(this.doc, "p", "bl-filters__none");
       setKeyedText(none, "viewer.filters.none", messages.text("viewer.filters.none"));
       this.filterChips.append(none);
     } else {
       for (const filter of filters) {
         const chip = createElement(this.doc, "span", "bl-filter-chip");
+        chip.setAttribute("data-filter-chip", filter.id);
+        chip.setAttribute("data-filter-active", String(filter.active));
         const origin = createElement(this.doc, "span", "bl-filter-chip__origin");
         setKeyedText(origin, filter.originKey, filter.originText);
         const label = createElement(this.doc, "span", "bl-filter-chip__label");
@@ -1147,7 +2018,43 @@ export class ViewerHost implements BoardViewHandle {
         const value = createElement(this.doc, "span", "bl-filter-chip__value");
         setHostText(value, filter.value);
         chip.append(origin, label, value);
+        if (filter.editable) {
+          const reset = createElement(this.doc, "button", "bl-filter-chip__action");
+          reset.setAttribute("type", "button");
+          reset.setAttribute("data-filter-reset", filter.id);
+          reset.setAttribute(
+            "aria-label",
+            messages.text("viewer.filters.resetNamed", { name: filter.label }),
+          );
+          setKeyedText(reset, "common.reset", messages.text("common.reset"));
+          chip.append(reset);
+        }
         this.filterChips.append(chip);
+      }
+      for (const selection of selections) {
+        const chip = createElement(this.doc, "span", "bl-filter-chip bl-filter-chip--selection");
+        chip.setAttribute("data-cross-chip", selection.id);
+        chip.setAttribute("data-cross-source", selection.sourceBlockId);
+        const origin = createElement(this.doc, "span", "bl-filter-chip__origin");
+        setKeyedText(origin, selection.originKey, selection.originText);
+        const label = createElement(this.doc, "span", "bl-filter-chip__label");
+        setHostText(label, selection.label);
+        const value = createElement(this.doc, "span", "bl-filter-chip__value");
+        setHostText(value, selection.value);
+        const clear = createElement(this.doc, "button", "bl-filter-chip__action");
+        clear.setAttribute("type", "button");
+        clear.setAttribute("data-cross-clear", "true");
+        clear.setAttribute("aria-label", messages.text("viewer.filters.clearSelection"));
+        setKeyedText(clear, "common.close", messages.text("common.close"));
+        chip.append(origin, label, value, clear);
+        this.filterChips.append(chip);
+      }
+      if (filters.some((filter) => filter.active && filter.editable)) {
+        const resetAll = createElement(this.doc, "button", "bl-filters__reset");
+        resetAll.setAttribute("type", "button");
+        resetAll.setAttribute("data-filter-reset-all", "true");
+        setKeyedText(resetAll, "viewer.filters.reset", messages.text("viewer.filters.reset"));
+        this.filterChips.append(resetAll);
       }
     }
 
@@ -1240,6 +2147,7 @@ export class ViewerHost implements BoardViewHandle {
       if (!this.ensureLive()) {
         return;
       }
+      this.updateCrossFilterNote(mounted, block, document, snapshot);
       desired.push(mounted.element);
       index += 1;
     }
@@ -1264,6 +2172,51 @@ export class ViewerHost implements BoardViewHandle {
       const last = this.grid.children[this.grid.children.length - 1];
       last?.remove();
     }
+  }
+
+  private updateCrossFilterNote(
+    mounted: MountedBlock,
+    block: BlockDefinition,
+    document: BoardDocumentV1,
+    snapshot: SpaceSnapshot,
+  ): void {
+    const existing = descendantsByClass(mounted.header, "bl-block__filter-note")[0] ?? null;
+    const hasSelection = snapshot.filterState.crossFilters.length > 0;
+    const dataBlock = block.type === "chart" || block.type === "metric" || block.type === "table";
+    if (!hasSelection || !dataBlock) {
+      existing?.remove();
+      mounted.element.removeAttribute("data-cross-filter");
+      return;
+    }
+    const catalog = this.spaceValue.getValidationCatalog();
+    const status = crossFilterTargetStatus(document, block, snapshot.filterState, catalog);
+    if (status.compatible) {
+      existing?.remove();
+      const applied = snapshot.filterState.crossFilters.some(
+        (selection) => selection.sourceBlockId !== block.id,
+      );
+      mounted.element.setAttribute("data-cross-filter", applied ? "included" : "source");
+      return;
+    }
+    const note = existing ?? createElement(this.doc, "p", "bl-block__filter-note");
+    note.setAttribute("role", "status");
+    note.setAttribute("data-reason", status.reason ?? "incompatible");
+    const reasonName = (status.reason ?? "field-unverified").replace(
+      /-([a-z])/g,
+      (_match, letter: string) => letter.toUpperCase(),
+    );
+    const reasonKey = `viewer.filters.reason.${reasonName}`;
+    const reasonText = this.messagesValue.has(reasonKey)
+      ? this.messagesValue.text(reasonKey)
+      : (status.reason ?? "field-unverified");
+    const targetText = this.messagesValue.text("viewer.filters.incompatibleTarget");
+    setKeyedText(note, "viewer.filters.incompatibleTarget", `${targetText} (${reasonText})`);
+    note.title = `${targetText} (${reasonText})`;
+    if (existing === null) {
+      mounted.header.append(note);
+    }
+    mounted.element.setAttribute("data-cross-filter", "disabled");
+    mounted.element.setAttribute("data-cross-filter-reason", status.reason ?? "incompatible");
   }
 
   private createMountedBlock(
@@ -1357,7 +2310,12 @@ export class ViewerHost implements BoardViewHandle {
       this.updateSurface(mounted, environment);
       return;
     }
-    const derived = deriveBlockQuery(document as unknown as BoardDocument, block);
+    const derived = deriveBlockQuery(document as unknown as BoardDocument, block, {
+      filterState: snapshot.filterState,
+      ...(this.spaceValue.getValidationCatalog() === undefined
+        ? {}
+        : { catalog: this.spaceValue.getValidationCatalog() }),
+    });
     if (!derived.ok) {
       this.removeBlockQuery(mounted);
       mounted.queryError = derived.diagnostics;
@@ -1555,6 +2513,49 @@ export class ViewerHost implements BoardViewHandle {
     });
   }
 
+  private applyFilterValue(filterId: string, value: JsonValue): Result<FilterRuntimeState> {
+    return this.applyFilterOperation("value", () =>
+      this.spaceValue.setFilterValue(filterId, value),
+    );
+  }
+
+  private applyFilterOperation(
+    reason: "value" | "reset" | "cross-filter",
+    operation: () => Result<FilterRuntimeState>,
+  ): Result<FilterRuntimeState> {
+    if (!this.publicOperationLive()) {
+      return fail([createDiagnostic(DIAGNOSTIC_CODES.VIEW_DISPOSED, "view")]);
+    }
+    const result = operation();
+    if (!this.ensureLive()) {
+      return fail([createDiagnostic(DIAGNOSTIC_CODES.VIEW_DISPOSED, "view")]);
+    }
+    if (result.ok) {
+      this.actionDiagnostics = Object.freeze([]);
+      this.announceFilterChange(reason);
+      this.scheduleRender();
+    } else {
+      this.actionDiagnostics = result.diagnostics;
+      this.announceDiagnostics(result.diagnostics);
+      this.renderNow();
+    }
+    return result;
+  }
+
+  private announceFilterChange(reason: "value" | "reset" | "cross-filter"): void {
+    const key =
+      reason === "cross-filter"
+        ? "viewer.filters.crossFilter"
+        : reason === "reset"
+          ? "viewer.filters.reset"
+          : "viewer.filters.active";
+    if (this.messagesValue.has(key)) {
+      this.liveRegion.textContent = this.messagesValue.text(key);
+      this.liveRegion.setAttribute("data-announcement-key", key);
+    }
+    this.liveRegion.removeAttribute("data-severity");
+  }
+
   private createEnvironment(
     block: BoardDocumentV1["blocks"][number],
     query: QueryState | null,
@@ -1571,7 +2572,8 @@ export class ViewerHost implements BoardViewHandle {
       query,
       queryError,
       queryPlan,
-      contextSignature: blockContextSignature(block, document),
+      filterState: snapshot.filterState,
+      contextSignature: blockContextSignature(block, document, snapshot.filterState),
       messages: this.messagesValue,
       formatters,
       locale: snapshot.locale,
@@ -1580,6 +2582,15 @@ export class ViewerHost implements BoardViewHandle {
       renderers: this.rendererRegistry,
       getDatasetDescriptor: (datasetId) => this.spaceValue.getDatasetDescriptor(datasetId),
       createElement: (tag, className) => createElement(this.doc, tag, className),
+      applyFilterValue: (filterId, value) => this.applyFilterValue(filterId, value),
+      resetFilterValue: (filterId) =>
+        this.applyFilterOperation("reset", () => this.spaceValue.resetFilter(filterId)),
+      toggleCrossFilter: (selection) =>
+        this.applyFilterOperation("cross-filter", () =>
+          this.spaceValue.setCrossFilter(selection, { toggle: true }),
+        ),
+      clearCrossFilters: () =>
+        this.applyFilterOperation("cross-filter", () => this.spaceValue.clearCrossFilters()),
     };
   }
 
@@ -1629,6 +2640,13 @@ export class ViewerHost implements BoardViewHandle {
     if (event.type === "space:disposed") {
       this.teardown(false);
       return;
+    }
+    if (
+      event.type === "document:changed" ||
+      event.type === "draft:cancelled" ||
+      event.type === "draft:applied"
+    ) {
+      this.pendingFilters.clear();
     }
     this.scheduleRender();
   }

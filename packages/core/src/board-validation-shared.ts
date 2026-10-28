@@ -249,10 +249,19 @@ export function resolveFieldId(
         relatedIds: [datasetId, fieldId],
       });
     }
-    if (providerInfo.allowedValues === undefined && documentInfo?.allowedValues !== undefined) {
-      return Object.freeze({ ...providerInfo, allowedValues: documentInfo.allowedValues });
-    }
-    return providerInfo;
+    const merged = Object.freeze({
+      ...providerInfo,
+      ...(providerInfo.unit === undefined && documentInfo?.unit !== undefined
+        ? { unit: documentInfo.unit }
+        : {}),
+      ...(providerInfo.timezone === undefined && documentInfo?.timezone !== undefined
+        ? { timezone: documentInfo.timezone }
+        : {}),
+      ...(providerInfo.allowedValues === undefined && documentInfo?.allowedValues !== undefined
+        ? { allowedValues: documentInfo.allowedValues }
+        : {}),
+    });
+    return merged;
   }
   if (context.catalog) {
     if (!providerDataset) {

@@ -3,6 +3,8 @@ import type { QueryPhase } from "./data-contract.js";
 import type { Diagnostic } from "./diagnostics.js";
 import type { BoardloomLocale } from "./locale.js";
 import type { BoardMigrationReport } from "./migrations.js";
+import type { FilterTarget } from "./board-schema.js";
+import type { JsonValue } from "./json.js";
 import type { ViewMode } from "./types.js";
 
 export type Unsubscribe = () => void;
@@ -89,6 +91,30 @@ export interface LocaleChangedEvent extends BaseSpaceEvent {
 
 export interface DiagnosticsChangedEvent extends BaseSpaceEvent {
   readonly type: "diagnostics:changed";
+  readonly diagnostics: readonly Diagnostic[];
+}
+
+export interface FilterChangedEvent extends BaseSpaceEvent {
+  readonly type: "filter:changed";
+  readonly filterId: string;
+  readonly scope: FilterTarget;
+  readonly value?: JsonValue;
+  readonly active: boolean;
+  readonly reason: "value" | "reset" | "document";
+  readonly diagnostics: readonly Diagnostic[];
+}
+
+export interface CrossFilterChangedEvent extends BaseSpaceEvent {
+  readonly type: "crossfilter:changed";
+  readonly sourceBlockId: string;
+  readonly targetIds: readonly string[];
+  readonly selectionId?: string;
+  readonly cleared: boolean;
+}
+
+export interface FilterRejectedEvent extends BaseSpaceEvent {
+  readonly type: "filter:rejected";
+  readonly reason: "value" | "reset" | "cross-filter" | "document";
   readonly diagnostics: readonly Diagnostic[];
 }
 
@@ -216,6 +242,9 @@ export type SpaceEvent =
   | DocumentChangedEvent
   | LocaleChangedEvent
   | DiagnosticsChangedEvent
+  | FilterChangedEvent
+  | CrossFilterChangedEvent
+  | FilterRejectedEvent
   | DocumentExportedEvent
   | DocumentInvalidEvent
   | DocumentMigratedEvent

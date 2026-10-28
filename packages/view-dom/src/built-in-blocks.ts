@@ -6,6 +6,8 @@ import {
   updateRenderer,
   type BoardDocumentV1,
   type Diagnostic,
+  type FieldDescriptor,
+  type FilterDefinition,
   type JsonValue,
   type QueryResultField,
   type RendererDefinition,
@@ -19,7 +21,7 @@ import type {
   BlockTypeDefinition,
 } from "./block-registry.js";
 import { clearElement, createElement, setHostText, setKeyedText } from "./dom.js";
-import { filterSummaryEntry, filterValueText } from "./filter-summary.js";
+import { filterDisplayValue, filterSummaryEntry, filterValueText } from "./filter-summary.js";
 import { formatRendererFieldValue } from "./format-value.js";
 import { ownValue } from "./own-value.js";
 import type { ViewMessages } from "./messages.js";
@@ -89,6 +91,94 @@ function renderCell(
   return cell;
 }
 
+function fieldDescriptor(
+  document: BoardDocumentV1,
+  datasetId: string,
+  fieldId: string,
+): FieldDescriptor | undefined {
+  return document.datasets
+    .find((entry) => entry.id === datasetId)
+    ?.fields?.find((entry) => entry.id === fieldId);
+}
+
+function currentFilterValue(
+  environment: BlockSurfaceEnvironment,
+  filter: FilterDefinition,
+): JsonValue | undefined {
+  const active = environment.filterState.activeValues.find((entry) => entry.filterId === filter.id);
+  return active === undefined ? filter.defaultValue : active.value;
+}
+
+function crossSelectionButton(
+  doc: Document,
+  environment: BlockSurfaceEnvironment,
+  fieldId: string,
+  value: JsonValue | undefined,
+  text: string,
+): HTMLElement {
+  const button = createElement(doc, "button", "bl-cross-select");
+  button.setAttribute("type", "button");
+  setHostText(button, text);
+  const datasetId = environment.queryPlan?.spec.datasetId ?? "";
+  const selected =
+    value !== undefined &&
+    value !== null &&
+    environment.filterState.crossFilters.some(
+      (selection) =>
+        selection.sourceBlockId === environment.block.id &&
+        selection.field.datasetId === datasetId &&
+        selection.field.fieldId === fieldId &&
+        JSON.stringify(selection.value) === JSON.stringify(value),
+    );
+  button.setAttribute("aria-pressed", String(selected));
+  button.setAttribute("data-cross-select", "true");
+  button.setAttribute("data-cross-block", environment.block.id);
+  button.setAttribute("data-cross-dataset", datasetId);
+  button.setAttribute("data-cross-field", fieldId);
+  button.setAttribute("data-cross-selected", String(selected));
+  button.setAttribute("data-message-key", "viewer.filters.crossFilter");
+  const messages = environment.messages;
+  button.setAttribute("aria-label", `${text}: ${messages.text("chart.selectValue")}`);
+  if (value !== undefined && value !== null && datasetId !== "") {
+    const click = (): void => {
+      environment.toggleCrossFilter({
+        sourceBlockId: environment.block.id,
+        field: { datasetId, fieldId },
+        operator: "equals",
+        value,
+        label: bindingLabel(environment.block, fieldId),
+      });
+    };
+    button.addEventListener("click", click);
+  } else {
+    button.setAttribute("disabled", "");
+    button.setAttribute("aria-disabled", "true");
+  }
+  return button;
+}
+
+function renderFilterDiagnostics(
+  container: HTMLElement,
+  environment: BlockSurfaceEnvironment,
+): void {
+  clearElement(container);
+  const conflicts = environment.queryPlan?.filterConflicts ?? [];
+  if (conflicts.length === 0) {
+    container.setAttribute("hidden", "");
+    return;
+  }
+  container.removeAttribute("hidden");
+  const note = createElement(container.ownerDocument, "p", "bl-filter-diagnostic");
+  note.setAttribute("role", "status");
+  note.setAttribute("data-diagnostic-code", conflicts[0]?.diagnostic.code ?? "FILTER_CONFLICT");
+  setKeyedText(
+    note,
+    "viewer.filters.conflict",
+    environment.messages.text("viewer.filters.conflict"),
+  );
+  container.append(note);
+}
+
 function renderTable(
   container: HTMLElement,
   environment: BlockSurfaceEnvironment,
@@ -156,10 +246,8 @@ function renderTable(
               );
         if (formatted === null) {
           missingValueCell(environment.messages, header);
-        } else if (field.type === "number") {
-          header.append(numericRun(doc, formatted));
         } else {
-          setHostText(header, formatted);
+          header.append(crossSelectionButton(doc, environment, field.fieldId, value, formatted));
         }
         rowElement.append(header);
       } else {
@@ -265,8 +353,9 @@ function createMetricSurface(environment: BlockSurfaceEnvironment): BlockSurface
   const element = createElement(doc, "div", "bl-metric-surface");
   const stateContainer = createElement(doc, "div", "bl-surface-state");
   const bannerContainer = createElement(doc, "div", "bl-surface-banner");
+  const filterContainer = createElement(doc, "div", "bl-surface-filter-diagnostics");
   const content = createElement(doc, "div", "bl-metric-content");
-  element.append(stateContainer, bannerContainer, content);
+  element.append(stateContainer, bannerContainer, filterContainer, content);
   const active = createActiveRenderer();
 
   return {
@@ -280,6 +369,7 @@ function createMetricSurface(environment: BlockSurfaceEnvironment): BlockSurface
         filterScopeText(next),
       );
       renderDataBanner(bannerContainer, next.messages, next.query, next.formatters);
+      renderFilterDiagnostics(filterContainer, next);
       if (!showing) {
         disposeActiveRenderer(active);
         clearElement(content);
@@ -323,8 +413,9 @@ function createTableSurface(environment: BlockSurfaceEnvironment): BlockSurface 
   const element = createElement(doc, "div", "bl-table-surface");
   const stateContainer = createElement(doc, "div", "bl-surface-state");
   const bannerContainer = createElement(doc, "div", "bl-surface-banner");
+  const filterContainer = createElement(doc, "div", "bl-surface-filter-diagnostics");
   const content = createElement(doc, "div", "bl-surface-content");
-  element.append(stateContainer, bannerContainer, content);
+  element.append(stateContainer, bannerContainer, filterContainer, content);
   const active = createActiveRenderer();
 
   return {
@@ -338,6 +429,7 @@ function createTableSurface(environment: BlockSurfaceEnvironment): BlockSurface 
         filterScopeText(next),
       );
       renderDataBanner(bannerContainer, next.messages, next.query, next.formatters);
+      renderFilterDiagnostics(filterContainer, next);
       if (!showing) {
         disposeActiveRenderer(active);
         clearElement(content);
@@ -401,6 +493,7 @@ function createChartSurface(environment: BlockSurfaceEnvironment): BlockSurface 
   const element = createElement(doc, "div", "bl-chart-surface");
   const stateContainer = createElement(doc, "div", "bl-surface-state");
   const bannerContainer = createElement(doc, "div", "bl-surface-banner");
+  const filterContainer = createElement(doc, "div", "bl-surface-filter-diagnostics");
   const plotContainer = createElement(doc, "div", "bl-chart-plot-container");
   const details = createElement(doc, "details", "bl-chart-data");
   details.setAttribute("open", "");
@@ -408,7 +501,7 @@ function createChartSurface(environment: BlockSurfaceEnvironment): BlockSurface 
   setKeyedText(summary, "chart.viewDataTable", environment.messages.text("chart.viewDataTable"));
   const tableContainer = createElement(doc, "div", "bl-chart-data__table");
   details.append(summary, tableContainer);
-  element.append(stateContainer, bannerContainer, plotContainer, details);
+  element.append(stateContainer, bannerContainer, filterContainer, plotContainer, details);
   const active = createActiveRenderer();
 
   return {
@@ -422,6 +515,7 @@ function createChartSurface(environment: BlockSurfaceEnvironment): BlockSurface 
         filterScopeText(next),
       );
       renderDataBanner(bannerContainer, next.messages, next.query, next.formatters);
+      renderFilterDiagnostics(filterContainer, next);
       setKeyedText(summary, "chart.viewDataTable", next.messages.text("chart.viewDataTable"));
       if (!showing) {
         disposeActiveRenderer(active);
@@ -490,6 +584,136 @@ function createChartSurface(environment: BlockSurfaceEnvironment): BlockSurface 
   };
 }
 
+function filterOriginText(environment: BlockSurfaceEnvironment, filter: FilterDefinition): string {
+  return filterSummaryEntry(
+    asDocument(environment.document),
+    filter,
+    environment.messages,
+    environment.filterState,
+  ).originText;
+}
+
+function applyScalar(
+  environment: BlockSurfaceEnvironment,
+  filter: FilterDefinition,
+  value: string,
+  type: FieldDescriptor["type"] | undefined,
+): void {
+  const scalar: JsonValue =
+    type === "number" ? Number(value) : type === "boolean" ? value === "true" : value;
+  const parsed: JsonValue =
+    filter.operator === "in" || filter.operator === "notIn" ? [scalar] : scalar;
+  environment.applyFilterValue(filter.id, parsed);
+}
+
+function createFilterControl(
+  doc: Document,
+  environment: BlockSurfaceEnvironment,
+  filter: FilterDefinition,
+  field: FieldDescriptor,
+): HTMLElement {
+  const control = createElement(doc, "div", "bl-filter-control");
+  control.setAttribute("data-filter-id", filter.id);
+  control.setAttribute("data-filter-operator", filter.operator);
+  control.setAttribute(
+    "aria-label",
+    environment.messages.text("a11y.filterControls", {
+      name: filter.label ?? filter.field.fieldId,
+    }),
+  );
+  const value = currentFilterValue(environment, filter);
+  const textValue = filterValueText(value);
+  if (filter.operator === "isNull" || filter.operator === "isNotNull") {
+    const note = createElement(doc, "span", "bl-filter-control__fixed");
+    setKeyedText(
+      note,
+      "viewer.filters.readOnly",
+      environment.messages.text("viewer.filters.readOnly"),
+    );
+    control.append(note);
+    return control;
+  }
+  if (filter.operator === "isTrue" || filter.operator === "isFalse") {
+    const note = createElement(doc, "span", "bl-filter-control__fixed");
+    const key = filter.operator === "isTrue" ? "filter.operator.isTrue" : "filter.operator.isFalse";
+    setKeyedText(note, key, environment.messages.text(key));
+    control.append(note);
+    return control;
+  }
+  if (filter.operator === "between") {
+    const range = Array.isArray(value) ? value : [];
+    const values: string[] = [];
+    for (const [index, labelKey] of [
+      [0, "viewer.filters.mapping"],
+      [1, "viewer.filters.value"],
+    ] as const) {
+      const input = createElement(
+        doc,
+        field.type === "number" ? "input" : "input",
+        "bl-filter-input",
+      );
+      input.setAttribute("data-filter-control", "range");
+      input.setAttribute("data-filter-index", String(index));
+      input.setAttribute("type", field.type === "number" ? "number" : "text");
+      input.setAttribute("aria-label", environment.messages.text(labelKey));
+      input.value = range[index] === undefined ? "" : filterValueText(range[index]);
+      values[index] = input.value;
+      input.addEventListener("input", () => {
+        values[index] = input.value;
+      });
+      control.append(input);
+    }
+    const apply = createElement(doc, "button", "bl-filter-apply");
+    apply.setAttribute("type", "button");
+    apply.setAttribute("data-filter-action", "apply-range");
+    setKeyedText(apply, "common.apply", environment.messages.text("common.apply"));
+    apply.addEventListener("click", () => {
+      const parsed = values.map((entry) => (field.type === "number" ? Number(entry) : entry));
+      environment.applyFilterValue(filter.id, parsed);
+    });
+    control.append(apply);
+    return control;
+  }
+  if (field.allowedValues !== undefined && field.allowedValues.length > 0) {
+    const select = createElement(doc, "select", "bl-filter-input");
+    select.setAttribute("data-filter-control", "value");
+    select.setAttribute(
+      "aria-label",
+      environment.messages.text("a11y.filterControls", {
+        name: filter.label ?? filter.field.fieldId,
+      }),
+    );
+    for (const allowed of field.allowedValues) {
+      const option = createElement(doc, "option");
+      option.value = String(allowed);
+      option.textContent = String(allowed);
+      select.append(option);
+    }
+    const first = Array.isArray(value) ? value[0] : value;
+    select.value = first === undefined || first === null ? "" : String(first);
+    select.addEventListener("change", () => {
+      applyScalar(environment, filter, select.value, field.type);
+    });
+    control.append(select);
+  } else {
+    const input = createElement(doc, "input", "bl-filter-input");
+    input.setAttribute("data-filter-control", "value");
+    input.setAttribute("type", field.type === "number" ? "number" : "text");
+    input.setAttribute(
+      "aria-label",
+      environment.messages.text("a11y.filterControls", {
+        name: filter.label ?? filter.field.fieldId,
+      }),
+    );
+    input.value = textValue;
+    input.addEventListener("change", () => {
+      applyScalar(environment, filter, input.value, field.type);
+    });
+    control.append(input);
+  }
+  return control;
+}
+
 function createFilterSurface(environment: BlockSurfaceEnvironment): BlockSurface {
   const doc = environment.dom;
   const element = createElement(doc, "div", "bl-filter-surface");
@@ -499,7 +723,7 @@ function createFilterSurface(environment: BlockSurfaceEnvironment): BlockSurface
     "viewer.filters.active",
     environment.messages.text("viewer.filters.active"),
   );
-  const list = createElement(doc, "ul", "bl-filter-list");
+  const list = createElement(doc, "div", "bl-filter-list");
   element.append(heading, list);
   return {
     element,
@@ -515,24 +739,60 @@ function createFilterSurface(environment: BlockSurfaceEnvironment): BlockSurface
         ids === null ? document.filters : document.filters.filter((filter) => ids.has(filter.id));
       clearElement(list);
       if (filters.length === 0) {
-        const none = createElement(doc, "li", "bl-filter-list__none");
+        const none = createElement(doc, "p", "bl-filter-list__none");
         setKeyedText(none, "viewer.filters.none", next.messages.text("viewer.filters.none"));
         list.append(none);
-      } else {
-        for (const filter of filters) {
-          const summary = filterSummaryEntry(document, filter, next.messages);
-          const item = createElement(doc, "li", "bl-filter-chip");
-          const origin = createElement(doc, "span", "bl-filter-chip__origin");
-          setKeyedText(origin, summary.originKey, summary.originText);
-          const label = createElement(doc, "span", "bl-filter-chip__label");
-          setHostText(label, summary.label);
-          const value = createElement(doc, "span", "bl-filter-chip__value");
-          setHostText(value, summary.value);
-          item.append(origin, label, value);
-          list.append(item);
-        }
+        return;
       }
-      element.setAttribute("data-state", "settled");
+      for (const filter of filters) {
+        const item = createElement(doc, "div", "bl-filter-item");
+        item.setAttribute("data-filter-id", filter.id);
+        const origin = createElement(doc, "span", "bl-filter-chip__origin");
+        setHostText(origin, filterOriginText(next, filter));
+        const label = createElement(doc, "span", "bl-filter-chip__label");
+        setHostText(label, filter.label ?? filter.field.fieldId);
+        const value = createElement(doc, "span", "bl-filter-chip__value");
+        setHostText(value, filterDisplayValue(filter, next.filterState, next.messages));
+        const headingRow = createElement(doc, "div", "bl-filter-item__head");
+        headingRow.append(origin, label, value);
+        item.append(headingRow);
+        const field = fieldDescriptor(document, filter.field.datasetId, filter.field.fieldId);
+        if (field === undefined) {
+          const pending = createElement(doc, "p", "bl-filter-pending");
+          pending.setAttribute("role", "status");
+          setKeyedText(
+            pending,
+            "viewer.filters.pending",
+            next.messages.text("viewer.filters.pending"),
+          );
+          item.append(pending);
+        } else if (filter.viewerEditable === true) {
+          item.append(createFilterControl(doc, next, filter, field));
+          const reset = createElement(doc, "button", "bl-filter-reset");
+          reset.setAttribute("type", "button");
+          reset.setAttribute("data-filter-reset", filter.id);
+          setKeyedText(
+            reset,
+            "viewer.filters.reset",
+            next.messages.text("viewer.filters.resetNamed", {
+              name: filter.label ?? filter.field.fieldId,
+            }),
+          );
+          reset.addEventListener("click", () => {
+            next.resetFilterValue(filter.id);
+          });
+          item.append(reset);
+        } else {
+          const fixed = createElement(doc, "span", "bl-filter-control__fixed");
+          setKeyedText(
+            fixed,
+            "viewer.filters.readOnly",
+            next.messages.text("viewer.filters.readOnly"),
+          );
+          item.append(fixed);
+        }
+        list.append(item);
+      }
     },
   };
 }

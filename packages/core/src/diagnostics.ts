@@ -44,6 +44,12 @@ export const DIAGNOSTIC_CODES = Object.freeze({
   FIXED_BINDING_LOCKED: "FIXED_BINDING_LOCKED",
   FIXED_BINDING_CHANGED: "FIXED_BINDING_CHANGED",
   INCOMPATIBLE_FILTER: "INCOMPATIBLE_FILTER",
+  FILTER_CONFLICT: "FILTER_CONFLICT",
+  FILTER_TARGET_UNMAPPED: "FILTER_TARGET_UNMAPPED",
+  FILTER_TARGET_INCOMPATIBLE: "FILTER_TARGET_INCOMPATIBLE",
+  FILTER_SCHEMA_PENDING: "FILTER_SCHEMA_PENDING",
+  FILTER_STATE_INVALID: "FILTER_STATE_INVALID",
+  CROSS_FILTER_INCOMPATIBLE: "CROSS_FILTER_INCOMPATIBLE",
   INCOMPATIBLE_COMPARISON: "INCOMPATIBLE_COMPARISON",
   INVALID_THEME_TOKEN: "INVALID_THEME_TOKEN",
   UNKNOWN_PROPERTY: "UNKNOWN_PROPERTY",
@@ -175,6 +181,16 @@ export const DIAGNOSTIC_MESSAGES: Readonly<Record<string, string>> = Object.free
   FIXED_BINDING_CHANGED:
     "A document replacement changed or removed a fixed binding; the document was rejected.",
   INCOMPATIBLE_FILTER: "A filter operator or value is incompatible with its field or target.",
+  FILTER_CONFLICT:
+    "Two active filters on the same field contradict each other and produce an empty result.",
+  FILTER_TARGET_UNMAPPED:
+    "A filter target uses a different dataset and has no explicit field mapping.",
+  FILTER_TARGET_INCOMPATIBLE:
+    "A filter field mapping is incompatible in type, unit or time semantics.",
+  FILTER_SCHEMA_PENDING:
+    "The filter target schema is not known yet; the filter is pending rather than guessed.",
+  FILTER_STATE_INVALID: "The serialized filter runtime state is invalid.",
+  CROSS_FILTER_INCOMPATIBLE: "The cross-filter selection is not compatible with this target block.",
   INCOMPATIBLE_COMPARISON: "The comparison mapping, units or alignment are incompatible.",
   INVALID_THEME_TOKEN: "A theme token name or value is invalid.",
   UNKNOWN_PROPERTY: "A property is not recognized by the schema version.",

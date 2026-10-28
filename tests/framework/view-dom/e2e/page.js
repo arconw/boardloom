@@ -14,7 +14,9 @@ const result = {
 function must(value) {
   if (!value || value.ok !== true) {
     const diagnostics = value && value.diagnostics ? value.diagnostics : [];
-    throw new Error(diagnostics.map((item) => item.code).join(", ") || "operation failed");
+    throw new Error(
+      diagnostics.map((item) => `${item.code} ${item.path}`).join(", ") || "operation failed",
+    );
   }
   return value.value;
 }
@@ -337,6 +339,96 @@ async function run() {
     }
     result.checks.missingKeys = missingKeys;
 
+    const filterItem = element.querySelector(
+      '[data-block-id="filter-block"] .bl-filter-item[data-filter-id="filter-school"]',
+    );
+    const filterValueControl = filterItem?.querySelector('[data-filter-control="value"]');
+    const chipBefore = element.querySelector(
+      '[data-filter-chip="filter-school"] .bl-filter-chip__value',
+    );
+    result.checks.filterUi = {
+      item: filterItem !== null && filterItem !== undefined,
+      control: filterValueControl !== null && filterValueControl !== undefined,
+      chip: chipBefore?.textContent ?? null,
+      resetButtons: element.querySelectorAll('[data-filter-reset="filter-school"]').length,
+    };
+    if (filterValueControl) {
+      filterValueControl.value = "east";
+      filterValueControl.dispatchEvent(new Event("change", { bubbles: true }));
+      await wait(40);
+    }
+    result.checks.filterActive = {
+      state: space.getFilterState().activeValues,
+      chip:
+        element.querySelector('[data-filter-chip="filter-school"] .bl-filter-chip__value')
+          ?.textContent ?? null,
+      tableRows: element.querySelectorAll('[data-block-id="table"] tbody tr').length,
+      metric: element.querySelector(".bl-metric__value")?.textContent ?? "",
+    };
+    const chipReset = element.querySelector('.bl-filter-chip [data-filter-reset="filter-school"]');
+    if (chipReset) {
+      chipReset.click();
+      await wait(40);
+    }
+    result.checks.filterReset = {
+      state: space.getFilterState().activeValues,
+      chip:
+        element.querySelector('[data-filter-chip="filter-school"] .bl-filter-chip__value')
+          ?.textContent ?? null,
+    };
+    const filterResetButton = element.querySelector(
+      '.bl-filter-chip [data-filter-reset="filter-school"]',
+    );
+    result.checks.filterA11y = {
+      controlLabel:
+        element
+          .querySelector('[data-block-id="filter-block"] [data-filter-control="value"]')
+          ?.getAttribute("aria-label") ?? null,
+      resetLabel: filterResetButton?.getAttribute("aria-label") ?? null,
+      resetKey: filterResetButton?.getAttribute("data-message-key") ?? null,
+      liveKey: element.querySelector(".bl-live")?.getAttribute("data-announcement-key") ?? null,
+      crossPressed:
+        element
+          .querySelector('[data-block-id="chart"] .bl-cross-select')
+          ?.getAttribute("aria-pressed") ?? null,
+      crossLabel:
+        element
+          .querySelector('[data-block-id="chart"] .bl-cross-select')
+          ?.getAttribute("aria-label") ?? null,
+      minTarget:
+        filterResetButton === null
+          ? null
+          : getComputedStyle(filterResetButton).minBlockSize ||
+            getComputedStyle(filterResetButton).minHeight,
+    };
+    const crossButton = element.querySelector('[data-block-id="chart"] .bl-cross-select');
+    if (crossButton) {
+      crossButton.click();
+      await wait(40);
+    }
+    result.checks.crossFilterOn = {
+      selections: space.getFilterState().crossFilters.length,
+      chips: element.querySelectorAll(".bl-filter-chip--selection").length,
+      pressed:
+        element
+          .querySelector('[data-block-id="chart"] .bl-cross-select')
+          ?.getAttribute("aria-pressed") ?? null,
+      label:
+        element
+          .querySelector('[data-block-id="chart"] .bl-cross-select')
+          ?.getAttribute("aria-label") ?? null,
+      chipText: element.querySelector(".bl-filter-chip--selection")?.textContent ?? null,
+    };
+    const crossOff = element.querySelector('[data-block-id="chart"] .bl-cross-select');
+    if (crossOff) {
+      crossOff.click();
+      await wait(40);
+    }
+    result.checks.crossFilterOff = {
+      selections: space.getFilterState().crossFilters.length,
+      chips: element.querySelectorAll(".bl-filter-chip--selection").length,
+    };
+
     must(
       handle.update({
         messages: {
@@ -411,6 +503,37 @@ async function run() {
     }
 
     const inspector = element.querySelector(".bl-inspector");
+    const manager = inspector?.querySelector(".bl-filter-manager");
+    const managerRow = inspector?.querySelector('.bl-filter-row[data-filter-id="filter-school"]');
+    const managerDefault = managerRow?.querySelector('[data-filter-control="default"]');
+    if (managerDefault) {
+      managerDefault.value = "west";
+      managerDefault.dispatchEvent(new Event("change", { bubbles: true }));
+      await wait(40);
+    }
+    const managerDraftFilter = space
+      .getSnapshot()
+      .draft?.document.filters.find((entry) => entry.id === "filter-school");
+    const managerAdd = inspector?.querySelector('[data-filter-action="add"]');
+    const managerRowsBefore = inspector?.querySelectorAll(".bl-filter-row").length ?? 0;
+    if (managerAdd) {
+      managerAdd.click();
+      await wait(40);
+    }
+    const pendingFilter = inspector?.querySelector('.bl-filter-row[data-filter-pending="true"]');
+    const pendingFilterId = pendingFilter?.getAttribute("data-filter-id");
+    if (pendingFilterId) {
+      inspector?.querySelector(`[data-filter-apply="${pendingFilterId}"]`)?.click();
+      await wait(40);
+    }
+    result.checks.filterManager = {
+      present: manager !== null && manager !== undefined,
+      rowsBefore: managerRowsBefore,
+      rowsAfter: inspector?.querySelectorAll(".bl-filter-row").length ?? 0,
+      defaultAfter: managerDraftFilter?.defaultValue ?? null,
+      filtersInDraft: space.getSnapshot().draft?.document.filters.length ?? 0,
+      addPresent: managerAdd !== null && managerAdd !== undefined,
+    };
     const chartX = bindingControl("chart", "x", "field");
     const chartY = bindingControl("chart", "y", "field");
     const chartSeries = bindingControl("chart", "series", "field");
@@ -543,6 +666,156 @@ async function run() {
       blocks: thirdHandle.element.querySelectorAll(".bl-block").length,
     };
 
+    const otherDescriptor = {
+      ...fixture.descriptor,
+      id: "viewer-other",
+      label: "Synthetic other dataset",
+      slices: fixture.descriptor.slices.map((slice) => ({
+        ...slice,
+        datasetId: "viewer-other",
+      })),
+    };
+    const multiDocument = JSON.parse(JSON.stringify(fixture.document));
+    multiDocument.datasets.push({
+      id: "viewer-other",
+      provider: "viewer-e2e",
+      label: "Synthetic other dataset",
+      fields: otherDescriptor.fields.map((field) => ({
+        id: field.id,
+        type: field.type,
+        role: field.role === "temporal" ? "dimension" : field.role,
+        ...(field.unit === undefined ? {} : { unit: field.unit.unit }),
+      })),
+    });
+    multiDocument.filters[0].mappings = [
+      {
+        source: { datasetId: "viewer-data", fieldId: "school_id" },
+        target: { datasetId: "viewer-other", fieldId: "school_id" },
+      },
+    ];
+    multiDocument.blocks.push({
+      id: "table-other",
+      type: "table",
+      title: "Other scores",
+      bindings: [
+        {
+          id: "other-school",
+          role: "dimension",
+          field: { datasetId: "viewer-other", fieldId: "school_id" },
+        },
+        {
+          id: "other-score",
+          role: "measure",
+          field: { datasetId: "viewer-other", fieldId: "score" },
+          aggregation: { type: "average" },
+        },
+      ],
+      config: { columns: ["other-school", "other-score"] },
+    });
+    multiDocument.layout.desktop.placements.push({
+      blockId: "table-other",
+      x: 0,
+      y: 8,
+      width: 8,
+      height: 4,
+    });
+    multiDocument.layout.tablet.placements.push({
+      blockId: "table-other",
+      x: 0,
+      y: 14,
+      width: 8,
+      height: 4,
+    });
+    multiDocument.layout.narrow.placements.push({
+      blockId: "table-other",
+      x: 0,
+      y: 16,
+      width: 4,
+      height: 4,
+    });
+    const multiProvider = must(
+      createLocalDatasetProvider({
+        providerId: "viewer-e2e-multi",
+        datasets: [
+          { descriptor: fixture.descriptor, rows: fixture.rows },
+          { descriptor: otherDescriptor, rows: fixture.rows },
+        ],
+      }),
+    );
+    const multiRuntime = createRuntime({
+      datasetProvider: multiProvider,
+      validationCatalog: createBoardValidationCatalog([fixture.descriptor, otherDescriptor]),
+    });
+    const multiCreated = multiRuntime.createSpace({ document: multiDocument, locale: "en" });
+    if (!multiCreated.ok) {
+      result.errors.push(
+        `multi-create: ${multiCreated.diagnostics.map((item) => `${item.code} ${item.path}`).join(", ")}`,
+      );
+      throw new Error("multi space creation failed");
+    }
+    const multiSpace = multiCreated.value;
+    const fourthTarget = document.getElementById("fourth");
+    const multiHandle = must(
+      mountBoardView(fourthTarget, {
+        space: multiSpace,
+        theme: "light",
+        realtime: { status: "historical" },
+      }),
+    );
+    await wait(40);
+    must(
+      multiSpace.setCrossFilter(
+        {
+          sourceBlockId: "chart",
+          field: { datasetId: "viewer-data", fieldId: "school_id" },
+          operator: "equals",
+          value: "north",
+        },
+        { toggle: true },
+      ),
+    );
+    await wait(40);
+    result.checks.multiDatasetUnmapped = {
+      note:
+        multiHandle.element.querySelector('[data-block-id="table-other"] .bl-block__filter-note')
+          ?.textContent ?? null,
+      disabled:
+        multiHandle.element
+          .querySelector('[data-block-id="table-other"]')
+          ?.getAttribute("data-cross-filter") ?? null,
+    };
+    must(multiSpace.clearCrossFilters());
+    must(
+      multiSpace.setCrossFilter(
+        {
+          sourceBlockId: "chart",
+          field: { datasetId: "viewer-data", fieldId: "school_id" },
+          operator: "equals",
+          value: "north",
+          mappings: [
+            {
+              source: { datasetId: "viewer-data", fieldId: "school_id" },
+              target: { datasetId: "viewer-other", fieldId: "school_id" },
+            },
+          ],
+        },
+        { toggle: true },
+      ),
+    );
+    await wait(40);
+    result.checks.multiDatasetMapped = {
+      note:
+        multiHandle.element.querySelector('[data-block-id="table-other"] .bl-block__filter-note')
+          ?.textContent ?? null,
+      included:
+        multiHandle.element
+          .querySelector('[data-block-id="table-other"]')
+          ?.getAttribute("data-cross-filter") ?? null,
+      otherRows: multiHandle.element.querySelectorAll('[data-block-id="table-other"] tbody tr')
+        .length,
+    };
+    must(multiHandle.unmount());
+
     const changedDocument = JSON.parse(JSON.stringify(fixture.document));
     const changedFilter = changedDocument.filters.find((filter) => filter.id === "filter-school");
     if (changedFilter) {
@@ -553,7 +826,7 @@ async function run() {
     await wait(20);
     result.checks.filterDocumentUpdate = {
       chipText:
-        thirdHandle.element.querySelector('[data-block-id="filter-block"] .bl-filter-chip')
+        thirdHandle.element.querySelector('[data-block-id="filter-block"] .bl-filter-item')
           ?.textContent ?? "",
       scopeText: thirdHandle.element.querySelector(".bl-state__scope")?.textContent ?? "",
     };
@@ -583,6 +856,7 @@ async function run() {
     runtime.dispose();
     secondRuntime.dispose();
     thirdRuntime.dispose();
+    multiRuntime.dispose();
     result.checks.complete = true;
   } catch (error) {
     result.errors.push(error instanceof Error ? error.message : String(error));

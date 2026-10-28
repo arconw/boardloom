@@ -2,6 +2,7 @@ import type { DatasetProvider, QueryState } from "./data-contract.js";
 import type { BoardDocument } from "./document.js";
 import type { Diagnostic } from "./diagnostics.js";
 import type { BoardloomLocale } from "./locale.js";
+import type { FilterRuntimeState } from "./filter-model.js";
 
 export type ViewMode = "viewer" | "editor";
 export type SpaceStatus = "active" | "paused" | "disposed";
@@ -43,6 +44,7 @@ export interface SpaceSnapshot {
   readonly locale: BoardloomLocale;
   readonly timezone: string;
   readonly diagnostics: readonly Diagnostic[];
+  readonly filterState: FilterRuntimeState;
   readonly queries: readonly QueryState[];
   readonly queryCount: number;
   readonly views: readonly ViewSummary[];

@@ -12,6 +12,9 @@ import {
   type QueryState,
   type RendererRegistry,
   type RendererTheme,
+  type CrossFilterSelectionInput,
+  type FilterRuntimeState,
+  type JsonValue,
   type Result,
 } from "@boardloom/core";
 import type { DerivedBlockQuery } from "./block-query.js";
@@ -24,6 +27,7 @@ export interface BlockSurfaceEnvironment {
   readonly query: QueryState | null;
   readonly queryError: readonly Diagnostic[] | null;
   readonly queryPlan: DerivedBlockQuery | null;
+  readonly filterState: FilterRuntimeState;
   readonly contextSignature: string;
   readonly messages: ViewMessages;
   readonly formatters: FormatterProvider;
@@ -36,6 +40,10 @@ export interface BlockSurfaceEnvironment {
     tag: K,
     className?: string,
   ): HTMLElementTagNameMap[K];
+  applyFilterValue(filterId: string, value: JsonValue): Result<FilterRuntimeState>;
+  resetFilterValue(filterId: string): Result<FilterRuntimeState>;
+  toggleCrossFilter(selection: CrossFilterSelectionInput): Result<FilterRuntimeState>;
+  clearCrossFilters(): Result<FilterRuntimeState>;
 }
 
 export interface BlockSurface {

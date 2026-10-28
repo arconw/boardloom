@@ -528,6 +528,47 @@
     color: var(--bl-color-text-muted);
   }
 
+  .boardloom .bl-filter-chip__action,
+  .boardloom .bl-filters__reset,
+  .boardloom .bl-filter-reset,
+  .boardloom .bl-filter-apply {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-block-size: var(--bl-target-min);
+    min-inline-size: var(--bl-target-min);
+    padding: 0 var(--bl-space-2);
+    border: 1px solid var(--bl-color-border);
+    border-radius: var(--bl-radius-full);
+    background: var(--bl-color-surface-sunken);
+    color: var(--bl-color-text);
+    font: inherit;
+    font-size: var(--bl-font-size-xs);
+    cursor: pointer;
+  }
+
+  .boardloom .bl-filter-chip__action:hover,
+  .boardloom .bl-filters__reset:hover,
+  .boardloom .bl-filter-reset:hover,
+  .boardloom .bl-filter-apply:hover {
+    border-color: var(--bl-color-border-strong);
+  }
+
+  .boardloom .bl-filter-chip--selection {
+    border-color: var(--bl-color-accent);
+  }
+
+  .boardloom .bl-filter-chip__action:focus-visible,
+  .boardloom .bl-filters__reset:focus-visible,
+  .boardloom .bl-filter-reset:focus-visible,
+  .boardloom .bl-filter-apply:focus-visible,
+  .boardloom .bl-filter-input:focus-visible,
+  .boardloom .bl-filter-control:focus-visible,
+  .boardloom .bl-cross-select:focus-visible {
+    outline: var(--bl-focus-ring-width) solid var(--bl-color-focus);
+    outline-offset: var(--bl-focus-ring-offset);
+  }
+
   .boardloom .bl-filters__none {
     background: transparent;
     border-style: dashed;
@@ -725,6 +766,124 @@
     display: flex;
     flex-direction: column;
     gap: var(--bl-space-2);
+  }
+
+  .boardloom .bl-filter-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--bl-space-2);
+  }
+
+  .boardloom .bl-filter-item {
+    display: flex;
+    flex-direction: column;
+    gap: var(--bl-space-1);
+    padding: var(--bl-space-2);
+    border: 1px solid var(--bl-color-border-subtle);
+    border-radius: var(--bl-radius-sm);
+    background: var(--bl-color-surface-sunken);
+  }
+
+  .boardloom .bl-filter-item__head {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--bl-space-1) var(--bl-space-2);
+    align-items: baseline;
+    font-size: var(--bl-font-size-sm);
+  }
+
+  .boardloom .bl-filter-control {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--bl-space-2);
+    align-items: center;
+  }
+
+  .boardloom .bl-filter-input,
+  .boardloom .bl-filter-control select,
+  .boardloom .bl-filter-control input {
+    min-block-size: var(--bl-target-min);
+    padding: 0 var(--bl-space-2);
+    border: 1px solid var(--bl-color-border);
+    border-radius: var(--bl-radius-xs);
+    background: var(--bl-color-surface);
+    color: var(--bl-color-text);
+    font: inherit;
+    font-size: var(--bl-font-size-sm);
+    min-inline-size: 0;
+  }
+
+  .boardloom .bl-filter-control__fixed,
+  .boardloom .bl-filter-pending,
+  .boardloom .bl-filter-diagnostic,
+  .boardloom .bl-block__filter-note {
+    margin: 0;
+    color: var(--bl-color-text-muted);
+    font-size: var(--bl-font-size-xs);
+  }
+
+  .boardloom .bl-filter-pending,
+  .boardloom .bl-filter-diagnostic {
+    color: var(--bl-color-warning-text, var(--bl-color-text));
+  }
+
+  .boardloom .bl-filter-manager {
+    display: flex;
+    flex-direction: column;
+    gap: var(--bl-space-2);
+    margin: 0;
+    padding: var(--bl-space-3);
+    border: 1px solid var(--bl-color-border-subtle);
+    border-radius: var(--bl-radius-md);
+  }
+
+  .boardloom .bl-filter-manager__title {
+    font-weight: var(--bl-font-weight-semibold);
+  }
+
+  .boardloom .bl-filter-row {
+    display: grid;
+    gap: var(--bl-space-2);
+    padding: var(--bl-space-2);
+    border: 1px solid var(--bl-color-border-subtle);
+    border-radius: var(--bl-radius-sm);
+  }
+
+  .boardloom .bl-filter-row__label {
+    color: var(--bl-color-text-muted);
+    font-size: var(--bl-font-size-xs);
+  }
+
+  .boardloom .bl-filter-manager__add {
+    min-block-size: var(--bl-target-min);
+  }
+
+  .boardloom .bl-cross-select {
+    display: inline-flex;
+    align-items: center;
+    min-block-size: var(--bl-target-min);
+    padding: 0 var(--bl-space-1);
+    border: 1px solid transparent;
+    border-radius: var(--bl-radius-xs);
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    text-align: start;
+    cursor: pointer;
+  }
+
+  .boardloom .bl-cross-select:hover {
+    background: var(--bl-color-surface-sunken);
+    border-color: var(--bl-color-border);
+  }
+
+  .boardloom .bl-cross-select[aria-pressed="true"] {
+    background: var(--bl-color-accent-soft);
+    border-color: var(--bl-color-accent);
+  }
+
+  .boardloom .bl-surface-filter-diagnostics[hidden] {
+    display: none;
   }
 
   .boardloom .bl-chart-data {

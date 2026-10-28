@@ -32,7 +32,25 @@ import { serializeBoardDocument } from "./document-io.js";
 import { createQueryController, type QueryController } from "./query-controller.js";
 import type { FormatterProvider } from "./formatting.js";
 import type { IdFactory } from "./ids.js";
-import { deepFreeze, jsonEqual } from "./json.js";
+import { deepFreeze, jsonEqual, type JsonValue } from "./json.js";
+import {
+  createEmptyFilterRuntimeState,
+  crossFilterTargetIds,
+  filterStateWithActiveValue,
+  filterStateWithCrossFilter,
+  filterStateWithoutActiveValues,
+  filterStateWithoutCrossFilter,
+  makeFilterState,
+  parseFilterRuntimeState,
+  pruneFilterState,
+  validateCrossFilterSelection,
+  validateFilterRuntimeState,
+  valueMatchesType,
+  valueShapeMatchesOperator,
+  type CrossFilterSelection,
+  type CrossFilterSelectionInput,
+  type FilterRuntimeState,
+} from "./filter-model.js";
 import type { Logger } from "./logger.js";
 import {
   resolveLocaleConfig,
@@ -110,6 +128,29 @@ export interface BoardSpace {
   setLocale(config: LocaleConfigInput): Result<SpaceSnapshot>;
   getFormatters(): FormatterProvider;
   getMessageProvider(): MessageProvider;
+  getFilterState(): FilterRuntimeState;
+  setFilterValue(
+    filterId: string,
+    value: JsonValue,
+    options?: { readonly allowLocked?: boolean },
+  ): Result<FilterRuntimeState>;
+  setFilterRuntimeState(value: unknown): Result<FilterRuntimeState>;
+  resetFilter(
+    filterId: string,
+    options?: { readonly allowLocked?: boolean },
+  ): Result<FilterRuntimeState>;
+  resetFilterScope(
+    target: "board" | "group" | "block",
+    id?: string,
+    options?: { readonly allowLocked?: boolean },
+  ): Result<FilterRuntimeState>;
+  resetAllFilters(options?: { readonly allowLocked?: boolean }): Result<FilterRuntimeState>;
+  setCrossFilter(
+    selection: CrossFilterSelectionInput | null,
+    options?: { readonly toggle?: boolean },
+  ): Result<FilterRuntimeState>;
+  setCrossFilters(selections: readonly CrossFilterSelectionInput[]): Result<FilterRuntimeState>;
+  clearCrossFilters(): Result<FilterRuntimeState>;
   getDatasetDescriptor(datasetId: string): DatasetDescriptor | undefined;
   getValidationCatalog(): BoardValidationCatalog | undefined;
   setQuery(queryId: string, spec: QuerySpec): Result<QueryState>;
@@ -176,6 +217,7 @@ class SpaceImpl implements BoardSpace {
   private formatters: FormatterProvider;
   private messages: MessageProvider;
   private diagnostics: readonly Diagnostic[] = EMPTY_DIAGNOSTICS;
+  private filterRuntimeState: FilterRuntimeState = createEmptyFilterRuntimeState();
   private validationDiagnostics: readonly Diagnostic[] = EMPTY_DIAGNOSTICS;
   private status: SpaceStatus = "active";
   private sequence = 0;
@@ -301,6 +343,343 @@ class SpaceImpl implements BoardSpace {
     return this.messages;
   }
 
+  getFilterState(): FilterRuntimeState {
+    return this.filterRuntimeState;
+  }
+
+  private filterDiagnostics(state: FilterRuntimeState): readonly Diagnostic[] {
+    const catalog = this.bindingValidationCatalog();
+    const committedDocument = this.committedDocument as unknown as BoardDocumentV1;
+    const committed = validateFilterRuntimeState(
+      committedDocument,
+      pruneFilterState(committedDocument, state),
+      catalog,
+    );
+    if (this.draft === null || jsonEqual(this.draft.document, this.committedDocument)) {
+      return committed;
+    }
+    const draftDocument = this.draft.document as unknown as BoardDocumentV1;
+    return Object.freeze([
+      ...committed,
+      ...validateFilterRuntimeState(draftDocument, pruneFilterState(draftDocument, state), catalog),
+    ]);
+  }
+
+  private acceptFilterState(
+    state: FilterRuntimeState,
+    reason: "value" | "reset" | "cross-filter" | "document",
+  ): Result<FilterRuntimeState> {
+    const diagnostics = this.filterDiagnostics(state);
+    if (diagnostics.some((diagnostic) => diagnostic.severity === "error")) {
+      this.emit({ type: "filter:rejected", reason, diagnostics });
+      return fail(diagnostics);
+    }
+    const previous = this.filterRuntimeState;
+    if (jsonEqual(state as never, previous as never)) {
+      return ok(previous);
+    }
+    const document = (this.draft?.document ?? this.committedDocument) as unknown as BoardDocumentV1;
+    const catalog = this.bindingValidationCatalog();
+    const previousActive = new Map(
+      previous.activeValues.map((entry) => [entry.filterId, entry.value] as const),
+    );
+    const nextActive = new Map(
+      state.activeValues.map((entry) => [entry.filterId, entry.value] as const),
+    );
+    const previousCross = new Map(previous.crossFilters.map((entry) => [entry.id, entry] as const));
+    const nextCross = new Map(state.crossFilters.map((entry) => [entry.id, entry] as const));
+    this.filterRuntimeState = state;
+    this.updatedAt = this.deps.clock.now();
+    for (const filter of document.filters) {
+      const before = previousActive.get(filter.id);
+      const after = nextActive.get(filter.id);
+      if (jsonEqual(before as never, after as never)) {
+        continue;
+      }
+      const value = after === undefined ? filter.defaultValue : after;
+      this.emit({
+        type: "filter:changed",
+        filterId: filter.id,
+        scope: Object.freeze({ ...filter.target }),
+        ...(value === undefined ? {} : { value }),
+        active: after !== undefined,
+        reason: reason === "cross-filter" ? "document" : reason,
+        diagnostics,
+      });
+    }
+    for (const [id, selection] of previousCross) {
+      if (nextCross.has(id)) {
+        continue;
+      }
+      this.emit({
+        type: "crossfilter:changed",
+        sourceBlockId: selection.sourceBlockId,
+        targetIds: crossFilterTargetIds(document, selection, catalog),
+        selectionId: id,
+        cleared: true,
+      });
+    }
+    for (const [id, selection] of nextCross) {
+      const before = previousCross.get(id);
+      if (before !== undefined && jsonEqual(before as never, selection as never)) {
+        continue;
+      }
+      this.emit({
+        type: "crossfilter:changed",
+        sourceBlockId: selection.sourceBlockId,
+        targetIds: crossFilterTargetIds(document, selection, catalog),
+        selectionId: id,
+        cleared: false,
+      });
+    }
+    return ok(state);
+  }
+
+  setFilterValue(
+    filterId: string,
+    value: JsonValue,
+    options: { readonly allowLocked?: boolean } = {},
+  ): Result<FilterRuntimeState> {
+    const blocked = this.assertActive();
+    if (blocked) {
+      return blocked;
+    }
+    const document = (this.draft?.document ?? this.committedDocument) as unknown as BoardDocumentV1;
+    const filter = document.filters.find((entry) => entry.id === filterId);
+    if (filter === undefined) {
+      return this.failWith([
+        createDiagnostic(DIAGNOSTIC_CODES.INVALID_REFERENCE, `filters/${filterId}`, {
+          relatedIds: [filterId],
+        }),
+      ]);
+    }
+    if (filter.viewerEditable !== true && options.allowLocked !== true) {
+      return this.failWith([
+        createDiagnostic(DIAGNOSTIC_CODES.VIEWER_READ_ONLY, `filters/${filterId}`, {
+          message: `Filter "${filterId}" is not viewer-editable.`,
+          relatedIds: [filterId],
+        }),
+      ]);
+    }
+    const descriptor = document.datasets
+      .find((entry) => entry.id === filter.field.datasetId)
+      ?.fields?.find((entry) => entry.id === filter.field.fieldId);
+    if (
+      filter.operator === "isNull" ||
+      filter.operator === "isNotNull" ||
+      filter.operator === "isTrue" ||
+      filter.operator === "isFalse" ||
+      !valueShapeMatchesOperator(filter.operator, value) ||
+      (descriptor !== undefined && !valueMatchesType(value, descriptor.type))
+    ) {
+      return this.failWith([
+        createDiagnostic(
+          DIAGNOSTIC_CODES.FILTER_STATE_INVALID,
+          `filterState/activeValues/${filterId}`,
+          {
+            message: `The active value for "${filterId}" does not match the declared filter operator and field type.`,
+            relatedIds: [filterId],
+          },
+        ),
+      ]);
+    }
+    const candidate = filterStateWithActiveValue(this.filterRuntimeState, filterId, value);
+    return this.acceptFilterState(candidate, "value");
+  }
+
+  setFilterRuntimeState(value: unknown): Result<FilterRuntimeState> {
+    const blocked = this.assertActive();
+    if (blocked) {
+      return blocked;
+    }
+    const parsed = parseFilterRuntimeState(value);
+    if (!parsed.ok) {
+      return parsed;
+    }
+    const document = this.committedDocument as unknown as BoardDocumentV1;
+    const pruned = pruneFilterState(document, parsed.value);
+    for (const selection of pruned.crossFilters) {
+      const validated = validateCrossFilterSelection(
+        document,
+        selection,
+        this.bindingValidationCatalog(),
+      );
+      if (!validated.ok) {
+        return validated;
+      }
+    }
+    return this.acceptFilterState(pruned, "document");
+  }
+
+  resetFilter(
+    filterId: string,
+    options: { readonly allowLocked?: boolean } = {},
+  ): Result<FilterRuntimeState> {
+    const blocked = this.assertActive();
+    if (blocked) {
+      return blocked;
+    }
+    const document = (this.draft?.document ?? this.committedDocument) as unknown as BoardDocumentV1;
+    const filter = document.filters.find((entry) => entry.id === filterId);
+    if (filter === undefined) {
+      return this.failWith([
+        createDiagnostic(DIAGNOSTIC_CODES.INVALID_REFERENCE, `filters/${filterId}`, {
+          relatedIds: [filterId],
+        }),
+      ]);
+    }
+    if (filter.viewerEditable !== true && options.allowLocked !== true) {
+      return this.failWith([
+        createDiagnostic(DIAGNOSTIC_CODES.VIEWER_READ_ONLY, `filters/${filterId}`, {
+          message: `Filter "${filterId}" is not viewer-editable.`,
+          relatedIds: [filterId],
+        }),
+      ]);
+    }
+    return this.acceptFilterState(
+      filterStateWithoutActiveValues(this.filterRuntimeState, new Set([filterId])),
+      "reset",
+    );
+  }
+
+  resetFilterScope(
+    target: "board" | "group" | "block",
+    id?: string,
+    options: { readonly allowLocked?: boolean } = {},
+  ): Result<FilterRuntimeState> {
+    const blocked = this.assertActive();
+    if (blocked) {
+      return blocked;
+    }
+    const document = (this.draft?.document ?? this.committedDocument) as unknown as BoardDocumentV1;
+    const ids = new Set<string>();
+    for (const filter of document.filters) {
+      const matches =
+        target === "board"
+          ? filter.target.kind === "board"
+          : target === "group"
+            ? filter.target.kind === "group" && filter.target.groupId === id
+            : filter.target.kind === "block" && filter.target.blockId === id;
+      if (!matches) {
+        continue;
+      }
+      if (filter.viewerEditable !== true && options.allowLocked !== true) {
+        continue;
+      }
+      ids.add(filter.id);
+    }
+    if (ids.size === 0) {
+      return ok(this.filterRuntimeState);
+    }
+    return this.acceptFilterState(
+      filterStateWithoutActiveValues(this.filterRuntimeState, ids),
+      "reset",
+    );
+  }
+
+  resetAllFilters(options: { readonly allowLocked?: boolean } = {}): Result<FilterRuntimeState> {
+    const blocked = this.assertActive();
+    if (blocked) {
+      return blocked;
+    }
+    const document = (this.draft?.document ?? this.committedDocument) as unknown as BoardDocumentV1;
+    const ids = new Set(
+      document.filters
+        .filter((filter) => filter.viewerEditable === true || options.allowLocked === true)
+        .map((filter) => filter.id),
+    );
+    return this.acceptFilterState(
+      filterStateWithoutActiveValues(this.filterRuntimeState, ids),
+      "reset",
+    );
+  }
+
+  setCrossFilter(
+    selection: CrossFilterSelectionInput | null,
+    options: { readonly toggle?: boolean } = {},
+  ): Result<FilterRuntimeState> {
+    const blocked = this.assertActive();
+    if (blocked) {
+      return blocked;
+    }
+    if (selection === null) {
+      return this.clearCrossFilters();
+    }
+    const document = (this.draft?.document ?? this.committedDocument) as unknown as BoardDocumentV1;
+    const validated = validateCrossFilterSelection(
+      document,
+      selection,
+      this.bindingValidationCatalog(),
+    );
+    if (!validated.ok) {
+      return validated;
+    }
+    if (options.toggle === true) {
+      const sameField = this.filterRuntimeState.crossFilters.filter(
+        (candidate) =>
+          candidate.sourceBlockId === validated.value.sourceBlockId &&
+          candidate.field.datasetId === validated.value.field.datasetId &&
+          candidate.field.fieldId === validated.value.field.fieldId &&
+          candidate.operator === validated.value.operator,
+      );
+      const exact = sameField.find((candidate) =>
+        jsonEqual(candidate.value, validated.value.value),
+      );
+      if (exact !== undefined) {
+        return this.acceptFilterState(
+          filterStateWithoutCrossFilter(this.filterRuntimeState, exact.id),
+          "cross-filter",
+        );
+      }
+      const withoutField = this.filterRuntimeState.crossFilters.filter(
+        (candidate) => !sameField.includes(candidate),
+      );
+      return this.acceptFilterState(
+        makeFilterState(this.filterRuntimeState.activeValues, [...withoutField, validated.value]),
+        "cross-filter",
+      );
+    }
+    return this.acceptFilterState(
+      filterStateWithCrossFilter(this.filterRuntimeState, validated.value),
+      "cross-filter",
+    );
+  }
+
+  setCrossFilters(selections: readonly CrossFilterSelectionInput[]): Result<FilterRuntimeState> {
+    const blocked = this.assertActive();
+    if (blocked) {
+      return blocked;
+    }
+    const document = (this.draft?.document ?? this.committedDocument) as unknown as BoardDocumentV1;
+    const validated: CrossFilterSelection[] = [];
+    for (const selection of selections) {
+      const result = validateCrossFilterSelection(
+        document,
+        selection,
+        this.bindingValidationCatalog(),
+      );
+      if (!result.ok) {
+        return result;
+      }
+      validated.push(result.value);
+    }
+    return this.acceptFilterState(
+      makeFilterState(this.filterRuntimeState.activeValues, validated),
+      "cross-filter",
+    );
+  }
+
+  clearCrossFilters(): Result<FilterRuntimeState> {
+    const blocked = this.assertActive();
+    if (blocked) {
+      return blocked;
+    }
+    return this.acceptFilterState(
+      makeFilterState(this.filterRuntimeState.activeValues, []),
+      "cross-filter",
+    );
+  }
+
   getValidationCatalog(): BoardValidationCatalog | undefined {
     if (this.disposedFlag || this.disposing) {
       return undefined;
@@ -322,6 +701,7 @@ class SpaceImpl implements BoardSpace {
       locale: this.localeConfig.locale,
       timezone: this.localeConfig.timezone,
       diagnostics: this.combinedDiagnostics(),
+      filterState: this.filterRuntimeState,
       queries,
       queryCount: queries.length,
       views: Object.freeze([...this.views.values()].map((view) => view.describe())),
@@ -386,11 +766,23 @@ class SpaceImpl implements BoardSpace {
     if (fixedChanges.length > 0) {
       return this.failDocument(fixedChanges, "load");
     }
+    const filterDiagnostics = validateFilterRuntimeState(
+      document as BoardDocumentV1,
+      this.filterRuntimeState,
+      this.bindingValidationCatalog(),
+    );
+    if (filterDiagnostics.some((diagnostic) => diagnostic.severity === "error")) {
+      return this.failDocument(filterDiagnostics, "load");
+    }
     const warnings = validationWarnings(validation);
     const previousDiagnostics = this.combinedDiagnostics();
     const loadedDocument = snapshotDocument(document as BoardDocument);
     const loadedSchemaVersion = documentSchemaVersion(loadedDocument);
     this.committedDocument = loadedDocument;
+    this.filterRuntimeState = pruneFilterState(
+      loadedDocument as unknown as BoardDocumentV1,
+      this.filterRuntimeState,
+    );
     this.committedRevision += 1;
     this.setDiagnosticsState(warnings);
     this.publishDiagnosticsChange(previousDiagnostics);
@@ -740,6 +1132,17 @@ class SpaceImpl implements BoardSpace {
     if (fixedChanges.length > 0) {
       return this.failDocument(
         [createDiagnostic(DIAGNOSTIC_CODES.DRAFT_INVALID, "draft"), ...fixedChanges],
+        "draft",
+      );
+    }
+    const filterDiagnostics = validateFilterRuntimeState(
+      document as BoardDocumentV1,
+      this.filterRuntimeState,
+      this.bindingValidationCatalog(),
+    );
+    if (filterDiagnostics.some((diagnostic) => diagnostic.severity === "error")) {
+      return this.failDocument(
+        [createDiagnostic(DIAGNOSTIC_CODES.DRAFT_INVALID, "draft"), ...filterDiagnostics],
         "draft",
       );
     }
@@ -1162,6 +1565,17 @@ class SpaceImpl implements BoardSpace {
         "apply",
       );
     }
+    const filterDiagnostics = validateFilterRuntimeState(
+      draft.document as unknown as BoardDocumentV1,
+      this.filterRuntimeState,
+      this.bindingValidationCatalog(),
+    );
+    if (filterDiagnostics.some((diagnostic) => diagnostic.severity === "error")) {
+      return this.failDocument(
+        [createDiagnostic(DIAGNOSTIC_CODES.DRAFT_INVALID, "draft"), ...filterDiagnostics],
+        "apply",
+      );
+    }
     if (draft.baseRevision !== this.committedRevision) {
       const expectedRevision = draft.baseRevision;
       const actualRevision = this.committedRevision;
@@ -1188,6 +1602,10 @@ class SpaceImpl implements BoardSpace {
     }
     this.committedDocument = draft.document;
     this.committedRevision += 1;
+    this.filterRuntimeState = pruneFilterState(
+      this.committedDocument as unknown as BoardDocumentV1,
+      this.filterRuntimeState,
+    );
     this.draft = this.createDraft(this.committedDocument, this.committedRevision);
     this.updatedAt = this.deps.clock.now();
     this.validationDiagnostics = deepFreeze([...warnings]);
@@ -1203,6 +1621,10 @@ class SpaceImpl implements BoardSpace {
     const warnings = isBlockingValidation(validation)
       ? EMPTY_DIAGNOSTICS
       : validationWarnings(validation);
+    this.filterRuntimeState = pruneFilterState(
+      this.committedDocument as unknown as BoardDocumentV1,
+      this.filterRuntimeState,
+    );
     this.draft = this.createDraft(this.committedDocument, this.committedRevision);
     this.updatedAt = this.deps.clock.now();
     this.validationDiagnostics = deepFreeze([...warnings]);

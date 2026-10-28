@@ -243,6 +243,11 @@ export interface FilterTemporalConfig {
   readonly bounds: (typeof LAYOUT_BOUNDS)[number];
 }
 
+export interface FilterFieldMapping {
+  readonly source: FieldReference;
+  readonly target: FieldReference;
+}
+
 export interface FilterDefinition {
   readonly id: string;
   readonly label?: string;
@@ -252,6 +257,7 @@ export interface FilterDefinition {
   readonly defaultValue?: JsonValue;
   readonly viewerEditable?: boolean;
   readonly temporal?: FilterTemporalConfig;
+  readonly mappings?: readonly FilterFieldMapping[];
   readonly target: FilterTarget;
 }
 

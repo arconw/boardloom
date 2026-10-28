@@ -29,7 +29,7 @@
     "test:contract": "vitest run tests/framework/core/contract",
     "test:integration": "vitest run tests/framework/core/integration tests/framework/view-dom/integration",
     "test:e2e": "vitest run --maxWorkers=1 tests/framework/view-dom/e2e tests/framework/renderers/e2e/gallery.e2e.test.ts",
-    "test:a11y": "vitest run tests/framework/renderers/e2e/a11y.e2e.test.ts",
+    "test:a11y": "vitest run --maxWorkers=1 tests/framework/renderers/e2e/a11y.e2e.test.ts tests/framework/view-dom/e2e/viewer.e2e.test.ts",
     "test:i18n": "node scripts/pending-tier.mjs test:i18n T17",
     "verify:boundaries": "node scripts/verify-boundaries.mjs",
     "verify:packages": "node scripts/verify-packages.mjs",

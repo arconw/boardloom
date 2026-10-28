@@ -2042,6 +2042,310 @@
       "context": "Mean denominator disclosure for multiple non-null rows",
       "source": "core",
       "placeholders": ["count"]
+    },
+    {
+      "key": "viewer.filters.origin.cross",
+      "english": "Selection: {name}",
+      "context": "Origin label for an ephemeral cross-filter selection",
+      "source": "core",
+      "placeholders": ["name"]
+    },
+    {
+      "key": "viewer.filters.crossFilter",
+      "english": "Linked selection",
+      "context": "Label for a cross-filter selection group",
+      "source": "core"
+    },
+    {
+      "key": "viewer.filters.clearSelection",
+      "english": "Clear linked selection",
+      "context": "Action to clear all cross-filter selections",
+      "source": "core"
+    },
+    {
+      "key": "viewer.filters.resetNamed",
+      "english": "Reset {name}",
+      "context": "Action to reset one active filter to its declared default",
+      "source": "core",
+      "placeholders": ["name"]
+    },
+    {
+      "key": "viewer.filters.pending",
+      "english": "Waiting for field schema",
+      "context": "Filter state while deferred field schema discovery is pending",
+      "source": "core"
+    },
+    {
+      "key": "viewer.filters.incompatibleTarget",
+      "english": "Not included: incompatible field",
+      "context": "Reason shown when a cross-filter selection cannot target a block",
+      "source": "core"
+    },
+    {
+      "key": "viewer.filters.conflict",
+      "english": "Active filters conflict and produce an empty result",
+      "context": "Visible diagnostic for contradictory active filters",
+      "source": "core"
+    },
+    {
+      "key": "viewer.filters.mapping",
+      "english": "Field mapping",
+      "context": "Heading for explicit dataset-qualified filter field mappings",
+      "source": "core"
+    },
+    {
+      "key": "viewer.filters.controls",
+      "english": "Filter controls",
+      "context": "Heading for viewer filter controls",
+      "source": "core"
+    },
+    {
+      "key": "viewer.filters.readOnly",
+      "english": "Fixed default",
+      "context": "Label for a non-viewer-editable filter value",
+      "source": "core"
+    },
+    {
+      "key": "editor.filters.mapping",
+      "english": "Map to {dataset}",
+      "context": "Editor control label for an explicit filter field mapping",
+      "source": "core",
+      "placeholders": ["dataset"]
+    },
+    {
+      "key": "editor.filters.pending",
+      "english": "Field schema is not available yet",
+      "context": "Editor notice when a filter field schema is deferred",
+      "source": "core"
+    },
+    {
+      "key": "editor.filters.noFields",
+      "english": "Add dataset fields before creating filters",
+      "context": "Editor notice when no filterable fields are declared",
+      "source": "core"
+    },
+    {
+      "key": "editor.filters.conflict",
+      "english": "Conflicting active filters",
+      "context": "Editor notice for contradictory active filter state",
+      "source": "core"
+    },
+    {
+      "key": "a11y.filterControls",
+      "english": "Filter controls for {name}",
+      "context": "Accessible name for a filter control group",
+      "source": "core",
+      "placeholders": ["name"]
+    },
+    {
+      "key": "filter.operator.equals",
+      "english": "Equals",
+      "context": "Filter operator label for equals",
+      "source": "core"
+    },
+    {
+      "key": "filter.operator.notEquals",
+      "english": "Does not equal",
+      "context": "Filter operator label for notEquals",
+      "source": "core"
+    },
+    {
+      "key": "filter.operator.greaterThan",
+      "english": "Greater than",
+      "context": "Filter operator label for greaterThan",
+      "source": "core"
+    },
+    {
+      "key": "filter.operator.greaterThanOrEqual",
+      "english": "Greater than or equal",
+      "context": "Filter operator label for greaterThanOrEqual",
+      "source": "core"
+    },
+    {
+      "key": "filter.operator.lessThan",
+      "english": "Less than",
+      "context": "Filter operator label for lessThan",
+      "source": "core"
+    },
+    {
+      "key": "filter.operator.lessThanOrEqual",
+      "english": "Less than or equal",
+      "context": "Filter operator label for lessThanOrEqual",
+      "source": "core"
+    },
+    {
+      "key": "filter.operator.between",
+      "english": "Between",
+      "context": "Filter operator label for between",
+      "source": "core"
+    },
+    {
+      "key": "filter.operator.in",
+      "english": "In set",
+      "context": "Filter operator label for in",
+      "source": "core"
+    },
+    {
+      "key": "filter.operator.notIn",
+      "english": "Not in set",
+      "context": "Filter operator label for notIn",
+      "source": "core"
+    },
+    {
+      "key": "filter.operator.contains",
+      "english": "Contains",
+      "context": "Filter operator label for contains",
+      "source": "core"
+    },
+    {
+      "key": "filter.operator.isNull",
+      "english": "Is empty",
+      "context": "Filter operator label for isNull",
+      "source": "core"
+    },
+    {
+      "key": "filter.operator.isNotNull",
+      "english": "Is not empty",
+      "context": "Filter operator label for isNotNull",
+      "source": "core"
+    },
+    {
+      "key": "filter.operator.before",
+      "english": "Before",
+      "context": "Filter operator label for before",
+      "source": "core"
+    },
+    {
+      "key": "filter.operator.after",
+      "english": "After",
+      "context": "Filter operator label for after",
+      "source": "core"
+    },
+    {
+      "key": "filter.operator.onOrBefore",
+      "english": "On or before",
+      "context": "Filter operator label for onOrBefore",
+      "source": "core"
+    },
+    {
+      "key": "filter.operator.onOrAfter",
+      "english": "On or after",
+      "context": "Filter operator label for onOrAfter",
+      "source": "core"
+    },
+    {
+      "key": "filter.operator.isTrue",
+      "english": "Is true",
+      "context": "Filter operator label for isTrue",
+      "source": "core"
+    },
+    {
+      "key": "filter.operator.isFalse",
+      "english": "Is false",
+      "context": "Filter operator label for isFalse",
+      "source": "core"
+    },
+    {
+      "key": "filter.scope.board",
+      "english": "Board",
+      "context": "Filter scope label for board-wide filters",
+      "source": "core"
+    },
+    {
+      "key": "filter.scope.group",
+      "english": "Group",
+      "context": "Filter scope label for group filters",
+      "source": "core"
+    },
+    {
+      "key": "filter.scope.block",
+      "english": "Block",
+      "context": "Filter scope label for block filters",
+      "source": "core"
+    },
+    {
+      "key": "filter.field",
+      "english": "Field",
+      "context": "Filter field control label",
+      "source": "core"
+    },
+    {
+      "key": "filter.defaultValue",
+      "english": "Default value",
+      "context": "Filter default value control label",
+      "source": "core"
+    },
+    {
+      "key": "viewer.filters.resetScope",
+      "english": "Reset scope filters",
+      "context": "Action to reset every active filter in one scope",
+      "source": "core"
+    },
+    {
+      "key": "viewer.filters.reason.unmapped",
+      "english": "no explicit field mapping",
+      "context": "Localized reason for an incompatible cross-filter target",
+      "source": "core"
+    },
+    {
+      "key": "viewer.filters.reason.fieldType",
+      "english": "different field type",
+      "context": "Localized reason for an incompatible cross-filter target",
+      "source": "core"
+    },
+    {
+      "key": "viewer.filters.reason.fieldUnit",
+      "english": "different field unit",
+      "context": "Localized reason for an incompatible cross-filter target",
+      "source": "core"
+    },
+    {
+      "key": "viewer.filters.reason.fieldTimezone",
+      "english": "different time semantics",
+      "context": "Localized reason for an incompatible cross-filter target",
+      "source": "core"
+    },
+    {
+      "key": "viewer.filters.reason.fieldUnverified",
+      "english": "field schema is unavailable",
+      "context": "Localized reason for an incompatible cross-filter target",
+      "source": "core"
+    },
+    {
+      "key": "viewer.filters.reason.schemaPending",
+      "english": "target schema is pending",
+      "context": "Localized reason for an incompatible cross-filter target",
+      "source": "core"
+    },
+    {
+      "key": "viewer.filters.reason.notDataConsuming",
+      "english": "the block does not consume data",
+      "context": "Localized reason for an incompatible cross-filter target",
+      "source": "core"
+    },
+    {
+      "key": "chart.selectValue",
+      "english": "Select value",
+      "context": "Accessible action label for a linked cross-filter selection cell",
+      "source": "core"
+    },
+    {
+      "key": "viewer.filters.noValue",
+      "english": "No value required",
+      "context": "Filter control label for a null-check operator",
+      "source": "core"
+    },
+    {
+      "key": "viewer.filters.reason.unsupportedOperator",
+      "english": "the target does not support this operator",
+      "context": "Localized reason for a cross-filter target that lacks the operator capability",
+      "source": "core"
+    },
+    {
+      "key": "viewer.filters.reason.timezoneConversion",
+      "english": "the target does not declare timezone conversion",
+      "context": "Localized reason for a cross-filter target that cannot convert the temporal window timezone",
+      "source": "core"
     }
   ]
 }

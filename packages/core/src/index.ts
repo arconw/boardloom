@@ -62,6 +62,57 @@ export type {
 } from "./formatting.js";
 
 export {
+  DATA_CONSUMING_BLOCK_TYPES,
+  EMPTY_FILTER_STATE,
+  activeValueFor,
+  blockDatasetIds,
+  cloneFilterState,
+  composeBlockFilters,
+  composeComparisonFilterSides,
+  createEmptyFilterRuntimeState,
+  crossFilterKey,
+  crossFilterSelectionEquals,
+  crossFilterTargetIds,
+  crossFilterTargetStatus,
+  documentField,
+  effectiveFilterValue,
+  fieldCompatibilityReason,
+  fieldReferenceEquals,
+  filterCompositionOrder,
+  filterFieldKey,
+  filterStateWithActiveValue,
+  filterStateWithCrossFilter,
+  filterStateWithoutActiveValues,
+  filterStateWithoutCrossFilter,
+  filterTargetsBlock,
+  filterDefinitionOperators,
+  filterOperatorsForField,
+  filtersForBlockScope,
+  isDataConsumingBlock,
+  isFilterOperator,
+  makeFilterState,
+  mappingForDataset,
+  parseFilterRuntimeState,
+  pruneFilterState,
+  queryFiltersForComposition,
+  validateCrossFilterSelection,
+  validateFilterRuntimeState,
+  valueMatchesType,
+} from "./filter-model.js";
+export type {
+  BlockFilterComposition,
+  ComparisonFilterSides,
+  CrossFilterSelection,
+  CrossFilterSelectionInput,
+  CrossFilterTargetStatus,
+  EffectiveFilter,
+  FilterActiveValue,
+  FilterConflict,
+  FilterOrigin,
+  FilterRuntimeState,
+} from "./filter-model.js";
+
+export {
   canonicalJson,
   cloneJson,
   deepFreeze,
@@ -148,6 +199,7 @@ export type {
   FieldValueType,
   FilterBlockConfig,
   FilterDefinition,
+  FilterFieldMapping,
   FilterGroupDefinition,
   FilterOperator,
   FilterTarget,
@@ -166,6 +218,7 @@ export type {
 } from "./board-schema.js";
 
 export { validateBoardDocument } from "./board-validation.js";
+export { FILTER_OPERATORS_BY_FIELD_TYPE } from "./board-validation-filter.js";
 export type {
   BoardDocumentValidation,
   BoardValidationCatalog,
@@ -397,8 +450,11 @@ export type {
 } from "./query-async.js";
 
 export type {
+  CrossFilterChangedEvent,
   DocumentExportedEvent,
   DocumentInvalidEvent,
+  FilterChangedEvent,
+  FilterRejectedEvent,
   DocumentMigratedEvent,
   ImportFailedEvent,
   QueryCancelledEvent,
