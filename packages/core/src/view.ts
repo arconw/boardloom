@@ -1,3 +1,4 @@
+import type { BindingSlotChange } from "./binding-model.js";
 import { DIAGNOSTIC_CODES, createDiagnostic, fail, ok, type Result } from "./diagnostics.js";
 import type {
   CreateViewOptions,
@@ -14,6 +15,7 @@ import type {
 
 export interface ViewCommands {
   updateDraft(document: unknown): Result<DraftSnapshot>;
+  updateBinding(change: BindingSlotChange): Result<DraftSnapshot>;
   undo(): Result<DraftSnapshot>;
   redo(): Result<DraftSnapshot>;
   applyDraft(): Result<SpaceSnapshot>;
@@ -37,6 +39,7 @@ export interface ViewHost {
   getState(): ViewState;
   getLease(leaseId: string): EditorLease | null;
   updateDraft(lease: EditorLease, document: unknown): Result<DraftSnapshot>;
+  updateBinding(lease: EditorLease, change: BindingSlotChange): Result<DraftSnapshot>;
   undoDraft(lease: EditorLease): Result<DraftSnapshot>;
   redoDraft(lease: EditorLease): Result<DraftSnapshot>;
   applyDraft(lease: EditorLease): Result<SpaceSnapshot>;
@@ -82,6 +85,10 @@ export class ViewImpl implements BoardView {
       updateDraft: (document: unknown): Result<DraftSnapshot> => {
         const context = this.authoringContext();
         return context.ok ? this.host.updateDraft(context.value, document) : context;
+      },
+      updateBinding: (change: BindingSlotChange): Result<DraftSnapshot> => {
+        const context = this.authoringContext();
+        return context.ok ? this.host.updateBinding(context.value, change) : context;
       },
       undo: (): Result<DraftSnapshot> => {
         const context = this.authoringContext();

@@ -159,7 +159,9 @@ describe("import as a new space", () => {
     expect(importedEvent?.documentId).toBe(fixture.id);
     expect(importedEvent?.migration).toBeNull();
 
-    unwrap(harness.source.loadDocument(makeDocument("After import"), { source: "host" }));
+    const afterImport = clone(fixture);
+    afterImport.title = "After import";
+    unwrap(harness.source.loadDocument(afterImport, { source: "host" }));
     expect(harness.sourceEvents.some((event) => event.type === "document:changed")).toBe(true);
   });
 
@@ -312,7 +314,9 @@ describe("import as a new space", () => {
         targetId = event.spaceId;
         const target = runtime.getSpace(event.spaceId);
         if (target) {
-          unwrap(target.loadDocument(makeDocument("Substituted")));
+          const substituted = clone(fixture);
+          substituted.title = "Substituted";
+          unwrap(target.loadDocument(substituted));
         }
       }
     });
@@ -583,7 +587,9 @@ describe("document:invalid events", () => {
       runtime.createSpace({ id: "invalid-load", document: readFixture(completeFixturePath) }),
     );
     const lease = unwrap(space.acquireEditorLease({ sessionId: "invalid-load-editor" }));
-    unwrap(space.updateDraft(lease, makeDocument("Preserved draft")));
+    const preservedDraft = clone(readFixture(completeFixturePath));
+    preservedDraft.title = "Preserved draft";
+    unwrap(space.updateDraft(lease, preservedDraft));
     const before = space.getSnapshot();
     const events: SpaceEvent[] = [];
     space.subscribe((event) => events.push(event));
@@ -673,7 +679,9 @@ describe("document:invalid events", () => {
       events.push(event);
       if (event.type === "diagnostics:changed" && !reentered) {
         reentered = true;
-        unwrap(space.loadDocument(makeDocument("Nested")));
+        const nested = clone(readFixture(completeFixturePath));
+        nested.title = "Nested";
+        unwrap(space.loadDocument(nested));
       }
     });
     unwrap(space.loadDocument(outer));
@@ -701,7 +709,9 @@ describe("document:invalid events", () => {
         targetId = event.spaceId;
         const target = runtime.getSpace(event.spaceId);
         if (target) {
-          unwrap(target.loadDocument(makeDocument("Nested create")));
+          const nestedCreate = clone(readFixture(completeFixturePath));
+          nestedCreate.title = "Nested create";
+          unwrap(target.loadDocument(nestedCreate));
         }
       }
     });

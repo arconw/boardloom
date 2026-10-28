@@ -3,6 +3,7 @@ import {
   ENGLISH_MESSAGES,
   createLocalDatasetProvider,
   createRuntime,
+  type BoardDocument,
   type BoardSpace,
   type BoardView,
   type DatasetProvider,
@@ -82,12 +83,15 @@ function mountFixture(
   options: {
     readonly width?: number;
     readonly provider?: DatasetProvider;
+    readonly document?: BoardDocument;
   } = {},
 ) {
   const document = createMiniDocument();
   const target = createTarget(document, options.width ?? 1280);
   const { runtime } = createViewerRuntime(options.provider ?? createViewerProvider());
-  const space = unwrap(runtime.createSpace({ document: viewerFixtureDocument() }));
+  const space = unwrap(
+    runtime.createSpace({ document: options.document ?? viewerFixtureDocument() }),
+  );
   const handle = unwrap(
     mountBoardView(target as unknown as HTMLElement, {
       space,
@@ -1399,5 +1403,51 @@ describe("T06 review-round regression coverage", () => {
     ).not.toBe("");
     unwrap(mounted.handle.unmount());
     unwrap(mounted.runtime.dispose());
+  });
+
+  describe("T08 label binding query coherence", () => {
+    it("keeps an ignored chart label out of grouping and chart data rows", async () => {
+      const base = viewerFixtureDocument();
+      const labelled = {
+        ...base,
+        blocks: base.blocks.map((block) =>
+          block.id === "block-chart"
+            ? {
+                ...block,
+                bindings: [
+                  {
+                    id: "chart-label",
+                    role: "label" as const,
+                    field: { datasetId: "assessment-results", fieldId: "subject" },
+                    sliceId: "all-results",
+                  },
+                  ...(block.bindings ?? []),
+                ],
+              }
+            : block,
+        ),
+      } as unknown as BoardDocument;
+      const mounted = mountFixture({ document: labelled });
+      await flush();
+      const chartBlock = findByAttribute(rootOf(mounted.handle), "data-block-id", "block-chart")[0];
+      expect(chartBlock).toBeDefined();
+      if (chartBlock === undefined) {
+        return;
+      }
+      const chartRows = findByTag(chartBlock, "tr").length - 1;
+      expect(chartRows).toBe(2);
+      expect(
+        findByAttribute(chartBlock, "data-severity", "error").filter((element) =>
+          element.textContent?.includes("RENDERER_DUPLICATE_POINT"),
+        ),
+      ).toHaveLength(0);
+      expect(
+        findByAttribute(rootOf(mounted.handle), "data-severity", "error").some((element) =>
+          element.textContent?.includes("RENDERER_DUPLICATE_POINT"),
+        ),
+      ).toBe(false);
+      unwrap(mounted.handle.unmount());
+      unwrap(mounted.runtime.dispose());
+    });
   });
 });

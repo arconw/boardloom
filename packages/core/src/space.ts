@@ -1,4 +1,11 @@
 import type { BoardValidationCatalog } from "./board-validation.js";
+import type { BoardDocumentV1 } from "./board-schema.js";
+import { createEffectiveValidationCatalog } from "./dataset-catalog.js";
+import {
+  assertFixedBindingsPreserved,
+  setBindingSlot,
+  type BindingSlotChange,
+} from "./binding-model.js";
 import type { DatasetDescriptor, DatasetProvider, QuerySpec, QueryState } from "./data-contract.js";
 import type { Clock } from "./clock.js";
 import {
@@ -104,6 +111,7 @@ export interface BoardSpace {
   getFormatters(): FormatterProvider;
   getMessageProvider(): MessageProvider;
   getDatasetDescriptor(datasetId: string): DatasetDescriptor | undefined;
+  getValidationCatalog(): BoardValidationCatalog | undefined;
   setQuery(queryId: string, spec: QuerySpec): Result<QueryState>;
   refreshQuery(queryId: string): Result<QueryState>;
   invalidateQuery(queryId: string, reason?: string): Result<QueryState>;
@@ -120,6 +128,7 @@ export interface BoardSpace {
     options?: ReleaseEditorLeaseOptions,
   ): Result<SpaceSnapshot>;
   updateDraft(lease: EditorLease, document: unknown): Result<DraftSnapshot>;
+  updateBinding(lease: EditorLease, change: BindingSlotChange): Result<DraftSnapshot>;
   undoDraft(lease: EditorLease): Result<DraftSnapshot>;
   redoDraft(lease: EditorLease): Result<DraftSnapshot>;
   applyDraft(lease: EditorLease): Result<SpaceSnapshot>;
@@ -213,6 +222,7 @@ class SpaceImpl implements BoardSpace {
       getState: () => this.getViewState(),
       getLease: (leaseId) => this.getActiveLease(leaseId),
       updateDraft: (lease, document) => this.updateDraft(lease, document),
+      updateBinding: (lease, change) => this.updateBinding(lease, change),
       undoDraft: (lease) => this.undoDraft(lease),
       redoDraft: (lease) => this.redoDraft(lease),
       applyDraft: (lease) => this.applyDraft(lease),
@@ -291,6 +301,13 @@ class SpaceImpl implements BoardSpace {
     return this.messages;
   }
 
+  getValidationCatalog(): BoardValidationCatalog | undefined {
+    if (this.disposedFlag || this.disposing) {
+      return undefined;
+    }
+    return this.bindingValidationCatalog();
+  }
+
   getSnapshot(): SpaceSnapshot {
     const draft = this.draft ? this.createDraftSnapshot(this.draft) : null;
     const queries = this.queryController.listQueryStates();
@@ -361,6 +378,13 @@ class SpaceImpl implements BoardSpace {
     const validation = this.deps.documentValidator(document);
     if (isBlockingValidation(validation)) {
       return this.failDocument(validation.diagnostics, "load");
+    }
+    const fixedChanges = assertFixedBindingsPreserved(
+      this.committedDocument,
+      document as BoardDocument,
+    );
+    if (fixedChanges.length > 0) {
+      return this.failDocument(fixedChanges, "load");
     }
     const warnings = validationWarnings(validation);
     const previousDiagnostics = this.combinedDiagnostics();
@@ -709,6 +733,16 @@ class SpaceImpl implements BoardSpace {
         "draft",
       );
     }
+    const fixedChanges = assertFixedBindingsPreserved(
+      this.committedDocument,
+      document as BoardDocument,
+    );
+    if (fixedChanges.length > 0) {
+      return this.failDocument(
+        [createDiagnostic(DIAGNOSTIC_CODES.DRAFT_INVALID, "draft"), ...fixedChanges],
+        "draft",
+      );
+    }
     const warnings = validationWarnings(validation);
     const next = snapshotDocument(document as BoardDocument);
     if (jsonEqual(next, draft.document)) {
@@ -734,6 +768,32 @@ class SpaceImpl implements BoardSpace {
     this.publishDiagnosticsChange(previousDiagnostics);
     this.emitDraftChanged(changed);
     return ok(this.createDraftSnapshot(draft));
+  }
+
+  updateBinding(lease: EditorLease, change: BindingSlotChange): Result<DraftSnapshot> {
+    const blocked = this.assertActive();
+    if (blocked) {
+      return blocked;
+    }
+    const releasing = this.assertNotReleasing();
+    if (releasing) {
+      return releasing;
+    }
+    const active = this.requireLease(lease);
+    if (!active.ok) {
+      return active;
+    }
+    const source = this.draft?.document ?? this.committedDocument;
+    const catalog = this.bindingValidationCatalog();
+    const applied = setBindingSlot(
+      source as unknown as BoardDocumentV1,
+      change,
+      catalog === undefined ? {} : { catalog },
+    );
+    if (!applied.ok) {
+      return this.failWith(applied.diagnostics);
+    }
+    return this.updateDraft(lease, applied.value.document);
   }
 
   undoDraft(lease: EditorLease): Result<DraftSnapshot> {
@@ -929,6 +989,26 @@ class SpaceImpl implements BoardSpace {
     return ok(undefined);
   }
 
+  private bindingValidationCatalog(): BoardValidationCatalog | undefined {
+    if (this.datasetProvider === null) {
+      return this.deps.validationCatalog;
+    }
+    try {
+      const descriptors: DatasetDescriptor[] = [];
+      for (const datasetId of this.datasetProvider.listDatasetIds()) {
+        const descriptor = this.datasetProvider.getDatasetDescriptor(datasetId);
+        if (descriptor !== undefined) {
+          descriptors.push(descriptor);
+        }
+      }
+      return descriptors.length === 0
+        ? this.deps.validationCatalog
+        : createEffectiveValidationCatalog(this.deps.validationCatalog, descriptors);
+    } catch {
+      return this.deps.validationCatalog;
+    }
+  }
+
   private createDraft(document: BoardDocument, baseRevision: number): DraftState {
     return {
       document,
@@ -1072,6 +1152,13 @@ class SpaceImpl implements BoardSpace {
     if (isBlockingValidation(validation)) {
       return this.failDocument(
         [createDiagnostic(DIAGNOSTIC_CODES.DRAFT_INVALID, "draft"), ...validation.diagnostics],
+        "apply",
+      );
+    }
+    const fixedChanges = assertFixedBindingsPreserved(this.committedDocument, draft.document);
+    if (fixedChanges.length > 0) {
+      return this.failDocument(
+        [createDiagnostic(DIAGNOSTIC_CODES.DRAFT_INVALID, "draft"), ...fixedChanges],
         "apply",
       );
     }

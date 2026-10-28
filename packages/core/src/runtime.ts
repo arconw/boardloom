@@ -1,5 +1,10 @@
 import { createSystemClock, type Clock } from "./clock.js";
 import { isBlockingValidation, validationWarnings, type DocumentValidator } from "./document.js";
+import { assertFixedBindingsPreserved } from "./binding-model.js";
+import {
+  createEffectiveValidationCatalog,
+  createProviderCapabilitiesCatalog,
+} from "./dataset-catalog.js";
 import { validateBoardDocument, type BoardValidationCatalog } from "./board-validation.js";
 import {
   BoardloomError,
@@ -11,7 +16,7 @@ import {
   type Diagnostic,
   type Result,
 } from "./diagnostics.js";
-import type { DatasetProvider } from "./data-contract.js";
+import type { DatasetDescriptor, DatasetProvider } from "./data-contract.js";
 import type { BoardDocumentParseOptions } from "./document-io.js";
 import { parseBoardDocument } from "./document-io.js";
 import type { BoardDocument } from "./document.js";
@@ -240,7 +245,10 @@ class RuntimeImpl implements BoardloomRuntime {
     const effectiveImportProvider =
       options.datasetProvider ?? sourceProvider ?? this.datasetProvider;
 
-    const effectiveCatalog = options.catalog ?? this.validationCatalog;
+    const effectiveCatalog = this.effectiveValidationCatalog(
+      options.catalog ?? this.validationCatalog,
+      effectiveImportProvider,
+    );
     const prepared = parseBoardDocument(input, {
       ...(options.maxBytes === undefined ? {} : { maxBytes: options.maxBytes }),
       ...(options.maxDepth === undefined ? {} : { maxDepth: options.maxDepth }),
@@ -259,6 +267,17 @@ class RuntimeImpl implements BoardloomRuntime {
     if (!prepared.ok) {
       this.emitImportFailure(prepared.diagnostics, options.sourceSpaceId);
       return fail(prepared.diagnostics);
+    }
+    if (sourceSpace !== undefined) {
+      const fixedChanges = assertFixedBindingsPreserved(
+        sourceSpace.getSnapshot().committedDocument,
+        prepared.value.document,
+        { allowDifferentDocument: true },
+      );
+      if (fixedChanges.length > 0) {
+        this.emitImportFailure(fixedChanges, options.sourceSpaceId);
+        return fail(fixedChanges);
+      }
     }
 
     let spaceId = this.idFactory.createId("space");
@@ -314,6 +333,35 @@ class RuntimeImpl implements BoardloomRuntime {
     );
   }
 
+  private providerDescriptors(provider: DatasetProvider | undefined): readonly DatasetDescriptor[] {
+    if (provider === undefined) {
+      return Object.freeze([]);
+    }
+    try {
+      const descriptors: DatasetDescriptor[] = [];
+      for (const datasetId of provider.listDatasetIds()) {
+        const descriptor = provider.getDatasetDescriptor(datasetId);
+        if (descriptor !== undefined) {
+          descriptors.push(descriptor);
+        }
+      }
+      return Object.freeze(descriptors);
+    } catch {
+      return Object.freeze([]);
+    }
+  }
+
+  private effectiveValidationCatalog(
+    catalog: BoardValidationCatalog | undefined,
+    provider: DatasetProvider | undefined,
+  ): BoardValidationCatalog | undefined {
+    const descriptors = this.providerDescriptors(provider);
+    if (catalog === undefined) {
+      return createProviderCapabilitiesCatalog(descriptors);
+    }
+    return createEffectiveValidationCatalog(catalog, descriptors);
+  }
+
   private createSpaceInternal(
     options: CreateSpaceOptions,
     importMetadata?: SpaceImportMetadata,
@@ -336,7 +384,11 @@ class RuntimeImpl implements BoardloomRuntime {
       return localeResult;
     }
 
-    const validationCatalog = catalogOverride ?? this.validationCatalog;
+    const effectiveProvider = options.datasetProvider ?? this.datasetProvider;
+    const validationCatalog = this.effectiveValidationCatalog(
+      catalogOverride ?? this.validationCatalog,
+      effectiveProvider,
+    );
     const documentValidator = this.createDocumentValidator(validationCatalog);
     const validation = documentValidator(options.document);
     if (isBlockingValidation(validation)) {
@@ -360,7 +412,6 @@ class RuntimeImpl implements BoardloomRuntime {
       ]);
     }
 
-    const effectiveProvider = options.datasetProvider ?? this.datasetProvider;
     const dependencies: SpaceDependencies = {
       idFactory: this.idFactory,
       clock: this.clock,

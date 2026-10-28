@@ -168,6 +168,7 @@ function buildFixture() {
             id: "metric-score",
             role: "measure",
             axis: "y",
+            mode: "fixed",
             field: { datasetId: "viewer-data", fieldId: "score" },
             sliceId: "all-results",
             aggregation: { type: "average" },
@@ -396,9 +397,96 @@ async function run() {
     await wait(10);
     result.checks.modeAfterSwitch = element.getAttribute("data-boardloom-mode");
     expectMode(handle.view.mode, "editor");
+
+    function bindingControl(blockId, slot, control) {
+      return element.querySelector(
+        `.bl-binding-control[data-binding-block="${blockId}"][data-binding-slot="${slot}"][data-binding-control="${control}"]`,
+      );
+    }
+    function optionState(select, attribute, value) {
+      const option = Array.from(select?.options ?? []).find(
+        (candidate) => candidate.getAttribute(attribute) === value,
+      );
+      return option ? !option.disabled : null;
+    }
+
+    const inspector = element.querySelector(".bl-inspector");
+    const chartX = bindingControl("chart", "x", "field");
+    const chartY = bindingControl("chart", "y", "field");
+    const chartSeries = bindingControl("chart", "series", "field");
+    const chartGroup = bindingControl("chart", "group", "field");
+    const chartAggregation = bindingControl("chart", "y", "aggregation");
+    const metricY = bindingControl("metric", "y", "field");
+    const metricAggregation = bindingControl("metric", "y", "aggregation");
+    result.checks.bindingInspector = {
+      hidden: inspector ? inspector.hasAttribute("hidden") : null,
+      slots: [chartX, chartY, chartSeries, chartGroup].every(Boolean),
+      sumEnabled: optionState(chartAggregation, "data-aggregation", "sum"),
+      countEnabled: optionState(chartAggregation, "data-aggregation", "count"),
+      medianEnabled: optionState(chartAggregation, "data-aggregation", "median"),
+      stringMeasureEnabled: optionState(chartY, "data-field-id", "school_id"),
+      numericMeasureEnabled: optionState(chartY, "data-field-id", "score"),
+      metricLocked: metricY?.hasAttribute("disabled") ?? null,
+      metricAggregationLocked: metricAggregation?.hasAttribute("disabled") ?? null,
+      metricMode: metricY?.getAttribute("data-binding-mode") ?? null,
+      lockText: inspector?.textContent ?? "",
+    };
+
+    if (chartAggregation) {
+      chartAggregation.value = "sum";
+      chartAggregation.dispatchEvent(new Event("change", { bubbles: true }));
+      await wait(30);
+    }
+    const chartSeriesAfterRender = bindingControl("chart", "series", "field");
+    if (chartSeriesAfterRender) {
+      const seriesValue = Array.from(chartSeriesAfterRender.options).find(
+        (option) => option.getAttribute("data-field-id") === "subject",
+      )?.value;
+      if (seriesValue !== undefined) {
+        chartSeriesAfterRender.value = seriesValue;
+        chartSeriesAfterRender.dispatchEvent(new Event("change", { bubbles: true }));
+        await wait(30);
+      }
+    }
+    const draftDocument = space.getSnapshot().draft?.document;
+    const draftChart = draftDocument?.blocks.find((block) => block.id === "chart");
+    const draftMeasure = draftChart?.bindings.find((entry) => entry.id === "chart-score");
+    const draftSeries = draftChart?.bindings.find((entry) => entry.role === "series");
+    const invalidAggregation = space.updateBinding(lease, {
+      blockId: "chart",
+      slot: "y",
+      field: { datasetId: "viewer-data", fieldId: "score" },
+      aggregation: "median",
+    });
+    const lockedMetric = space.updateBinding(lease, {
+      blockId: "metric",
+      slot: "y",
+      field: { datasetId: "viewer-data", fieldId: "score" },
+      aggregation: "sum",
+    });
+    result.checks.bindingDraft = {
+      aggregation: draftMeasure?.aggregation?.type ?? null,
+      seriesRole: draftSeries?.role ?? null,
+      seriesField: draftSeries?.field?.fieldId ?? null,
+      committedAggregation:
+        space
+          .getSnapshot()
+          .committedDocument.blocks.find((block) => block.id === "chart")
+          ?.bindings.find((entry) => entry.id === "chart-score")?.aggregation?.type ?? null,
+    };
+    result.checks.bindingRejections = {
+      invalidAggregation: invalidAggregation.ok
+        ? null
+        : (invalidAggregation.diagnostics[0]?.code ?? null),
+      fixedBinding: lockedMetric.ok ? null : (lockedMetric.diagnostics[0]?.code ?? null),
+    };
+
     must(handle.setMode("viewer"));
     await wait(10);
     result.checks.modeAfterReturn = element.getAttribute("data-boardloom-mode");
+    result.checks.inspectorAfterReturn = element
+      .querySelector(".bl-inspector")
+      ?.hasAttribute("hidden");
 
     const secondTarget = document.getElementById("second");
     const secondRuntime = createRuntime({
@@ -471,7 +559,7 @@ async function run() {
     };
 
     const sibling = must(space.createView({ mode: "viewer" }));
-    must(handle.unmount());
+    must(handle.unmount({ draftDecision: "cancel" }));
     result.checks.unmounted = target.children.length === 0;
     result.checks.spaceAlive = space.disposed === false;
     result.checks.siblingAlive = sibling.disposed === false;

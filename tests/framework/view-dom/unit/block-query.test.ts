@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   DIAGNOSTIC_CODES,
+  buildQueryPlan,
   type BoardDocument,
   type BindingDefinition,
   type BlockDefinition,
@@ -11,6 +12,7 @@ import {
   querySpecSignature,
 } from "../../../../packages/view-dom/src/block-query.js";
 import { expectFailure, unwrap } from "../../core/support/assertions.js";
+import { ASSESSMENT_DESCRIPTOR } from "../../core/fixtures/assessment-fixture.js";
 import { viewerFixtureDocument } from "../support/fixture.js";
 
 function block(document: ReturnType<typeof viewerFixtureDocument>, id: string): BlockDefinition {
@@ -58,6 +60,65 @@ describe("T06 block query derivation", () => {
     expect(chart.spec.aggregations).toEqual([
       { output: "chart-score", type: "average", fieldId: "score" },
     ]);
+  });
+
+  it("keeps a chart label binding that the selector ignores out of query grouping", () => {
+    const document = viewerFixtureDocument();
+    const chart = block(document, "block-chart");
+    const labelBinding: BindingDefinition = {
+      id: "chart-label",
+      role: "label",
+      field: { datasetId: "assessment-results", fieldId: "subject" },
+      sliceId: "all-results",
+    };
+    const withLabel: BlockDefinition = {
+      ...chart,
+      bindings: [labelBinding, ...(chart.bindings ?? [])],
+    };
+    const derived = unwrap(deriveBlockQuery(documentValue(), withLabel));
+    expect(derived.spec.groupBy).toEqual([{ fieldId: "school_id" }]);
+    expect(derived.spec.groupBy?.some((group) => group.fieldId === "subject")).toBe(false);
+    expect(derived.spec.aggregations).toEqual([
+      { output: "chart-score", type: "average", fieldId: "score" },
+    ]);
+  });
+
+  it("carries a distinct series selection through query planning", () => {
+    const document = viewerFixtureDocument();
+    const chart = block(document, "block-chart");
+    const withSeries: BlockDefinition = {
+      ...chart,
+      bindings: [
+        ...(chart.bindings ?? []),
+        {
+          id: "chart-series",
+          role: "series",
+          field: { datasetId: "assessment-results", fieldId: "subject" },
+          sliceId: "all-results",
+        },
+      ],
+    };
+    const derived = unwrap(deriveBlockQuery(documentValue(), withSeries));
+    expect(derived.spec.groupBy).toEqual([{ fieldId: "school_id" }, { fieldId: "subject" }]);
+    expect(buildQueryPlan(ASSESSMENT_DESCRIPTOR, derived.spec).ok).toBe(true);
+
+    const duplicateGrouped: BlockDefinition = {
+      ...chart,
+      bindings: [
+        ...(chart.bindings ?? []),
+        {
+          id: "chart-series",
+          role: "series",
+          field: { datasetId: "assessment-results", fieldId: "school_id" },
+          sliceId: "all-results",
+        },
+      ],
+    };
+    const duplicate = unwrap(deriveBlockQuery(documentValue(), duplicateGrouped));
+    expectFailure(
+      buildQueryPlan(ASSESSMENT_DESCRIPTOR, duplicate.spec),
+      DIAGNOSTIC_CODES.DUPLICATE_ID,
+    );
   });
 
   it("keeps canonical signatures stable for equivalent query specs", () => {

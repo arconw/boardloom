@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "status": "T05 proposed catalog for the first UI implementation; T06 publishes the keys in the core English dictionary, T07 adds renderer and accessibility keys, and T17 completes all built-in locales",
+  "status": "T05 proposed catalog for the first UI implementation; T06 publishes the keys in the core English dictionary, T07 adds renderer and accessibility keys, T08 adds binding, aggregation and configuration-lock keys, and T17 completes all built-in locales",
   "rules": {
     "namespace": "lowercase namespace followed by dot-separated segments; diagnostic codes may use uppercase segments after diagnostic.",
     "fallback": "English is the deterministic fallback; host overrides win over the selected built-in locale and English.",
@@ -836,6 +836,18 @@
       "source": "proposed"
     },
     {
+      "key": "editor.binding.lockedHint",
+      "english": "Locked by configuration. This is not a security boundary.",
+      "context": "Clarifies that a fixed binding is a configuration constraint rather than a security control",
+      "source": "core"
+    },
+    {
+      "key": "editor.binding.none",
+      "english": "None",
+      "context": "Clear an optional binding slot",
+      "source": "core"
+    },
+    {
       "key": "editor.block.selectable",
       "english": "Selectable binding",
       "context": "Selectable binding state",
@@ -1578,6 +1590,60 @@
       "english": "Y measure",
       "context": "Measure binding label",
       "source": "proposed"
+    },
+    {
+      "key": "aggregation.none",
+      "english": "None",
+      "context": "No aggregation",
+      "source": "core"
+    },
+    {
+      "key": "aggregation.count",
+      "english": "Count",
+      "context": "Row count aggregation",
+      "source": "core"
+    },
+    {
+      "key": "aggregation.countDistinct",
+      "english": "Distinct count",
+      "context": "Distinct value count aggregation",
+      "source": "core"
+    },
+    {
+      "key": "aggregation.sum",
+      "english": "Sum",
+      "context": "Sum aggregation",
+      "source": "core"
+    },
+    {
+      "key": "aggregation.average",
+      "english": "Average",
+      "context": "Mean aggregation",
+      "source": "core"
+    },
+    {
+      "key": "aggregation.min",
+      "english": "Minimum",
+      "context": "Minimum aggregation",
+      "source": "core"
+    },
+    {
+      "key": "aggregation.max",
+      "english": "Maximum",
+      "context": "Maximum aggregation",
+      "source": "core"
+    },
+    {
+      "key": "aggregation.median",
+      "english": "Median",
+      "context": "Median aggregation",
+      "source": "core"
+    },
+    {
+      "key": "aggregation.mode",
+      "english": "Mode",
+      "context": "Most frequent value aggregation",
+      "source": "core"
     },
     {
       "key": "editor.library.line.name",

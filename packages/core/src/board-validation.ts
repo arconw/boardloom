@@ -39,6 +39,7 @@ export type {
   BoardDocumentValidation,
   BoardValidationCatalog,
   BoardValidationOptions,
+  ProviderDatasetCapabilities,
   ProviderDatasetDescriptor,
   ProviderFieldDescriptor,
 } from "./board-validation-shared.js";

@@ -239,6 +239,32 @@ describe("T06 browser viewer", () => {
     expect(tableAlignment.valueDirection).toBe("rtl");
     expect(result.checks.modeAfterSwitch).toBe("editor");
     expect(result.checks.modeAfterReturn).toBe("viewer");
+    expect(result.checks.bindingInspector).toMatchObject({
+      hidden: false,
+      slots: true,
+      sumEnabled: true,
+      countEnabled: true,
+      medianEnabled: false,
+      stringMeasureEnabled: false,
+      numericMeasureEnabled: true,
+      metricLocked: true,
+      metricAggregationLocked: true,
+      metricMode: "fixed",
+    });
+    expect(String((result.checks.bindingInspector as { lockText?: string }).lockText)).toContain(
+      "not a security boundary",
+    );
+    expect(result.checks.bindingDraft).toMatchObject({
+      aggregation: "sum",
+      seriesRole: "series",
+      seriesField: "subject",
+      committedAggregation: "average",
+    });
+    expect(result.checks.bindingRejections).toMatchObject({
+      invalidAggregation: "RENDERER_INCOMPATIBLE",
+      fixedBinding: "FIXED_BINDING_LOCKED",
+    });
+    expect(result.checks.inspectorAfterReturn).toBe(true);
     expect(result.checks.multi).toMatchObject({
       firstTheme: "dark",
       secondTheme: "light",

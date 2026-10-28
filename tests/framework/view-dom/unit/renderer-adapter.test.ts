@@ -5,10 +5,12 @@ import {
   createIntlFormatterProvider,
   createMessageProvider,
   createRendererRegistry,
+  describeBindingSlots,
   emptyRendererData,
   type BindingDefinition,
   type BlockDefinition,
   type BoardDocument,
+  type BoardDocumentV1,
   type DatasetDescriptor,
   type QueryResultField,
   type QueryResultRow,
@@ -43,6 +45,8 @@ function board(): BoardDocument {
         id: "dataset",
         fields: [
           { id: "label", type: "string", role: "dimension" },
+          { id: "category", type: "string", role: "dimension" },
+          { id: "series", type: "string", role: "dimension" },
           { id: "value", type: "number", role: "measure" },
           { id: "percent", type: "number", role: "measure", unit: "percent" },
           { id: "xnum", type: "number", role: "dimension" },
@@ -61,6 +65,8 @@ function board(): BoardDocument {
 
 const fields: readonly QueryResultField[] = [
   { fieldId: "label", type: "string", role: "dimension" },
+  { fieldId: "category", type: "string", role: "dimension" },
+  { fieldId: "series", type: "string", role: "dimension" },
   {
     fieldId: "value",
     type: "number",
@@ -571,5 +577,107 @@ describe("T07 renderer adapter metadata", () => {
     const env = environment(block, [{ label: "A", value: null, xnum: 1 }]);
     expect(env.query?.rows[0]).toBeDefined();
     expect(emptyRendererData().rows).toEqual([]);
+  });
+
+  it("resolves explicit X and series with the document-validation precedence", () => {
+    const reordered = buildChartSpecForBlock(
+      environment(
+        {
+          id: "reordered-chart",
+          type: "chart",
+          bindings: [
+            binding("series", "dimension", "category"),
+            binding("x", "dimension", "label", { axis: "x" }),
+            binding("y", "measure", "value", {
+              axis: "y",
+              aggregation: { type: "sum" },
+            }),
+          ],
+          config: { visualization: "bar" },
+        },
+        [{ label: "A", category: "one", value: 2 }],
+      ),
+    );
+    expect(reordered.ok).toBe(true);
+    if (reordered.ok) {
+      expect(reordered.value.x.fieldId).toBe("label");
+      expect(reordered.value.series?.fieldId).toBe("category");
+    }
+
+    const labelled = buildChartSpecForBlock(
+      environment(
+        {
+          id: "labelled-chart",
+          type: "chart",
+          bindings: [
+            binding("label", "label", "category"),
+            binding("x", "dimension", "label", { axis: "x" }),
+            binding("y", "measure", "value", {
+              axis: "y",
+              aggregation: { type: "sum" },
+            }),
+            binding("series", "series", "series"),
+          ],
+          config: { visualization: "bar" },
+        },
+        [{ label: "A", category: "one", series: "group-a", value: 2 }],
+      ),
+    );
+    expect(labelled.ok).toBe(true);
+    if (labelled.ok) {
+      expect(labelled.value.x.fieldId).toBe("label");
+      expect(labelled.value.series?.fieldId).toBe("series");
+    }
+
+    const scatter = buildChartSpecForBlock(
+      environment(
+        {
+          id: "implicit-scatter",
+          type: "chart",
+          bindings: [binding("first", "measure", "value"), binding("second", "measure", "percent")],
+          config: { visualization: "scatter" },
+        },
+        [{ value: 1, percent: 2 }],
+        percentDescriptor,
+      ),
+    );
+    expect(scatter.ok).toBe(true);
+    if (scatter.ok) {
+      expect(scatter.value.x.fieldId).toBe("value");
+      expect(scatter.value.y.fieldId).toBe("percent");
+    }
+  });
+
+  it("matches the inspector slot descriptors for a label-bearing chart with a series", () => {
+    const block: BlockDefinition = {
+      id: "agreement-chart",
+      type: "chart",
+      bindings: [
+        binding("label", "label", "category"),
+        binding("x", "dimension", "label", { axis: "x" }),
+        binding("y", "measure", "value", {
+          axis: "y",
+          aggregation: { type: "sum" },
+        }),
+        binding("series", "series", "series"),
+      ],
+      config: { visualization: "bar" },
+    };
+    const document = { ...board(), blocks: [block] } as unknown as BoardDocumentV1;
+    const described = describeBindingSlots(document, block.id);
+    expect(described.ok).toBe(true);
+    const spec = buildChartSpecForBlock(
+      environment(block, [{ label: "A", category: "one", series: "group-a", value: 2 }]),
+    );
+    expect(spec.ok).toBe(true);
+    if (!described.ok || !spec.ok) {
+      return;
+    }
+    const slot = (name: "x" | "y" | "series") =>
+      described.value.find((entry) => entry.slot === name);
+    expect(slot("x")?.selectedField?.fieldId).toBe(spec.value.x.fieldId);
+    expect(slot("y")?.bindingId).toBe(spec.value.y.fieldId);
+    expect(slot("series")?.selectedField?.fieldId).toBe(spec.value.series?.fieldId);
+    expect(slot("series")?.selectedField?.fieldId).toBe("series");
   });
 });

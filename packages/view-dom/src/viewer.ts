@@ -4,9 +4,14 @@ import {
   THEME_MODES,
   canonicalJson,
   createDiagnostic,
+  describeBindingSlots,
   fail,
   ok,
   resolveRendererColors,
+  type AggregationType,
+  type BindingSlot,
+  type BindingSlotChange,
+  type BindingSlotDescriptor,
   type BoardDocument,
   type BoardDocumentV1,
   type BlockDefinition,
@@ -15,6 +20,7 @@ import {
   type BoardloomRuntime,
   type Diagnostic,
   type EditorLease,
+  type FieldReference,
   type FormatterProvider,
   type MessageDictionary,
   type MessageProvider,
@@ -134,6 +140,47 @@ export function failureFrom(error: unknown, path: string): readonly Diagnostic[]
 
 export function isThemeMode(value: unknown): value is ThemeMode {
   return typeof value === "string" && (THEME_MODES as readonly string[]).includes(value);
+}
+
+function parseBindingFieldValue(value: string): FieldReference | null {
+  if (value === "") {
+    return null;
+  }
+  try {
+    const parsed = JSON.parse(value) as unknown;
+    if (
+      Array.isArray(parsed) &&
+      parsed.length === 2 &&
+      typeof parsed[0] === "string" &&
+      typeof parsed[1] === "string"
+    ) {
+      return Object.freeze({ datasetId: parsed[0], fieldId: parsed[1] });
+    }
+  } catch {
+    return null;
+  }
+  return null;
+}
+
+function bindingFieldValue(field: FieldReference | null): string {
+  return field === null ? "" : JSON.stringify([field.datasetId, field.fieldId]);
+}
+
+function bindingSlotLabelKey(blockType: string, slot: BindingSlot): string {
+  if (slot === "x") {
+    return "chart.axis.x";
+  }
+  if (slot === "y") {
+    return blockType === "metric" ? "editor.properties.measure" : "chart.axis.y";
+  }
+  if (slot === "series") {
+    return "chart.series";
+  }
+  return "editor.properties.groupBy";
+}
+
+function aggregationMessageKey(type: string): string {
+  return `aggregation.${type}`;
 }
 
 function documentTheme(document: BoardDocumentV1): ThemeMode {
@@ -263,6 +310,9 @@ export class ViewerHost implements BoardViewHandle {
   private readonly filterSection: HTMLElement;
   private readonly filterHeading: HTMLElement;
   private readonly filterChips: HTMLElement;
+  private readonly inspector: HTMLElement;
+  private readonly inspectorHeading: HTMLElement;
+  private readonly inspectorBody: HTMLElement;
   private readonly body: HTMLElement;
   private readonly grid: HTMLElement;
   private readonly liveRegion: HTMLElement;
@@ -289,6 +339,46 @@ export class ViewerHost implements BoardViewHandle {
     }
     if (event.target === this.editorModeButton) {
       this.setMode("editor");
+    }
+  };
+
+  private readonly onChange = (event: Event): void => {
+    if (!this.publicOperationLive() || this.viewValue.mode !== "editor") {
+      return;
+    }
+    const target = event.target as
+      | (EventTarget & {
+          readonly value?: string;
+          getAttribute?: (name: string) => string | null;
+        })
+      | null;
+    if (target === null || typeof target.getAttribute !== "function") {
+      return;
+    }
+    const blockId = target.getAttribute("data-binding-block");
+    const slot = target.getAttribute("data-binding-slot");
+    const control = target.getAttribute("data-binding-control");
+    if (blockId === null || slot === null || control === null) {
+      return;
+    }
+    const value = typeof target.value === "string" ? target.value : "";
+    if (control === "field") {
+      const field = parseBindingFieldValue(value);
+      this.applyBindingSelection({
+        blockId,
+        slot: slot as BindingSlot,
+        field,
+      });
+      return;
+    }
+    if (control === "aggregation") {
+      const field = parseBindingFieldValue(target.getAttribute("data-binding-field") ?? "");
+      this.applyBindingSelection({
+        blockId,
+        slot: slot as BindingSlot,
+        field,
+        aggregation: value as AggregationType,
+      });
     }
   };
 
@@ -389,6 +479,21 @@ export class ViewerHost implements BoardViewHandle {
     this.filterSection.append(this.filterHeading, this.filterChips);
     this.root.append(this.filterSection);
 
+    this.inspector = createElement(this.doc, "aside", "bl-inspector");
+    this.inspector.setAttribute("role", "region");
+    this.inspector.setAttribute("aria-labelledby", `${instanceId}-inspector-title`);
+    this.inspector.setAttribute("data-message-key", "a11y.inspectorRegion");
+    this.inspectorHeading = createElement(this.doc, "h2", "bl-inspector__title");
+    this.inspectorHeading.id = `${instanceId}-inspector-title`;
+    setKeyedText(
+      this.inspectorHeading,
+      "editor.inspector",
+      this.messagesValue.text("editor.inspector"),
+    );
+    this.inspectorBody = createElement(this.doc, "div", "bl-inspector__body");
+    this.inspector.append(this.inspectorHeading, this.inspectorBody);
+    this.root.append(this.inspector);
+
     this.body = createElement(this.doc, "div", "bl-body");
     this.body.id = bodyId;
     this.body.setAttribute("role", "region");
@@ -408,6 +513,7 @@ export class ViewerHost implements BoardViewHandle {
 
     try {
       this.root.addEventListener("click", this.onClick);
+      this.root.addEventListener("change", this.onChange);
       this.target.append(this.root);
       this.unsubscribeSpace = space.subscribe((event) => this.handleEvent(event));
       const viewWindow = this.doc.defaultView as
@@ -563,6 +669,231 @@ export class ViewerHost implements BoardViewHandle {
     return changed;
   }
 
+  private applyBindingSelection(change: BindingSlotChange): void {
+    const result = this.viewValue.commands.updateBinding(change);
+    if (result.ok) {
+      this.actionDiagnostics = Object.freeze([]);
+      this.scheduleRender();
+      return;
+    }
+    this.actionDiagnostics = result.diagnostics;
+    this.announceDiagnostics(result.diagnostics);
+    this.renderNow();
+  }
+
+  private captureBindingFocus(): {
+    readonly blockId: string;
+    readonly slot: string;
+    readonly control: string;
+  } | null {
+    const active = this.doc.activeElement;
+    if (active === null) {
+      return null;
+    }
+    const blockId = active.getAttribute("data-binding-block");
+    const slot = active.getAttribute("data-binding-slot");
+    const control = active.getAttribute("data-binding-control");
+    return blockId !== null && slot !== null && control !== null
+      ? Object.freeze({ blockId, slot, control })
+      : null;
+  }
+
+  private restoreBindingFocus(
+    focus: {
+      readonly blockId: string;
+      readonly slot: string;
+      readonly control: string;
+    } | null,
+  ): void {
+    if (focus === null) {
+      return;
+    }
+    for (const element of descendantsByClass(this.inspectorBody, "bl-binding-control")) {
+      if (
+        element.getAttribute("data-binding-block") === focus.blockId &&
+        element.getAttribute("data-binding-slot") === focus.slot &&
+        element.getAttribute("data-binding-control") === focus.control
+      ) {
+        element.focus();
+        return;
+      }
+    }
+  }
+
+  private renderInspector(document: BoardDocumentV1): void {
+    const editorMode =
+      this.viewValue.mode === "editor" && this.viewValue.getSnapshot().leaseId !== null;
+    if (!editorMode) {
+      this.inspector.setAttribute("hidden", "");
+      clearElement(this.inspectorBody);
+      return;
+    }
+    this.inspector.removeAttribute("hidden");
+    setKeyedLabel(
+      this.inspector,
+      "a11y.inspectorRegion",
+      this.messagesValue.text("a11y.inspectorRegion"),
+    );
+    setKeyedText(
+      this.inspectorHeading,
+      "editor.inspector",
+      this.messagesValue.text("editor.inspector"),
+    );
+    clearElement(this.inspectorBody);
+    const catalog = this.spaceValue.getValidationCatalog();
+    const configurable = document.blocks.filter(
+      (block) => block.type === "chart" || block.type === "metric",
+    );
+    if (configurable.length === 0) {
+      const empty = createElement(this.doc, "p", "bl-inspector__empty");
+      setKeyedText(
+        empty,
+        "editor.inspector.empty",
+        this.messagesValue.text("editor.inspector.empty"),
+      );
+      this.inspectorBody.append(empty);
+      return;
+    }
+    for (const block of configurable) {
+      const described = describeBindingSlots(
+        document,
+        block.id,
+        catalog === undefined ? {} : { catalog },
+      );
+      if (!described.ok) {
+        continue;
+      }
+      const group = createElement(this.doc, "fieldset", "bl-binding-group");
+      const legend = createElement(this.doc, "legend", "bl-binding-group__title");
+      setHostText(legend, block.title ?? block.id);
+      group.append(legend);
+      for (const slot of described.value) {
+        group.append(this.createBindingRow(block, slot));
+      }
+      this.inspectorBody.append(group);
+    }
+  }
+
+  private createBindingRow(
+    block: BoardDocumentV1["blocks"][number],
+    slot: BindingSlotDescriptor,
+  ): HTMLElement {
+    const messages = this.messagesValue;
+    const row = createElement(this.doc, "div", "bl-binding-row");
+    row.setAttribute("data-binding-block", block.id);
+    row.setAttribute("data-binding-slot", slot.slot);
+    const labelKey = bindingSlotLabelKey(String(block.type), slot.slot);
+    const labelText = messages.text(labelKey);
+    const label = createElement(this.doc, "label", "bl-binding-row__label");
+    const fieldId = `${this.root.id}-binding-${block.id}-${slot.slot}`.replace(
+      /[^A-Za-z0-9_-]/g,
+      "-",
+    );
+    label.setAttribute("for", fieldId);
+    setKeyedText(label, labelKey, labelText);
+    const field = createElement(this.doc, "select", "bl-binding-control");
+    field.id = fieldId;
+    field.setAttribute("data-binding-block", block.id);
+    field.setAttribute("data-binding-slot", slot.slot);
+    field.setAttribute("data-binding-control", "field");
+    field.setAttribute("data-binding-mode", slot.locked ? "fixed" : "selectable");
+    field.setAttribute("aria-label", labelText);
+    if (slot.optional) {
+      const none = createElement(this.doc, "option");
+      none.value = "";
+      none.textContent = messages.text("editor.binding.none");
+      none.setAttribute("data-binding-option", "none");
+      field.append(none);
+    }
+    for (const option of slot.fields) {
+      const element = createElement(this.doc, "option");
+      element.value = bindingFieldValue({
+        datasetId: option.datasetId,
+        fieldId: option.fieldId,
+      });
+      element.textContent = option.label ?? option.fieldId;
+      element.setAttribute("data-field-id", option.fieldId);
+      element.setAttribute("data-option-enabled", String(option.enabled));
+      if (!option.enabled) {
+        element.disabled = true;
+        element.setAttribute("disabled", "");
+        if (option.reason !== null) {
+          element.setAttribute("data-reason-code", option.reason.code);
+          const reasonKey = `diagnostic.${option.reason.code}`;
+          element.title = messages.has(reasonKey)
+            ? messages.text(reasonKey)
+            : option.reason.message;
+        }
+      }
+      field.append(element);
+    }
+    field.value = bindingFieldValue(slot.selectedField);
+    if (slot.locked) {
+      field.disabled = true;
+      field.setAttribute("disabled", "");
+      field.setAttribute("aria-disabled", "true");
+    }
+    row.append(label, field);
+
+    const mode = createElement(this.doc, "span", "bl-binding-mode");
+    const modeKey = slot.locked ? "editor.block.locked" : "editor.block.selectable";
+    mode.setAttribute("data-binding-mode", slot.mode);
+    setKeyedText(mode, modeKey, messages.text(modeKey));
+    row.append(mode);
+
+    if (slot.locked) {
+      const hint = createElement(this.doc, "p", "bl-binding-hint");
+      setKeyedText(hint, "editor.binding.lockedHint", messages.text("editor.binding.lockedHint"));
+      row.append(hint);
+    }
+
+    if (slot.slot === "y" && slot.aggregations.length > 0) {
+      const aggregationLabel = createElement(this.doc, "label", "bl-binding-row__label");
+      const aggregationId = `${fieldId}-aggregation`;
+      aggregationLabel.setAttribute("for", aggregationId);
+      setKeyedText(
+        aggregationLabel,
+        "editor.properties.aggregation",
+        messages.text("editor.properties.aggregation"),
+      );
+      const aggregation = createElement(this.doc, "select", "bl-binding-control");
+      aggregation.id = aggregationId;
+      aggregation.setAttribute("data-binding-block", block.id);
+      aggregation.setAttribute("data-binding-slot", slot.slot);
+      aggregation.setAttribute("data-binding-control", "aggregation");
+      aggregation.setAttribute("data-binding-field", bindingFieldValue(slot.selectedField));
+      aggregation.setAttribute("data-binding-mode", slot.locked ? "fixed" : "selectable");
+      aggregation.setAttribute("aria-label", messages.text("editor.properties.aggregation"));
+      for (const option of slot.aggregations) {
+        const element = createElement(this.doc, "option");
+        element.value = option.type;
+        element.textContent = messages.text(aggregationMessageKey(option.type));
+        element.setAttribute("data-aggregation", option.type);
+        element.setAttribute("data-option-enabled", String(option.enabled));
+        if (!option.enabled) {
+          element.disabled = true;
+          element.setAttribute("disabled", "");
+          if (option.reason !== null) {
+            element.setAttribute("data-reason-code", option.reason.code);
+            const reasonKey = `diagnostic.${option.reason.code}`;
+            element.title = messages.has(reasonKey)
+              ? messages.text(reasonKey)
+              : option.reason.message;
+          }
+        }
+        aggregation.append(element);
+      }
+      aggregation.value = slot.selectedAggregation ?? "none";
+      if (slot.locked || slot.selectedField === null) {
+        aggregation.disabled = true;
+        aggregation.setAttribute("disabled", "");
+        aggregation.setAttribute("aria-disabled", "true");
+      }
+      row.append(aggregationLabel, aggregation);
+    }
+    return row;
+  }
+
   refresh(): void {
     if (!this.publicOperationLive()) {
       return;
@@ -686,7 +1017,11 @@ export class ViewerHost implements BoardViewHandle {
       return;
     }
     const messages = this.messagesValue;
-    const document = snapshot.committedDocument as unknown as BoardDocumentV1;
+    const committedDocument = snapshot.committedDocument as unknown as BoardDocumentV1;
+    const draftDocument = snapshot.draft?.document as unknown as BoardDocumentV1 | undefined;
+    const document =
+      this.viewValue.mode === "editor" ? (draftDocument ?? committedDocument) : committedDocument;
+    const bindingFocus = this.captureBindingFocus();
     const formatters = this.spaceValue.getFormatters();
     if (!this.ensureLive()) {
       return;
@@ -816,7 +1151,9 @@ export class ViewerHost implements BoardViewHandle {
       }
     }
 
+    this.renderInspector(document);
     this.renderBlocks(document, snapshot, formatters);
+    this.restoreBindingFocus(bindingFocus);
   }
 
   private applyDocumentThemeTokens(document: BoardDocumentV1): void {
@@ -1340,6 +1677,7 @@ export class ViewerHost implements BoardViewHandle {
       this.resizeObserver = null;
     }
     this.root.removeEventListener("click", this.onClick);
+    this.root.removeEventListener("change", this.onChange);
     for (const mounted of this.blockElements.values()) {
       this.removeBlockQuery(mounted);
       if (mounted.surface.destroy !== undefined) {

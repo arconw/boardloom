@@ -358,4 +358,21 @@ describe("T07 chart model", () => {
     expect(model.zeroCount).toBe(2);
     expect(model.total).toBe(0);
   });
+
+  it("reports duplicate points with an actionable stable diagnostic", () => {
+    const model = buildChartModel(
+      spec("bar"),
+      {
+        fields,
+        rows: rows({ category: "a", value: 1 }, { category: "a", value: 2 }),
+      },
+      formatters,
+    );
+    expect(model.blocked).toBe(true);
+    const duplicate = model.diagnostics.find(
+      (diagnostic) => diagnostic.code === "RENDERER_DUPLICATE_POINT",
+    );
+    expect(duplicate).toBeDefined();
+    expect(duplicate?.message).toContain("Adjust the X, series or label bindings");
+  });
 });

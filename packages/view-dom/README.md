@@ -2,7 +2,7 @@
 
 Framework-neutral DOM runtime for the Boardloom viewer shell, design tokens and accessible state surfaces.
 
-Status: T06 implements the browser ESM viewer runtime, mount/update/unmount host contract, view-local mode handling, block registry foundation, locale/timezone forwarding, scoped responsive layout and loading, empty, error, cancelled, stale and partial states. T07 adds the KPI and table renderers on the shared renderer contract, chart renderer composition through `renderers`, accessible chart summaries and data alternatives, and an explicit fallback when no chart renderer is registered. Chart blocks use the accessible tabular data alternative plus a renderer-unavailable notice by default; hosts pass `CHART_RENDERERS` from `@boardloom/renderers-echarts` to render charts. The full editor belongs to T12. No DOM runtime depends on React, Angular, Svelte, a backend or a database, and it does not import ECharts directly.
+Status: T06 implements the browser ESM viewer runtime, mount/update/unmount host contract, view-local mode handling, block registry foundation, locale/timezone forwarding, scoped responsive layout and loading, empty, error, cancelled, stale and partial states. T07 adds the KPI and table renderers on the shared renderer contract, chart renderer composition through `renderers`, accessible chart summaries and data alternatives, and an explicit fallback when no chart renderer is registered. T08 adds the editor-mode binding inspector foundation for chart and metric X, Y, series, group and aggregation selection. The inspector uses the shared core binding model and the space's effective validation catalog, disables combinations the core would reject, resolves X/Y/series with the same precedence as chart rendering, renders fixed bindings as configuration locks with a non-security notice, and writes selectable changes to the space-owned draft. The full editor, block library, layout editing and apply/cancel draft workflow belong to T12. Chart blocks use the accessible tabular data alternative plus a renderer-unavailable notice by default; hosts pass `CHART_RENDERERS` from `@boardloom/renderers-echarts` to render charts. No DOM runtime depends on React, Angular, Svelte, a backend or a database, and it does not import ECharts directly.
 
 The package exports browser ESM with TypeScript declarations and `@boardloom/view-dom/styles.css`. npm publication is not authorized; planned scoped names are used for tarball consumers only.
 
@@ -60,6 +60,7 @@ The root carries the `boardloom` class, a `data-boardloom-theme` value of `light
 - Board title, host provenance, update time and explicit display timezone.
 - A realtime status placeholder that distinguishes historical, live, connecting, reconnecting, resyncing, paused, degraded, disconnected and error states.
 - Read-only declared filter summaries with scope words and host filter values.
+- An editor-mode binding inspector for chart and metric blocks. It offers only field and aggregation options admitted by the shared core binding model, marks unavailable options explicitly, shows fixed bindings as locked, and states that the lock is a configuration constraint rather than a security boundary.
 - A responsive 12/8/4-column board grid selected from the instance width, with placed row spans, deliberate vertical gaps and instance-scoped narrow stacking even inside a wider host page.
 - Block-level loading, empty, error, cancelled, stale and partial states driven by actual query state. No placeholder values or fabricated zero axes are rendered. Chart data disclosures are removed from the accessibility tree and keyboard order in every non-settled state.
 - Table and chart data-table regions always have a localized accessible name, using host block titles when present and a stable fallback key otherwise.
@@ -74,7 +75,7 @@ Styles live in the `boardloom` cascade layer and remain scoped to the Boardloom 
 
 ## Scope boundaries
 
-- No editor controls, draft bar or inspector. The mode group reflects and changes the core view mode, but the editor interface is T12.
+- No full editor, block library, layout editing, draft bar or apply/cancel workflow. T08 provides the binding inspector foundation in editor mode; T12 completes the editor.
 - The six built-in chart types are provided by `@boardloom/renderers-echarts` and composed through the `renderers` mount option. Without a registered chart renderer, a chart block shows an explicit renderer-unavailable notice plus its accessible query data table.
 - No filter editing or cross-filter UI. Declared filter defaults are summarized read-only until T09.
 - No realtime transport. The shell renders host-supplied transport status until T11.

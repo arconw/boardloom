@@ -170,6 +170,7 @@ export type {
   BoardDocumentValidation,
   BoardValidationCatalog,
   BoardValidationOptions,
+  ProviderDatasetCapabilities,
   ProviderDatasetDescriptor,
   ProviderFieldDescriptor,
 } from "./board-validation.js";
@@ -278,6 +279,23 @@ export type {
   VisualizationMatrixEntry,
 } from "./field-matrix.js";
 
+export {
+  BINDING_SLOTS,
+  assertFixedBindingsPreserved,
+  describeBindingSlots,
+  setBindingSlot,
+} from "./binding-model.js";
+export type {
+  AppliedBindingSlot,
+  BindingSlot,
+  BindingSlotAggregationOption,
+  BindingSlotChange,
+  BindingSlotDescriptionOptions,
+  BindingSlotDescriptor,
+  BindingSlotFieldOption,
+  FixedBindingPreservationOptions,
+} from "./binding-model.js";
+
 export { formatValueParts, formatValueText, unitTextOf } from "./value-format.js";
 export type { FormattedValue, ValueFieldSpec, ValueMessages } from "./value-format.js";
 
@@ -352,7 +370,14 @@ export {
   zonedDateStartInstant,
 } from "./temporal.js";
 
-export { createBoardValidationCatalog } from "./dataset-catalog.js";
+export {
+  createBoardValidationCatalog,
+  createEffectiveValidationCatalog,
+  createProviderCapabilitiesCatalog,
+} from "./dataset-catalog.js";
+
+export { selectChartBindings } from "./chart-bindings.js";
+export type { ChartBindingLike, ChartBindingSelection } from "./chart-bindings.js";
 
 export { buildQueryPlan, deriveQueryResultFields, queryFilterKey } from "./query-planning.js";
 export type { BuildQueryPlanOptions, CanonicalQueryKey, QueryPlan } from "./query-planning.js";

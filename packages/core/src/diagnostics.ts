@@ -32,6 +32,7 @@ export const DIAGNOSTIC_CODES = Object.freeze({
   RENDERER_FAILED: "RENDERER_FAILED",
   RENDERER_INCOMPATIBLE: "RENDERER_INCOMPATIBLE",
   RENDERER_DATA_INVALID: "RENDERER_DATA_INVALID",
+  RENDERER_DUPLICATE_POINT: "RENDERER_DUPLICATE_POINT",
   RENDERER_UNSUPPORTED: "RENDERER_UNSUPPORTED",
   BLOCK_SURFACE_FAILED: "BLOCK_SURFACE_FAILED",
   LAYOUT_INVALID: "LAYOUT_INVALID",
@@ -40,6 +41,8 @@ export const DIAGNOSTIC_CODES = Object.freeze({
   INVALID_REFERENCE: "INVALID_REFERENCE",
   REFERENCE_UNVERIFIED: "REFERENCE_UNVERIFIED",
   INCOMPATIBLE_BINDING: "INCOMPATIBLE_BINDING",
+  FIXED_BINDING_LOCKED: "FIXED_BINDING_LOCKED",
+  FIXED_BINDING_CHANGED: "FIXED_BINDING_CHANGED",
   INCOMPATIBLE_FILTER: "INCOMPATIBLE_FILTER",
   INCOMPATIBLE_COMPARISON: "INCOMPATIBLE_COMPARISON",
   INVALID_THEME_TOKEN: "INVALID_THEME_TOKEN",
@@ -156,6 +159,8 @@ export const DIAGNOSTIC_MESSAGES: Readonly<Record<string, string>> = Object.free
     "The renderer spec or field combination is not compatible with the selected visualization.",
   RENDERER_DATA_INVALID:
     "The data violates a renderer policy such as a non-negative stacked or donut total.",
+  RENDERER_DUPLICATE_POINT:
+    "The query produced duplicate category and series points. Adjust the X, series or label bindings so each point is unique.",
   RENDERER_UNSUPPORTED: "No registered renderer supports this block and visualization.",
   BLOCK_SURFACE_FAILED: "The block surface failed while rendering or updating.",
   LAYOUT_INVALID: "The layout geometry is invalid or outside the breakpoint grid.",
@@ -165,6 +170,10 @@ export const DIAGNOSTIC_MESSAGES: Readonly<Record<string, string>> = Object.free
   REFERENCE_UNVERIFIED:
     "A field or provider reference could not be verified without a host provider catalog.",
   INCOMPATIBLE_BINDING: "A block binding is incompatible with its block or field.",
+  FIXED_BINDING_LOCKED:
+    "A fixed binding is locked by configuration and cannot be changed. Locking is not a security boundary.",
+  FIXED_BINDING_CHANGED:
+    "A document replacement changed or removed a fixed binding; the document was rejected.",
   INCOMPATIBLE_FILTER: "A filter operator or value is incompatible with its field or target.",
   INCOMPATIBLE_COMPARISON: "The comparison mapping, units or alignment are incompatible.",
   INVALID_THEME_TOKEN: "A theme token name or value is invalid.",

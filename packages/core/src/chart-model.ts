@@ -459,10 +459,10 @@ export function buildChartModel(
     if (seen.has(pointKey)) {
       hasDuplicate = true;
       diagnostics.push(
-        dataDiagnostic(
-          `chart/${spec.id}/data`,
-          "The data contains duplicate category and series points after query grouping.",
-        ),
+        createDiagnostic(DIAGNOSTIC_CODES.RENDERER_DUPLICATE_POINT, `chart/${spec.id}/data`, {
+          message:
+            "The query produced duplicate category and series points. Adjust the X, series or label bindings so each point is unique.",
+        }),
       );
     }
     seen.add(pointKey);

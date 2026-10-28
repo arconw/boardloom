@@ -12,6 +12,7 @@ import {
   WEEK_STARTS,
   type BindingRole,
 } from "./board-schema.js";
+import { selectChartBindings } from "./chart-bindings.js";
 import { DIAGNOSTIC_CODES } from "./diagnostics.js";
 import { isValidTimeZone } from "./locale.js";
 import {
@@ -22,6 +23,7 @@ import {
   type VisualizationKind,
 } from "./field-matrix.js";
 import {
+  catalogDatasetEntry,
   checkUnknownKeys,
   isRecord,
   nonEmptyString,
@@ -80,6 +82,8 @@ interface ParsedMatrixBinding {
   readonly role: BindingRole | null;
   readonly axis: "x" | "y" | "none" | null;
   readonly field: FieldInfo | null;
+  readonly datasetId?: string;
+  readonly fieldId?: string;
   readonly grain?: string;
   readonly aggregation: string | null;
   readonly path: string;
@@ -159,41 +163,31 @@ function validateFieldMatrix(
     }
     return;
   }
-  let x: ParsedMatrixBinding | undefined;
-  let y: ParsedMatrixBinding | undefined;
-  let series: ParsedMatrixBinding | undefined;
-  if (visualization === "scatter") {
-    x = measures.find((binding) => binding.axis === "x") ?? measures[0];
-    y =
-      measures.find((binding) => binding.axis === "y" && binding !== x) ??
-      measures.find((binding) => binding !== x);
-    series = bindings.find((binding) => binding.role === "series" || binding.role === "group");
-  } else {
-    x =
-      bindings.find((binding) => binding.axis === "x") ??
-      bindings.find((binding) => binding.role === "dimension") ??
-      bindings.find(
-        (binding) =>
-          binding.role === "series" || binding.role === "group" || binding.role === "label",
-      );
-    y = measures.find((binding) => binding !== x);
-    const candidates = bindings.filter(
-      (binding) =>
-        binding !== x &&
-        binding !== y &&
-        (binding.role === "series" ||
-          binding.role === "group" ||
-          binding.role === "dimension" ||
-          binding.axis === "x"),
+  const selection = selectChartBindings(bindings, visualization === "scatter" ? "scatter" : null);
+  const x = selection.x ?? undefined;
+  const y = selection.y ?? undefined;
+  const series = selection.series ?? undefined;
+  if (selection.seriesCandidates.length > 1) {
+    add(
+      DIAGNOSTIC_CODES.INCOMPATIBLE_BINDING,
+      `${path}/bindings`,
+      "A chart supports at most one series dimension.",
     );
-    series = candidates[0];
-    if (candidates.length > 1) {
-      add(
-        DIAGNOSTIC_CODES.INCOMPATIBLE_BINDING,
-        `${path}/bindings`,
-        "A chart supports at most one series dimension.",
-      );
-    }
+  }
+  if (
+    visualization !== "scatter" &&
+    x !== undefined &&
+    series !== undefined &&
+    x.datasetId !== undefined &&
+    x.datasetId === series.datasetId &&
+    x.fieldId !== undefined &&
+    x.fieldId === series.fieldId
+  ) {
+    add(
+      DIAGNOSTIC_CODES.INCOMPATIBLE_BINDING,
+      series.path,
+      "The series or group field must differ from the X field; a grouped chart query cannot repeat the same field.",
+    );
   }
   const options = own(config, "options");
   const stackedOption = isRecord(options) ? own(options, "stacked") : undefined;
@@ -283,6 +277,84 @@ function validateFieldMatrix(
           "The Y axis must include a visible zero baseline.",
         );
       }
+    }
+  }
+}
+
+function isQueryDataBinding(binding: ParsedMatrixBinding): boolean {
+  return (
+    binding.role === "dimension" ||
+    binding.role === "measure" ||
+    binding.role === "value" ||
+    binding.role === "series" ||
+    binding.role === "group" ||
+    binding.role === "label" ||
+    binding.axis === "x" ||
+    binding.axis === "y"
+  );
+}
+
+function isQueryMeasureBinding(binding: ParsedMatrixBinding): boolean {
+  return binding.role === "measure" || binding.role === "value" || binding.axis === "y";
+}
+
+function validateProviderGrouping(
+  blockType: string,
+  visualization: VisualizationKind,
+  bindings: readonly ParsedMatrixBinding[],
+  path: string,
+  context: ReferenceContext,
+  add: AddDiagnostic,
+): void {
+  if (blockType !== "chart" && blockType !== "table") {
+    return;
+  }
+  if (blockType === "chart" && visualization === "scatter") {
+    return;
+  }
+  let hasAggregation: boolean;
+  let grouping: readonly ParsedMatrixBinding[];
+  if (blockType === "chart") {
+    const selection = selectChartBindings(bindings, null);
+    hasAggregation =
+      selection.y !== null &&
+      selection.y.aggregation !== null &&
+      selection.y.aggregation !== "none";
+    grouping = [selection.x, selection.series].filter(
+      (binding): binding is ParsedMatrixBinding =>
+        binding !== null && !isQueryMeasureBinding(binding),
+    );
+  } else {
+    hasAggregation = bindings.some(
+      (binding) =>
+        isQueryMeasureBinding(binding) &&
+        binding.aggregation !== null &&
+        binding.aggregation !== "none",
+    );
+    grouping = bindings.filter(
+      (binding) => isQueryDataBinding(binding) && !isQueryMeasureBinding(binding),
+    );
+  }
+  if (!hasAggregation) {
+    return;
+  }
+  if (grouping.length === 0) {
+    return;
+  }
+  const seen = new Set<string>();
+  for (const binding of grouping) {
+    if (binding.datasetId === undefined || seen.has(binding.datasetId)) {
+      continue;
+    }
+    seen.add(binding.datasetId);
+    const provider = catalogDatasetEntry(context.catalog, binding.datasetId);
+    if (provider?.capabilities?.grouping === false) {
+      add(
+        DIAGNOSTIC_CODES.PROVIDER_CAPABILITY_MISMATCH,
+        `${path}/bindings`,
+        "The dataset does not declare grouping capability required by this grouped or aggregated block.",
+        { relatedIds: [binding.datasetId] },
+      );
     }
   }
 }
@@ -384,6 +456,18 @@ export function validateAggregation(
         DIAGNOSTIC_CODES.INCOMPATIBLE_BINDING,
         `${path}/type`,
         `Aggregation "${type}" is not compatible with field type "${fieldInfo.type}".`,
+      );
+    }
+  }
+  if (oneOf(type, AGGREGATION_TYPES) && type !== "none" && datasetId !== undefined) {
+    const provider = catalogDatasetEntry(context.catalog, datasetId);
+    const declared = provider?.capabilities?.aggregations;
+    if (Array.isArray(declared) && !declared.includes(type)) {
+      add(
+        DIAGNOSTIC_CODES.PROVIDER_CAPABILITY_MISMATCH,
+        `${path}/type`,
+        `The dataset does not declare the "${type}" aggregation capability.`,
+        { relatedIds: [datasetId, type] },
       );
     }
   }
@@ -524,6 +608,7 @@ export function validateBlock(
         }
         const field = own(entry, "field");
         let datasetId: string | undefined;
+        let bindingFieldId: string | undefined;
         let bindingFieldInfo: FieldInfo | null = null;
         if (!isRecord(field)) {
           add(DIAGNOSTIC_CODES.MISSING_REQUIRED_PROPERTY, `${bindingPath}/field`);
@@ -533,10 +618,31 @@ export function validateBlock(
           if (typeof value === "string") {
             datasetId = value;
           }
+          const fieldIdValue = own(field, "fieldId");
+          if (typeof fieldIdValue === "string") {
+            bindingFieldId = fieldIdValue;
+          }
         }
         const bucket = own(entry, "bucket");
         if (bucket !== undefined) {
           validateTemporalBucket(bucket, bindingFieldInfo, `${bindingPath}/bucket`, add);
+        }
+        if (datasetId !== undefined) {
+          const provider = catalogDatasetEntry(context.catalog, datasetId);
+          const bucketTimezone = isRecord(bucket) ? own(bucket, "timezone") : undefined;
+          if (
+            typeof bucketTimezone === "string" &&
+            bindingFieldInfo?.timezone !== undefined &&
+            bucketTimezone !== bindingFieldInfo.timezone &&
+            provider?.capabilities?.timezoneConversion === false
+          ) {
+            add(
+              DIAGNOSTIC_CODES.PROVIDER_CAPABILITY_MISMATCH,
+              `${bindingPath}/bucket/timezone`,
+              "The dataset does not declare timezone conversion capability.",
+              { relatedIds: [datasetId, bucketTimezone] },
+            );
+          }
         }
         const sliceId = own(entry, "sliceId");
         if (sliceId !== undefined) {
@@ -577,6 +683,8 @@ export function validateBlock(
           role: oneOf(role, BINDING_ROLES) ? role : null,
           axis: oneOf(axis, BINDING_AXES) ? axis : null,
           field: bindingFieldInfo,
+          ...(datasetId === undefined ? {} : { datasetId }),
+          ...(bindingFieldId === undefined ? {} : { fieldId: bindingFieldId }),
           ...(isRecord(bucket) && oneOf(own(bucket, "grain"), BUCKET_GRAINS)
             ? { grain: own(bucket, "grain") as string }
             : {}),
@@ -678,6 +786,14 @@ export function validateBlock(
       path,
       add,
     );
+    validateProviderGrouping(
+      "chart",
+      visualization as VisualizationKind,
+      matrixBindings,
+      path,
+      context,
+      add,
+    );
     return;
   }
   if (type === "metric") {
@@ -761,6 +877,7 @@ export function validateBlock(
         }
       }
     }
+    validateProviderGrouping("table", "table", matrixBindings, path, context, add);
     return;
   }
   if (type === "text") {

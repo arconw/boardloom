@@ -6,6 +6,7 @@ import {
   FIELD_ROLES,
   FIELD_VALUE_TYPES,
   FILTER_OPERATORS,
+  type AggregationType,
   type FieldRole,
   type FieldValueType,
   type FilterOperator,
@@ -14,15 +15,26 @@ import {
 export interface ProviderFieldDescriptor {
   readonly type: FieldValueType;
   readonly role?: FieldRole;
+  readonly label?: string;
   readonly unit?: string;
   readonly timezone?: string;
   readonly operators?: readonly FilterOperator[];
   readonly allowedValues?: readonly (string | number | boolean)[];
 }
 
+export interface ProviderDatasetCapabilities {
+  readonly grouping?: boolean;
+  readonly aggregations?: readonly AggregationType[];
+  readonly timeWindow?: boolean;
+  readonly timezoneConversion?: boolean;
+  readonly comparison?: boolean;
+  readonly maxResultSize?: number | null;
+}
+
 export interface ProviderDatasetDescriptor {
   readonly fields?: Readonly<Record<string, ProviderFieldDescriptor>>;
   readonly slices?: Readonly<Record<string, readonly string[]>>;
+  readonly capabilities?: ProviderDatasetCapabilities;
 }
 
 export interface BoardValidationCatalog {

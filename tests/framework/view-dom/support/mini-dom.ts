@@ -33,6 +33,7 @@ export class MiniElement {
   readonly listeners = new Map<string, Set<Listener>>();
   className = "";
   id = "";
+  value = "";
   clientWidth = 1280;
   scrollTop = 0;
   scrollLeft = 0;

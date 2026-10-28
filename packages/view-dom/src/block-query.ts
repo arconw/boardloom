@@ -5,6 +5,7 @@ import {
   fail,
   isPlainObject,
   ok,
+  selectChartBindings,
   type BindingDefinition,
   type BoardDocument,
   type BoardDocumentV1,
@@ -302,29 +303,28 @@ function buildSpec(
         }),
       );
     }
-    const measured = bindings
-      .map((binding) => ({ binding, aggregation: aggregationFor(binding) }))
-      .filter(
-        (entry): entry is { binding: BindingDefinition; aggregation: QueryAggregation } =>
-          entry.aggregation !== null && isMeasureBinding(entry.binding),
-      );
-    if (measured.length === 0) {
+    const selection = selectChartBindings(bindings, null);
+    const measure = selection.y;
+    const aggregation = measure === null ? null : aggregationFor(measure);
+    if (measure === null || aggregation === null) {
       return bindingDiagnostic(
         `blocks/${block.id}/bindings`,
         "A chart block requires a measure aggregation.",
       );
     }
-    const grouped = bindings.filter(isGroupingBinding);
+    const grouped = [selection.x, selection.series].filter(
+      (binding): binding is BindingDefinition => binding !== null && !isMeasureBinding(binding),
+    );
     const groupBy = grouped.map(groupingFor);
     return ok(
       Object.freeze({
         spec: Object.freeze({
           ...common,
           ...(groupBy.length === 0 ? {} : { groupBy: Object.freeze(groupBy) }),
-          aggregations: Object.freeze(measured.map((entry) => entry.aggregation)),
+          aggregations: Object.freeze([aggregation]),
         }),
-        valueBindingId: measured[0]?.binding.id ?? null,
-        valueLabel: measured[0]?.binding.label ?? null,
+        valueBindingId: measure.id,
+        valueLabel: measure.label ?? null,
       }),
     );
   }

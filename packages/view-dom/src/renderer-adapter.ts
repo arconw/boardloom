@@ -7,6 +7,7 @@ import {
   fail,
   ok,
   rendererAxisFromConfig,
+  selectChartBindings as selectSharedChartBindings,
   type BindingDefinition,
   type BoardDocumentV1,
   type ChartAxisConfig,
@@ -39,16 +40,6 @@ function bindingDiagnostic(path: string, message: string): Result<never> {
 
 function isMeasureBinding(binding: BindingDefinition): boolean {
   return binding.role === "measure" || binding.role === "value" || binding.axis === "y";
-}
-
-function isDimensionBinding(binding: BindingDefinition): boolean {
-  return (
-    binding.role === "dimension" ||
-    binding.role === "series" ||
-    binding.role === "group" ||
-    binding.role === "label" ||
-    binding.axis === "x"
-  );
 }
 
 function effectiveFieldId(binding: BindingDefinition): string {
@@ -307,7 +298,7 @@ function selectChartBindings(
 }> {
   const bindings = block.bindings ?? [];
   const measures = bindings.filter(isMeasureBinding);
-  const dimensions = bindings.filter(isDimensionBinding);
+  const selection = selectSharedChartBindings(bindings, visualization);
   if (visualization === "scatter") {
     if (measures.length > 2) {
       return bindingDiagnostic(
@@ -315,28 +306,15 @@ function selectChartBindings(
         "A scatter chart supports at most two measures, X and Y.",
       );
     }
-    const x = measures.find((binding) => binding.axis === "x") ?? measures[0] ?? null;
-    const y =
-      measures.find((binding) => binding.axis === "y" && binding !== x) ??
-      measures.find((binding) => binding !== x) ??
-      null;
-    if (x === null || y === null) {
+    if (selection.x === null || selection.y === null) {
       return bindingDiagnostic(
         `blocks/${block.id}/bindings`,
         "A scatter chart requires two numeric measures for X and Y.",
       );
     }
-    const seriesCandidate = bindings.find(
-      (binding) => binding.role === "series" || binding.role === "group",
-    );
-    return ok({ x, y, series: seriesCandidate ?? null });
+    return ok({ x: selection.x, y: selection.y, series: selection.series });
   }
-  const x =
-    dimensions.find((binding) => binding.axis === "x") ??
-    dimensions.find((binding) => binding.role === "dimension") ??
-    dimensions[0] ??
-    null;
-  if (x === null) {
+  if (selection.x === null) {
     return bindingDiagnostic(
       `blocks/${block.id}/bindings`,
       "A chart requires an X dimension binding.",
@@ -348,24 +326,19 @@ function selectChartBindings(
       "A chart supports one Y measure binding.",
     );
   }
-  const y =
-    measures.find((binding) => binding.axis === "y" && binding !== x) ??
-    measures.find((binding) => binding !== x) ??
-    null;
-  if (y === null) {
+  if (selection.y === null) {
     return bindingDiagnostic(
       `blocks/${block.id}/bindings`,
       "A chart requires a Y measure binding.",
     );
   }
-  const seriesCandidates = dimensions.filter((binding) => binding !== x);
-  if (seriesCandidates.length > 1) {
+  if (selection.seriesCandidates.length > 1) {
     return bindingDiagnostic(
       `blocks/${block.id}/bindings`,
       "A chart supports at most one series dimension.",
     );
   }
-  return ok({ x, y, series: seriesCandidates[0] ?? null });
+  return ok({ x: selection.x, y: selection.y, series: selection.series });
 }
 
 export function buildChartSpecForBlock(
