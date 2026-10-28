@@ -563,7 +563,7 @@ A comparison definition contains:
 - Alignment keys, including composite keys, with declared collation and normalization.
 - Optional time windows for primary and reference, each with explicit timezone and boundary rules.
 - Display mode: overlay or side-by-side.
-- Delta mode: absolute, percentage or both.
+- Delta mode: absolute, percentage, both or none. `none` disables delta output; side-by-side display with different units requires `none`.
 - Unit policy: identical units required for direct delta; no automatic unit conversion. Explicit conversion is allowed only when the provider declares a lossless or documented conversion.
 
 ### 11.1 Alignment, duplicates and null keys
@@ -616,7 +616,7 @@ T10 must implement and trace these expected values:
 Additional rules:
 
 - Overlay requires compatible measure units and scales; otherwise the UI rejects overlay and offers side-by-side without a delta.
-- Side-by-side may show different units only when delta is disabled and the unit difference is visible.
+- Side-by-side may show different units only when delta is disabled (`none`) and each side keeps its declared unit visible.
 - Comparison results are renderer-neutral and available to every supported block/renderer that declares comparison capability.
 - Comparing data from a different dataset is allowed only when the mapping is complete and validated.
 - Primary and reference input generations are tracked separately.

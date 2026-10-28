@@ -1,5 +1,7 @@
 import {
   BoardloomError,
+  COMPARISON_DELTA_MODES,
+  COMPARISON_DISPLAY_MODES,
   DIAGNOSTIC_CODES,
   THEME_MODES,
   canonicalJson,
@@ -13,7 +15,9 @@ import {
   filterOperatorsForField,
   ok,
   resolveRendererColors,
+  selectChartBindings,
   type AggregationType,
+  type BindingDefinition,
   type BindingSlot,
   type BindingSlotChange,
   type BindingSlotDescriptor,
@@ -23,8 +27,14 @@ import {
   type BoardSpace,
   type BoardView,
   type BoardloomRuntime,
+  type ComparisonDefinition,
+  type ComparisonDeltaMode,
+  type ComparisonDisplayMode,
+  type ComparisonFieldMapping,
+  type ComparisonInput,
   type Diagnostic,
   type EditorLease,
+  type FieldDescriptor,
   type FieldReference,
   type FieldValueType,
   type FilterDefinition,
@@ -42,6 +52,7 @@ import {
   type SpaceEvent,
   type SpaceSnapshot,
   type ThemeMode,
+  type TimeWindow,
   type ViewMode,
   type ViewSnapshot,
 } from "@boardloom/core";
@@ -51,6 +62,13 @@ import {
   querySpecSignature,
   type DerivedBlockQuery,
 } from "./block-query.js";
+import {
+  comparisonQueryIds,
+  computeComparisonView,
+  deriveComparisonQuery,
+  type ComparisonQueryIds,
+  type ComparisonViewState,
+} from "./comparison-query.js";
 import type {
   BlockSurface,
   BlockSurfaceEnvironment,
@@ -119,10 +137,15 @@ interface MountedBlock {
   signature: string | null;
   queryError: readonly Diagnostic[] | null;
   queryPlan: DerivedBlockQuery | null;
+  comparisonQueryIds: ComparisonQueryIds | null;
+  comparisonSignature: string | null;
+  comparisonState: ComparisonViewState | null;
+  comparisonError: readonly Diagnostic[] | null;
   lastBlockSignature: string | null;
   lastQueryState: QueryState | null;
   lastQueryErrorSignature: string | null;
   lastPlanSignature: string | null;
+  lastComparisonSignature: string | null;
   lastContextSignature: string | null;
   lastMessages: ViewMessages | null;
   lastLocale: string | null;
@@ -155,6 +178,7 @@ export function failureFrom(error: unknown, path: string): readonly Diagnostic[]
 }
 
 export let filterSequence = 0;
+let comparisonSequence = 0;
 
 function filterOperatorLabelKey(operator: FilterOperator): string {
   return `filter.operator.${operator}`;
@@ -525,6 +549,31 @@ export class ViewerHost implements BoardViewHandle {
       this.addFilterDefinition();
       return;
     }
+    if (target.getAttribute("data-comparison-action") === "add") {
+      this.addComparisonDefinition();
+      return;
+    }
+    const removeComparison = target.getAttribute("data-comparison-remove");
+    if (removeComparison !== null) {
+      this.removeComparisonDefinition(removeComparison);
+      return;
+    }
+    const windowApply = target.getAttribute("data-comparison-window-apply");
+    if (windowApply !== null) {
+      const side = target.getAttribute("data-comparison-side");
+      if (side === "primary" || side === "reference") {
+        this.applyComparisonWindow(windowApply, side);
+      }
+      return;
+    }
+    const windowClear = target.getAttribute("data-comparison-window-clear");
+    if (windowClear !== null) {
+      const side = target.getAttribute("data-comparison-side");
+      if (side === "primary" || side === "reference") {
+        this.applyComparisonWindow(windowClear, side, true);
+      }
+      return;
+    }
     if (target.getAttribute("data-cross-clear") === "true") {
       const result = this.applyFilterOperation("cross-filter", () =>
         this.spaceValue.clearCrossFilters(),
@@ -546,6 +595,14 @@ export class ViewerHost implements BoardViewHandle {
         })
       | null;
     if (target === null || typeof target.getAttribute !== "function") {
+      return;
+    }
+    const comparisonControl = target.getAttribute("data-comparison-control");
+    if (comparisonControl !== null) {
+      this.applyComparisonManagerChange(
+        comparisonControl,
+        target as typeof target & { readonly checked?: boolean },
+      );
       return;
     }
     const filterControl = target.getAttribute("data-filter-control");
@@ -986,6 +1043,11 @@ export class ViewerHost implements BoardViewHandle {
       this.inspectorBody.append(manager);
       hasContent = true;
     }
+    const comparisons = this.createComparisonManager(document);
+    if (comparisons !== null) {
+      this.inspectorBody.append(comparisons);
+      hasContent = true;
+    }
     if (!hasContent) {
       const empty = createElement(this.doc, "p", "bl-inspector__empty");
       setKeyedText(
@@ -995,6 +1057,922 @@ export class ViewerHost implements BoardViewHandle {
       );
       this.inspectorBody.append(empty);
     }
+  }
+
+  private comparisonInputs(document: BoardDocumentV1): readonly {
+    readonly value: string;
+    readonly label: string;
+    readonly input: ComparisonInput;
+  }[] {
+    const entries: { value: string; label: string; input: ComparisonInput }[] = [];
+    for (const dataset of document.datasets) {
+      const datasetLabel = dataset.label ?? dataset.id;
+      const slices = document.slices.filter((slice) => slice.datasetId === dataset.id);
+      if (slices.length === 0) {
+        entries.push({
+          value: `${dataset.id}|`,
+          label: datasetLabel,
+          input: { datasetId: dataset.id },
+        });
+        continue;
+      }
+      for (const slice of slices) {
+        entries.push({
+          value: `${dataset.id}|${slice.id}`,
+          label: `${datasetLabel} / ${slice.label ?? slice.id}`,
+          input: { datasetId: dataset.id, sliceId: slice.id },
+        });
+      }
+    }
+    return Object.freeze(entries);
+  }
+
+  private parseComparisonInput(value: string, document: BoardDocumentV1): ComparisonInput | null {
+    const separator = value.indexOf("|");
+    if (separator < 0) {
+      return null;
+    }
+    const datasetId = value.slice(0, separator);
+    const sliceId = value.slice(separator + 1);
+    if (datasetId === "" || !document.datasets.some((dataset) => dataset.id === datasetId)) {
+      return null;
+    }
+    if (sliceId === "") {
+      return { datasetId };
+    }
+    if (!document.slices.some((slice) => slice.datasetId === datasetId && slice.id === sliceId)) {
+      return null;
+    }
+    return { datasetId, sliceId };
+  }
+
+  private comparisonInputValue(input: ComparisonInput): string {
+    return `${input.datasetId}|${input.sliceId ?? ""}`;
+  }
+
+  private comparisonFields(
+    document: BoardDocumentV1,
+    input: ComparisonInput,
+  ): readonly FieldDescriptor[] {
+    return document.datasets.find((dataset) => dataset.id === input.datasetId)?.fields ?? [];
+  }
+
+  private comparisonUnitsDiffer(
+    document: BoardDocumentV1,
+    comparison: ComparisonDefinition,
+  ): boolean {
+    if (
+      comparison.unitPolicy?.mode === "explicit" &&
+      (comparison.unitPolicy.conversions?.length ?? 0) > 0
+    ) {
+      return false;
+    }
+    const primary = this.comparisonFields(document, comparison.base);
+    const reference = this.comparisonFields(document, comparison.reference);
+    return comparison.mapping
+      .filter((entry) => entry.role === "measure")
+      .some((entry) => {
+        const left = primary.find((field) => field.id === entry.primary.fieldId);
+        const right = reference.find((field) => field.id === entry.reference.fieldId);
+        return (left?.unit ?? null) !== (right?.unit ?? null);
+      });
+  }
+
+  private comparisonMapping(
+    document: BoardDocumentV1,
+    base: ComparisonInput,
+    reference: ComparisonInput,
+    preferredAlignment: readonly string[],
+    existing?: readonly ComparisonFieldMapping[],
+  ): {
+    readonly mapping: readonly ComparisonFieldMapping[];
+    readonly alignmentKeys: readonly string[];
+    readonly unitsCompatible: boolean;
+  } | null {
+    const primaryFields = this.comparisonFields(document, base);
+    const referenceFields = this.comparisonFields(document, reference);
+    const used = new Set<string>();
+    const mapping: ComparisonFieldMapping[] = [];
+    const category = (field: FieldDescriptor): "dimension" | "measure" =>
+      field.role === "measure" ? "measure" : "dimension";
+    for (const field of primaryFields) {
+      const role = category(field);
+      const previous =
+        existing === undefined
+          ? undefined
+          : existing.find((entry) => entry.primary.fieldId === field.id);
+      const candidates = referenceFields.filter((entry) => !used.has(entry.id));
+      const target =
+        (previous === undefined
+          ? undefined
+          : candidates.find(
+              (entry) =>
+                entry.id === previous.reference.fieldId &&
+                entry.type === field.type &&
+                category(entry) === role,
+            )) ??
+        candidates.find((entry) => entry.id === field.id && entry.type === field.type) ??
+        candidates.find((entry) => entry.type === field.type && category(entry) === role);
+      if (target === undefined) {
+        continue;
+      }
+      used.add(target.id);
+      mapping.push({
+        primary: { datasetId: base.datasetId, fieldId: field.id },
+        reference: { datasetId: reference.datasetId, fieldId: target.id },
+        role,
+      });
+    }
+    const dimensionMappings = mapping.filter((entry) => entry.role === "dimension");
+    const measureMappings = mapping.filter((entry) => entry.role === "measure");
+    if (dimensionMappings.length === 0 || measureMappings.length === 0) {
+      return null;
+    }
+    const preferredKeys = preferredAlignment.filter((fieldId) =>
+      dimensionMappings.some((entry) => entry.primary.fieldId === fieldId),
+    );
+    const alignmentKeys =
+      preferredKeys.length > 0
+        ? [...new Set(preferredKeys)]
+        : [dimensionMappings[0]?.primary.fieldId ?? ""].filter((value) => value !== "");
+    const unitsCompatible = measureMappings.every((entry) => {
+      const primary = primaryFields.find((field) => field.id === entry.primary.fieldId);
+      const target = referenceFields.find((field) => field.id === entry.reference.fieldId);
+      return (primary?.unit ?? null) === (target?.unit ?? null);
+    });
+    return {
+      mapping: Object.freeze(mapping),
+      alignmentKeys: Object.freeze(alignmentKeys),
+      unitsCompatible,
+    };
+  }
+
+  private createComparisonManager(document: BoardDocumentV1): HTMLElement | null {
+    const messages = this.messagesValue;
+    const comparisons = document.comparisons ?? [];
+    if (document.datasets.length === 0) {
+      return null;
+    }
+    const group = createElement(this.doc, "fieldset", "bl-comparison-manager");
+    const legend = createElement(this.doc, "legend", "bl-comparison-manager__title");
+    setKeyedText(legend, "editor.comparison.title", messages.text("editor.comparison.title"));
+    group.append(legend);
+    const actions = createElement(this.doc, "div", "bl-comparison-manager__actions");
+    const add = createElement(this.doc, "button", "bl-comparison-manager__add");
+    add.setAttribute("type", "button");
+    add.setAttribute("data-comparison-action", "add");
+    setKeyedText(add, "editor.comparison.add", messages.text("editor.comparison.add"));
+    actions.append(add);
+    group.append(actions);
+    const inputs = this.comparisonInputs(document);
+    if (inputs.length < 2) {
+      const empty = createElement(this.doc, "p", "bl-comparison-manager__empty");
+      setKeyedText(
+        empty,
+        "editor.comparison.noFields",
+        messages.text("editor.comparison.noFields"),
+      );
+      group.append(empty);
+      return group;
+    }
+    if (comparisons.length === 0) {
+      const empty = createElement(this.doc, "p", "bl-comparison-manager__empty");
+      setKeyedText(
+        empty,
+        "editor.comparison.noComparisons",
+        messages.text("editor.comparison.noComparisons"),
+      );
+      group.append(empty);
+      return group;
+    }
+    for (const comparison of comparisons) {
+      group.append(this.createComparisonRow(document, comparison, inputs));
+    }
+    return group;
+  }
+
+  private createComparisonRow(
+    document: BoardDocumentV1,
+    comparison: ComparisonDefinition,
+    inputs: readonly {
+      readonly value: string;
+      readonly label: string;
+      readonly input: ComparisonInput;
+    }[],
+  ): HTMLElement {
+    const messages = this.messagesValue;
+    const row = createElement(this.doc, "div", "bl-comparison-row");
+    row.setAttribute("data-comparison-id", comparison.id);
+    const heading = createElement(this.doc, "div", "bl-comparison-row__head");
+    const title = createElement(this.doc, "span", "bl-comparison-row__title");
+    setHostText(title, comparison.label);
+    const remove = createElement(this.doc, "button", "bl-comparison-row__remove");
+    remove.setAttribute("type", "button");
+    remove.setAttribute("data-comparison-remove", comparison.id);
+    setKeyedText(remove, "editor.comparison.remove", messages.text("editor.comparison.remove"));
+    heading.append(title, remove);
+    row.append(heading);
+
+    const labeled = (
+      key: string,
+      control: HTMLElement,
+      labelText = messages.text(key),
+    ): HTMLElement => {
+      const item = createElement(this.doc, "div", "bl-comparison-field");
+      const label = createElement(this.doc, "label", "bl-comparison-field__label");
+      setKeyedText(label, key, labelText);
+      if ("id" in control && typeof control.id === "string") {
+        label.setAttribute("for", control.id);
+      }
+      item.append(label, control);
+      return item;
+    };
+
+    const display = createElement(this.doc, "select", "bl-comparison-control");
+    display.id = `${this.root.id}-comparison-${comparison.id}-display`.replace(
+      /[^A-Za-z0-9_-]/g,
+      "-",
+    );
+    display.setAttribute("data-comparison-control", "displayMode");
+    display.setAttribute("data-comparison-id", comparison.id);
+    display.setAttribute("aria-label", messages.text("editor.comparison.display"));
+    for (const mode of COMPARISON_DISPLAY_MODES) {
+      const option = createElement(this.doc, "option");
+      option.value = mode;
+      const modeKey = mode === "side-by-side" ? "sideBySide" : mode;
+      option.textContent = messages.has(`editor.comparison.display.${modeKey}`)
+        ? messages.text(`editor.comparison.display.${modeKey}`)
+        : mode;
+      display.append(option);
+    }
+    display.value = comparison.displayMode;
+
+    const delta = createElement(this.doc, "select", "bl-comparison-control");
+    delta.id = `${this.root.id}-comparison-${comparison.id}-delta`.replace(/[^A-Za-z0-9_-]/g, "-");
+    delta.setAttribute("data-comparison-control", "deltaMode");
+    delta.setAttribute("data-comparison-id", comparison.id);
+    delta.setAttribute("aria-label", messages.text("editor.comparison.delta"));
+    for (const mode of COMPARISON_DELTA_MODES) {
+      const option = createElement(this.doc, "option");
+      option.value = mode;
+      option.textContent = messages.has(`editor.comparison.delta.${mode}`)
+        ? messages.text(`editor.comparison.delta.${mode}`)
+        : mode;
+      delta.append(option);
+    }
+    delta.value = comparison.deltaMode;
+
+    const base = createElement(this.doc, "select", "bl-comparison-control");
+    base.id = `${this.root.id}-comparison-${comparison.id}-base`.replace(/[^A-Za-z0-9_-]/g, "-");
+    base.setAttribute("data-comparison-control", "base");
+    base.setAttribute("data-comparison-id", comparison.id);
+    base.setAttribute("aria-label", messages.text("editor.comparison.base"));
+    for (const entry of inputs) {
+      const option = createElement(this.doc, "option");
+      option.value = entry.value;
+      option.textContent = entry.label;
+      base.append(option);
+    }
+    base.value = this.comparisonInputValue(comparison.base);
+
+    const reference = createElement(this.doc, "select", "bl-comparison-control");
+    reference.id = `${this.root.id}-comparison-${comparison.id}-reference`.replace(
+      /[^A-Za-z0-9_-]/g,
+      "-",
+    );
+    reference.setAttribute("data-comparison-control", "reference");
+    reference.setAttribute("data-comparison-id", comparison.id);
+    reference.setAttribute("aria-label", messages.text("editor.comparison.referenceInput"));
+    for (const entry of inputs) {
+      const option = createElement(this.doc, "option");
+      option.value = entry.value;
+      option.textContent = entry.label;
+      reference.append(option);
+    }
+    reference.value = this.comparisonInputValue(comparison.reference);
+
+    const inputsRow = createElement(this.doc, "div", "bl-comparison-row__inputs");
+    inputsRow.append(
+      labeled("editor.comparison.base", base),
+      labeled("editor.comparison.referenceInput", reference),
+      labeled("editor.comparison.display", display),
+      labeled("editor.comparison.delta", delta),
+    );
+    row.append(inputsRow);
+
+    const alignment = createElement(this.doc, "div", "bl-comparison-alignment");
+    const alignmentTitle = createElement(this.doc, "span", "bl-comparison-alignment__title");
+    setKeyedText(
+      alignmentTitle,
+      "editor.comparison.alignment",
+      messages.text("editor.comparison.alignment"),
+    );
+    alignment.append(alignmentTitle);
+    const dimensionMappings = comparison.mapping.filter((entry) => entry.role === "dimension");
+    for (const entry of dimensionMappings) {
+      const item = createElement(this.doc, "label", "bl-comparison-alignment__item");
+      const input = createElement(this.doc, "input", "bl-comparison-control");
+      input.setAttribute("type", "checkbox");
+      input.setAttribute("data-comparison-control", "alignment");
+      input.setAttribute("data-comparison-id", comparison.id);
+      input.setAttribute("data-comparison-field", entry.primary.fieldId);
+      (input as unknown as { checked: boolean }).checked = comparison.alignment.keys.includes(
+        entry.primary.fieldId,
+      );
+      const text = createElement(this.doc, "span");
+      setHostText(text, entry.primary.fieldId);
+      item.append(input, text);
+      alignment.append(item);
+    }
+    row.append(alignment);
+
+    const mappingList = createElement(this.doc, "div", "bl-comparison-mapping");
+    comparison.mapping.forEach((entry, index) => {
+      const item = createElement(this.doc, "div", "bl-comparison-mapping__row");
+      const primary = createElement(this.doc, "span", "bl-comparison-mapping__primary");
+      setHostText(primary, `${entry.role}: ${entry.primary.fieldId}`);
+      const select = createElement(this.doc, "select", "bl-comparison-control");
+      select.setAttribute("data-comparison-control", "mapping");
+      select.setAttribute("data-comparison-id", comparison.id);
+      select.setAttribute("data-comparison-index", String(index));
+      select.setAttribute("aria-label", messages.text("editor.comparison.mapping"));
+      const primaryField = this.comparisonFields(document, comparison.base).find(
+        (field) => field.id === entry.primary.fieldId,
+      );
+      for (const field of this.comparisonFields(document, comparison.reference)) {
+        if (primaryField !== undefined && field.type !== primaryField.type) {
+          continue;
+        }
+        const option = createElement(this.doc, "option");
+        option.value = field.id;
+        option.textContent = field.id;
+        select.append(option);
+      }
+      select.value = entry.reference.fieldId;
+      item.append(primary, select);
+      mappingList.append(item);
+    });
+    row.append(mappingList);
+
+    const policy = createElement(this.doc, "p", "bl-comparison-policy");
+    policy.setAttribute("data-comparison-unit-policy", comparison.unitPolicy?.mode ?? "identical");
+    setHostText(
+      policy,
+      `${messages.text("editor.comparison.unitPolicy")}: ${
+        comparison.unitPolicy?.mode ?? "identical"
+      }`,
+    );
+    row.append(policy);
+
+    const attach = createElement(this.doc, "select", "bl-comparison-control");
+    attach.setAttribute("data-comparison-control", "attach");
+    attach.setAttribute("data-comparison-id", comparison.id);
+    attach.setAttribute("aria-label", messages.text("editor.comparison.attach"));
+    const none = createElement(this.doc, "option");
+    none.value = "";
+    none.textContent = messages.text("editor.comparison.none");
+    attach.append(none);
+    for (const block of document.blocks.filter(
+      (entry) => entry.type === "chart" || entry.type === "metric" || entry.type === "table",
+    )) {
+      const option = createElement(this.doc, "option");
+      option.value = block.id;
+      option.textContent = block.title ?? block.id;
+      attach.append(option);
+    }
+    const attached = document.blocks.find((block) => {
+      const configured = block.config.comparisonId;
+      return typeof configured === "string" && configured === comparison.id;
+    });
+    attach.value = attached?.id ?? "";
+    row.append(labeled("editor.comparison.attach", attach));
+
+    for (const side of ["primary", "reference"] as const) {
+      row.append(this.createComparisonWindow(comparison, side));
+    }
+    return row;
+  }
+
+  private createComparisonWindow(
+    comparison: ComparisonDefinition,
+    side: "primary" | "reference",
+  ): HTMLElement {
+    const messages = this.messagesValue;
+    const windowValue =
+      side === "primary" ? comparison.windows?.primary : comparison.windows?.reference;
+    const group = createElement(this.doc, "div", "bl-comparison-window");
+    group.setAttribute("data-comparison-id", comparison.id);
+    group.setAttribute("data-comparison-side", side);
+    const title = createElement(this.doc, "span", "bl-comparison-window__title");
+    const titleKey =
+      side === "primary" ? "editor.comparison.windowPrimary" : "editor.comparison.windowReference";
+    setKeyedText(title, titleKey, messages.text(titleKey));
+    group.append(title);
+    const inputs: HTMLElement[] = [];
+    for (const [field, labelKey, value, placeholder] of [
+      ["timezone", "editor.comparison.windowTimezone", windowValue?.timezone, "UTC"],
+      ["start", "editor.comparison.windowStart", windowValue?.start, "YYYY-MM-DD"],
+      ["end", "editor.comparison.windowEnd", windowValue?.end, "YYYY-MM-DD"],
+    ] as const) {
+      const input = createElement(this.doc, "input", "bl-comparison-control");
+      input.setAttribute("type", "text");
+      input.setAttribute("data-comparison-window-input", field);
+      input.setAttribute("aria-label", messages.text(labelKey));
+      input.setAttribute("placeholder", placeholder);
+      input.value = value ?? "";
+      group.append(input);
+      inputs.push(input);
+    }
+    const bounds = createElement(this.doc, "select", "bl-comparison-control");
+    bounds.setAttribute("data-comparison-window-input", "bounds");
+    bounds.setAttribute("aria-label", messages.text("editor.comparison.windowBounds"));
+    for (const value of ["inclusive", "exclusive", "half-open"]) {
+      const option = createElement(this.doc, "option");
+      option.value = value;
+      option.textContent = value;
+      bounds.append(option);
+    }
+    bounds.value = windowValue?.bounds ?? "inclusive";
+    group.append(bounds);
+    const apply = createElement(this.doc, "button", "bl-comparison-window__apply");
+    apply.setAttribute("type", "button");
+    apply.setAttribute("data-comparison-window-apply", comparison.id);
+    apply.setAttribute("data-comparison-side", side);
+    setKeyedText(
+      apply,
+      "editor.comparison.windowApply",
+      messages.text("editor.comparison.windowApply"),
+    );
+    group.append(apply);
+    if (windowValue !== undefined) {
+      const clear = createElement(this.doc, "button", "bl-comparison-window__clear");
+      clear.setAttribute("type", "button");
+      clear.setAttribute("data-comparison-window-clear", comparison.id);
+      clear.setAttribute("data-comparison-side", side);
+      setKeyedText(
+        clear,
+        "editor.comparison.windowClear",
+        messages.text("editor.comparison.windowClear"),
+      );
+      group.append(clear);
+    }
+    return group;
+  }
+
+  private applyComparisonManagerChange(
+    control: string,
+    target: EventTarget & {
+      readonly value?: string;
+      readonly checked?: boolean;
+      getAttribute?: (name: string) => string | null;
+    },
+  ): void {
+    if (target.getAttribute === undefined) {
+      return;
+    }
+    const comparisonId = target.getAttribute("data-comparison-id");
+    if (comparisonId === null) {
+      return;
+    }
+    const snapshot = this.safeSnapshot();
+    if (snapshot === null) {
+      return;
+    }
+    const document = (snapshot.draft?.document ??
+      snapshot.committedDocument) as unknown as BoardDocumentV1;
+    const current = document.comparisons?.find((entry) => entry.id === comparisonId);
+    if (current === undefined) {
+      return;
+    }
+    const value = typeof target.value === "string" ? target.value : "";
+    if (control === "attach") {
+      const next = {
+        ...document,
+        blocks: document.blocks.map((block) => {
+          const configured = block.config.comparisonId;
+          if (block.id === value) {
+            return { ...block, config: { ...block.config, comparisonId } };
+          }
+          if (typeof configured === "string" && configured === comparisonId) {
+            const { comparisonId: _removed, ...config } = block.config;
+            void _removed;
+            return { ...block, config };
+          }
+          return block;
+        }),
+      } as BoardDocumentV1;
+      const diagnostics = this.comparisonPlanDiagnostics(next, comparisonId);
+      if (diagnostics.length > 0) {
+        this.setComparisonDiagnostics(diagnostics);
+        return;
+      }
+      this.updateFilterDocument(() => next);
+      return;
+    }
+    if (control === "displayMode") {
+      if (!(COMPARISON_DISPLAY_MODES as readonly string[]).includes(value)) {
+        return;
+      }
+      const unitsDiffer = this.comparisonUnitsDiffer(document, current);
+      this.updateComparisonDefinition(comparisonId, (comparison) => ({
+        ...comparison,
+        displayMode: value as ComparisonDisplayMode,
+        ...(value === "side-by-side" && unitsDiffer ? { deltaMode: "none" as const } : {}),
+      }));
+      return;
+    }
+    if (control === "deltaMode") {
+      if (!(COMPARISON_DELTA_MODES as readonly string[]).includes(value)) {
+        return;
+      }
+      const unitsDiffer = this.comparisonUnitsDiffer(document, current);
+      this.updateComparisonDefinition(comparisonId, (comparison) => ({
+        ...comparison,
+        deltaMode: value as ComparisonDeltaMode,
+        ...(value === "none" && unitsDiffer ? { displayMode: "side-by-side" as const } : {}),
+      }));
+      return;
+    }
+    if (control === "base" || control === "reference") {
+      const input = this.parseComparisonInput(value, document);
+      if (input === null) {
+        return;
+      }
+      const base = control === "base" ? input : current.base;
+      const reference = control === "reference" ? input : current.reference;
+      if (base.datasetId === reference.datasetId && base.sliceId === reference.sliceId) {
+        this.setComparisonDiagnostics([
+          createDiagnostic(
+            DIAGNOSTIC_CODES.INCOMPATIBLE_COMPARISON,
+            `comparisons/${comparisonId}`,
+            { message: "A comparison needs two distinct inputs.", relatedIds: [comparisonId] },
+          ),
+        ]);
+        return;
+      }
+      const preferred = document.blocks
+        .flatMap((block) => block.bindings ?? [])
+        .filter((binding) => binding.field.datasetId === base.datasetId)
+        .map((binding) => binding.field.fieldId);
+      const rebuilt = this.comparisonMapping(document, base, reference, preferred, current.mapping);
+      if (rebuilt === null) {
+        this.setComparisonDiagnostics([
+          createDiagnostic(
+            DIAGNOSTIC_CODES.INCOMPATIBLE_COMPARISON,
+            `comparisons/${comparisonId}/mapping`,
+            {
+              message: "The selected inputs do not share compatible dimension and measure fields.",
+              relatedIds: [comparisonId],
+            },
+          ),
+        ]);
+        return;
+      }
+      const rawUnitAlternative =
+        current.displayMode === "side-by-side" && current.deltaMode === "none";
+      if (!rebuilt.unitsCompatible && !rawUnitAlternative) {
+        this.setComparisonDiagnostics([
+          createDiagnostic(
+            DIAGNOSTIC_CODES.INCOMPATIBLE_COMPARISON,
+            `comparisons/${comparisonId}/unitPolicy`,
+            {
+              message: "The selected inputs use incompatible measure units.",
+              relatedIds: [comparisonId],
+              hint: "Choose side-by-side display with deltas disabled, or declare a documented explicit conversion.",
+            },
+          ),
+        ]);
+        return;
+      }
+      this.updateComparisonDefinition(comparisonId, () => ({
+        ...current,
+        base,
+        reference,
+        mapping: rebuilt.mapping,
+        alignment: { ...current.alignment, keys: rebuilt.alignmentKeys },
+        unitPolicy: { mode: "identical" },
+      }));
+      return;
+    }
+    if (control === "alignment") {
+      const fieldId = target.getAttribute("data-comparison-field");
+      if (fieldId === null) {
+        return;
+      }
+      const keys =
+        target.checked === true
+          ? [...current.alignment.keys, fieldId].filter(
+              (entry, index, list) => list.indexOf(entry) === index,
+            )
+          : current.alignment.keys.filter((entry) => entry !== fieldId);
+      if (keys.length === 0) {
+        return;
+      }
+      this.updateComparisonDefinition(comparisonId, (comparison) => ({
+        ...comparison,
+        alignment: { ...comparison.alignment, keys },
+      }));
+      return;
+    }
+    if (control === "mapping") {
+      const index = Number(target.getAttribute("data-comparison-index"));
+      if (!Number.isInteger(index) || index < 0) {
+        return;
+      }
+      const mapping = current.mapping.map((entry, entryIndex) =>
+        entryIndex === index
+          ? {
+              ...entry,
+              reference: {
+                datasetId: current.reference.datasetId,
+                fieldId: value,
+              },
+            }
+          : entry,
+      );
+      this.updateComparisonDefinition(comparisonId, (comparison) => ({
+        ...comparison,
+        mapping,
+      }));
+    }
+  }
+
+  private setComparisonDiagnostics(diagnostics: readonly Diagnostic[]): void {
+    this.actionDiagnostics = Object.freeze([...diagnostics]);
+    this.announceDiagnostics(diagnostics);
+    this.renderNow();
+  }
+
+  private updateComparisonDefinition(
+    comparisonId: string,
+    mutate: (comparison: ComparisonDefinition) => ComparisonDefinition,
+  ): void {
+    const snapshot = this.safeSnapshot();
+    if (snapshot === null) {
+      return;
+    }
+    const document = (snapshot.draft?.document ??
+      snapshot.committedDocument) as unknown as BoardDocumentV1;
+    const current = document.comparisons?.find((comparison) => comparison.id === comparisonId);
+    if (current === undefined) {
+      return;
+    }
+    const next = {
+      ...document,
+      comparisons: (document.comparisons ?? []).map((comparison) =>
+        comparison.id === comparisonId ? mutate(comparison) : comparison,
+      ),
+    } as BoardDocumentV1;
+    const diagnostics = this.comparisonPlanDiagnostics(next, comparisonId);
+    if (diagnostics.length > 0) {
+      this.setComparisonDiagnostics(diagnostics);
+      return;
+    }
+    this.updateFilterDocument(() => next);
+  }
+
+  private comparisonPlanDiagnostics(
+    document: BoardDocumentV1,
+    comparisonId?: string,
+  ): readonly Diagnostic[] {
+    const snapshot = this.safeSnapshot();
+    if (snapshot === null) {
+      return Object.freeze([]);
+    }
+    const catalog = this.spaceValue.getValidationCatalog();
+    const diagnostics: Diagnostic[] = [];
+    for (const block of document.blocks) {
+      const configured = block.config.comparisonId;
+      if (typeof configured !== "string") {
+        continue;
+      }
+      if (comparisonId !== undefined && configured !== comparisonId) {
+        continue;
+      }
+      const derived = deriveComparisonQuery(document, block, {
+        filterState: snapshot.filterState,
+        ...(catalog === undefined ? {} : { catalog }),
+        getDatasetDescriptor: (datasetId) => this.spaceValue.getDatasetDescriptor(datasetId),
+      });
+      if (!derived.ok) {
+        diagnostics.push(...derived.diagnostics.filter((entry) => entry.severity === "error"));
+      }
+    }
+    return Object.freeze(diagnostics);
+  }
+
+  private applyComparisonWindow(
+    comparisonId: string,
+    side: "primary" | "reference",
+    clear = false,
+  ): void {
+    const snapshot = this.safeSnapshot();
+    if (snapshot === null) {
+      return;
+    }
+    const document = (snapshot.draft?.document ??
+      snapshot.committedDocument) as unknown as BoardDocumentV1;
+    const comparison = document.comparisons?.find((entry) => entry.id === comparisonId);
+    if (comparison === undefined) {
+      return;
+    }
+    const element = [...descendantsByClass(this.inspectorBody, "bl-comparison-window")].find(
+      (entry) =>
+        entry.getAttribute("data-comparison-id") === comparisonId &&
+        entry.getAttribute("data-comparison-side") === side,
+    );
+    if (element === undefined) {
+      return;
+    }
+    const withoutWindow = (current: ComparisonDefinition): ComparisonDefinition => {
+      const { [side]: _removed, ...remaining } = current.windows ?? {};
+      void _removed;
+      if (Object.keys(remaining).length === 0) {
+        const { windows: _discarded, ...rest } = current;
+        void _discarded;
+        return rest;
+      }
+      return { ...current, windows: remaining };
+    };
+    if (clear) {
+      this.updateComparisonDefinition(comparisonId, withoutWindow);
+      return;
+    }
+    const read = (key: string): string => {
+      const input = element.querySelector(`[data-comparison-window-input="${key}"]`);
+      if (input === null) {
+        return "";
+      }
+      return typeof (input as HTMLInputElement).value === "string"
+        ? (input as HTMLInputElement).value.trim()
+        : "";
+    };
+    const timezone = read("timezone");
+    const start = read("start");
+    const end = read("end");
+    const boundsValue = read("bounds") || "inclusive";
+    if (timezone === "" && start === "" && end === "") {
+      this.updateComparisonDefinition(comparisonId, withoutWindow);
+      return;
+    }
+    if (timezone === "" || start === "" || end === "") {
+      this.setComparisonDiagnostics([
+        createDiagnostic(
+          DIAGNOSTIC_CODES.INVALID_PROPERTY_TYPE,
+          `comparisons/${comparisonId}/windows/${side}`,
+          { message: "A comparison window requires a timezone, start and end." },
+        ),
+      ]);
+      return;
+    }
+    if (boundsValue !== "inclusive" && boundsValue !== "exclusive" && boundsValue !== "half-open") {
+      return;
+    }
+    const windowValue: TimeWindow = {
+      timezone,
+      start,
+      end,
+      bounds: boundsValue,
+    };
+    this.updateComparisonDefinition(comparisonId, (current) => ({
+      ...current,
+      windows: {
+        ...current.windows,
+        [side]: windowValue,
+      },
+    }));
+  }
+
+  private addComparisonDefinition(): void {
+    const snapshot = this.safeSnapshot();
+    if (snapshot === null) {
+      return;
+    }
+    const document = (snapshot.draft?.document ??
+      snapshot.committedDocument) as unknown as BoardDocumentV1;
+    const targetBlock = document.blocks.find(
+      (block) =>
+        (block.type === "chart" || block.type === "metric" || block.type === "table") &&
+        typeof block.config.comparisonId !== "string" &&
+        (block.bindings ?? []).length > 0,
+    );
+    if (targetBlock === undefined) {
+      this.setComparisonDiagnostics([
+        createDiagnostic(
+          DIAGNOSTIC_CODES.INCOMPATIBLE_COMPARISON,
+          "blocks/pending/config/comparisonId",
+          { message: "Add a data block with bindings before creating a comparison." },
+        ),
+      ]);
+      return;
+    }
+    const firstBinding = (targetBlock.bindings ?? [])[0];
+    if (firstBinding === undefined) {
+      return;
+    }
+    const base: ComparisonInput = {
+      datasetId: firstBinding.field.datasetId,
+      ...(firstBinding.sliceId === undefined ? {} : { sliceId: firstBinding.sliceId }),
+    };
+    const chartSelection =
+      targetBlock.type === "chart" ? selectChartBindings(targetBlock.bindings ?? [], null) : null;
+    const preferred =
+      targetBlock.type === "chart"
+        ? [chartSelection?.x, chartSelection?.series]
+            .filter(
+              (binding): binding is BindingDefinition => binding !== null && binding !== undefined,
+            )
+            .map((binding) => binding.field.fieldId)
+        : targetBlock.type === "table"
+          ? (targetBlock.bindings ?? [])
+              .filter((binding) => binding.role !== "measure" && binding.axis !== "y")
+              .filter((binding) => binding.field.datasetId === base.datasetId)
+              .map((binding) => binding.field.fieldId)
+          : [];
+    const candidates = this.comparisonInputs(document)
+      .filter(
+        (entry) => entry.input.datasetId !== base.datasetId || entry.input.sliceId !== base.sliceId,
+      )
+      .map((entry) => ({
+        entry,
+        mapping: this.comparisonMapping(document, base, entry.input, preferred),
+      }))
+      .filter(
+        (entry): entry is typeof entry & { mapping: NonNullable<typeof entry.mapping> } =>
+          entry.mapping !== null,
+      )
+      .sort((left, right) => {
+        if (left.mapping.unitsCompatible !== right.mapping.unitsCompatible) {
+          return left.mapping.unitsCompatible ? -1 : 1;
+        }
+        return right.mapping.mapping.length - left.mapping.mapping.length;
+      });
+    const chosen = candidates[0];
+    if (chosen === undefined) {
+      this.setComparisonDiagnostics([
+        createDiagnostic(DIAGNOSTIC_CODES.INCOMPATIBLE_COMPARISON, "comparisons/pending/mapping", {
+          message:
+            "No other dataset or slice has compatible dimension and measure fields for an explicit mapping.",
+        }),
+      ]);
+      return;
+    }
+    const existing = new Set([...(document.comparisons ?? []).map((comparison) => comparison.id)]);
+    let id = `comparison-${++comparisonSequence}`;
+    while (existing.has(id)) {
+      id = `comparison-${++comparisonSequence}`;
+    }
+    const comparison: ComparisonDefinition = {
+      id,
+      label: chosen.entry.label,
+      displayMode: chosen.mapping.unitsCompatible ? "overlay" : "side-by-side",
+      deltaMode: chosen.mapping.unitsCompatible ? "both" : "none",
+      base,
+      reference: chosen.entry.input,
+      mapping: chosen.mapping.mapping,
+      alignment: {
+        keys: chosen.mapping.alignmentKeys,
+        collation: "unicode",
+        normalization: "none",
+      },
+      unitPolicy: { mode: "identical" },
+    };
+    const next = {
+      ...document,
+      comparisons: [...(document.comparisons ?? []), comparison],
+      blocks: document.blocks.map((block) =>
+        block.id === targetBlock.id
+          ? { ...block, config: { ...block.config, comparisonId: id } }
+          : block,
+      ),
+    } as BoardDocumentV1;
+    const diagnostics = this.comparisonPlanDiagnostics(next, id);
+    if (diagnostics.length > 0) {
+      this.setComparisonDiagnostics(diagnostics);
+      return;
+    }
+    this.updateFilterDocument(() => next);
+  }
+
+  private removeComparisonDefinition(comparisonId: string): void {
+    this.updateFilterDocument(
+      (document) =>
+        ({
+          ...document,
+          comparisons: (document.comparisons ?? []).filter(
+            (comparison) => comparison.id !== comparisonId,
+          ),
+          blocks: document.blocks.map((block) => {
+            const configured = block.config.comparisonId;
+            if (typeof configured === "string" && configured === comparisonId) {
+              const { comparisonId: _removed, ...config } = block.config;
+              void _removed;
+              return { ...block, config };
+            }
+            return block;
+          }),
+        }) as BoardDocumentV1,
+    );
   }
 
   private createFilterManager(document: BoardDocumentV1): HTMLElement | null {
@@ -2273,10 +3251,15 @@ export class ViewerHost implements BoardViewHandle {
       signature: null,
       queryError: null,
       queryPlan: null,
+      comparisonQueryIds: null,
+      comparisonSignature: null,
+      comparisonState: null,
+      comparisonError: null,
       lastBlockSignature: null,
       lastQueryState: null,
       lastQueryErrorSignature: null,
       lastPlanSignature: null,
+      lastComparisonSignature: null,
       lastContextSignature: null,
       lastMessages: null,
       lastLocale: null,
@@ -2296,8 +3279,11 @@ export class ViewerHost implements BoardViewHandle {
     }
     if (!QUERY_BLOCK_TYPES.has(String(block.type))) {
       this.removeBlockQuery(mounted);
+      this.removeComparisonQueries(mounted);
       mounted.queryError = null;
       mounted.queryPlan = null;
+      mounted.comparisonState = null;
+      mounted.comparisonError = null;
       const environment = this.createEnvironment(
         block,
         null,
@@ -2306,10 +3292,19 @@ export class ViewerHost implements BoardViewHandle {
         snapshot,
         formatters,
         document,
+        null,
       );
       this.updateSurface(mounted, environment);
       return;
     }
+    const comparisonId = block.config.comparisonId;
+    if (typeof comparisonId === "string" && comparisonId.trim() !== "") {
+      this.updateComparisonBlock(mounted, block, document, snapshot, formatters);
+      return;
+    }
+    this.removeComparisonQueries(mounted);
+    mounted.comparisonState = null;
+    mounted.comparisonError = null;
     const derived = deriveBlockQuery(document as unknown as BoardDocument, block, {
       filterState: snapshot.filterState,
       ...(this.spaceValue.getValidationCatalog() === undefined
@@ -2328,6 +3323,7 @@ export class ViewerHost implements BoardViewHandle {
         snapshot,
         formatters,
         document,
+        null,
       );
       this.updateSurface(mounted, environment);
       return;
@@ -2369,6 +3365,118 @@ export class ViewerHost implements BoardViewHandle {
       snapshot,
       formatters,
       document,
+      null,
+    );
+    this.updateSurface(mounted, environment);
+  }
+
+  private updateComparisonBlock(
+    mounted: MountedBlock,
+    block: BlockDefinition,
+    document: BoardDocumentV1,
+    snapshot: SpaceSnapshot,
+    formatters: FormatterProvider,
+  ): void {
+    if (mounted.queryId !== null) {
+      this.removeBlockQuery(mounted);
+    }
+    const catalog = this.spaceValue.getValidationCatalog();
+    const derived = deriveComparisonQuery(document, block, {
+      filterState: snapshot.filterState,
+      ...(catalog === undefined ? {} : { catalog }),
+      getDatasetDescriptor: (datasetId) => this.spaceValue.getDatasetDescriptor(datasetId),
+    });
+    if (!derived.ok) {
+      this.removeComparisonQueries(mounted);
+      mounted.comparisonSignature = null;
+      mounted.comparisonState = null;
+      mounted.comparisonError = derived.diagnostics;
+      const environment = this.createEnvironment(
+        block,
+        null,
+        derived.diagnostics,
+        null,
+        snapshot,
+        formatters,
+        document,
+        null,
+      );
+      this.updateSurface(mounted, environment);
+      return;
+    }
+    const plan = derived.value.plan;
+    const ids = comparisonQueryIds(this.viewValue.viewId, block.id);
+    if (mounted.comparisonQueryIds === null) {
+      mounted.comparisonQueryIds = ids;
+      mounted.comparisonSignature = null;
+    }
+    const signature = canonicalJson({
+      primary: plan.primary.request,
+      reference: plan.reference.request,
+    } as never);
+    let registrationError: readonly Diagnostic[] | null = null;
+    if (mounted.comparisonSignature !== signature) {
+      const primarySet = this.spaceValue.setQuery(ids.primary, plan.primary.request);
+      if (!this.ensureLive()) {
+        return;
+      }
+      const referenceSet = this.spaceValue.setQuery(ids.reference, plan.reference.request);
+      if (!this.ensureLive()) {
+        return;
+      }
+      const errors: Diagnostic[] = [];
+      if (!primarySet.ok) {
+        errors.push(...primarySet.diagnostics);
+      }
+      if (!referenceSet.ok) {
+        errors.push(...referenceSet.diagnostics);
+      }
+      if (errors.length > 0) {
+        if (!this.spaceValue.disposed) {
+          this.spaceValue.removeQuery(ids.primary);
+          this.spaceValue.removeQuery(ids.reference);
+        }
+        registrationError = Object.freeze(errors);
+        mounted.comparisonSignature = null;
+      } else {
+        mounted.comparisonSignature = signature;
+      }
+    }
+    const primaryState = this.spaceValue.disposed
+      ? null
+      : (this.spaceValue.getQueryState(ids.primary) ?? null);
+    const referenceState = this.spaceValue.disposed
+      ? null
+      : (this.spaceValue.getQueryState(ids.reference) ?? null);
+    let comparisonState: ComparisonViewState | null = null;
+    let comparisonError = registrationError;
+    if (registrationError === null && primaryState !== null && referenceState !== null) {
+      const computed = computeComparisonView(plan, primaryState, referenceState);
+      if (computed.ok) {
+        comparisonState = computed.value;
+      } else {
+        comparisonError = computed.diagnostics;
+      }
+    }
+    mounted.comparisonState = comparisonState;
+    mounted.comparisonError = comparisonError;
+    mounted.queryError = comparisonError;
+    const environmentQuery =
+      primaryState === null
+        ? null
+        : Object.freeze({
+            ...primaryState,
+            phase: comparisonState?.phase ?? ("loading" as const),
+          });
+    const environment = this.createEnvironment(
+      block,
+      environmentQuery,
+      comparisonError,
+      null,
+      snapshot,
+      formatters,
+      document,
+      comparisonState,
     );
     this.updateSurface(mounted, environment);
   }
@@ -2382,11 +3490,15 @@ export class ViewerHost implements BoardViewHandle {
       environment.queryPlan === null ? null : querySpecSignature(environment.queryPlan.spec);
     const errorSignature =
       environment.queryError === null ? null : canonicalJson(environment.queryError as never);
+    const comparisonSignature = environment.comparison?.signature ?? null;
+    const queryIdentityMatches =
+      environment.comparison != null || mounted.lastQueryState === environment.query;
     if (
       mounted.lastBlockSignature === blockSignature &&
-      mounted.lastQueryState === environment.query &&
+      queryIdentityMatches &&
       mounted.lastQueryErrorSignature === errorSignature &&
       mounted.lastPlanSignature === planSignature &&
+      mounted.lastComparisonSignature === comparisonSignature &&
       mounted.lastContextSignature === environment.contextSignature &&
       mounted.lastMessages === environment.messages &&
       mounted.lastLocale === environment.locale &&
@@ -2408,6 +3520,7 @@ export class ViewerHost implements BoardViewHandle {
     mounted.lastQueryState = environment.query;
     mounted.lastQueryErrorSignature = errorSignature;
     mounted.lastPlanSignature = planSignature;
+    mounted.lastComparisonSignature = comparisonSignature;
     mounted.lastContextSignature = environment.contextSignature;
     mounted.lastMessages = environment.messages;
     mounted.lastLocale = environment.locale;
@@ -2564,6 +3677,7 @@ export class ViewerHost implements BoardViewHandle {
     snapshot: SpaceSnapshot,
     formatters: FormatterProvider,
     document: BoardDocumentV1,
+    comparison: ComparisonViewState | null = null,
   ): BlockSurfaceEnvironment {
     return {
       document: document as unknown as BoardDocument,
@@ -2572,6 +3686,7 @@ export class ViewerHost implements BoardViewHandle {
       query,
       queryError,
       queryPlan,
+      comparison,
       filterState: snapshot.filterState,
       contextSignature: blockContextSignature(block, document, snapshot.filterState),
       messages: this.messagesValue,
@@ -2605,8 +3720,21 @@ export class ViewerHost implements BoardViewHandle {
     mounted.signature = null;
   }
 
+  private removeComparisonQueries(mounted: MountedBlock): void {
+    if (mounted.comparisonQueryIds === null) {
+      return;
+    }
+    if (!this.spaceValue.disposed) {
+      this.spaceValue.removeQuery(mounted.comparisonQueryIds.primary);
+      this.spaceValue.removeQuery(mounted.comparisonQueryIds.reference);
+    }
+    mounted.comparisonQueryIds = null;
+    mounted.comparisonSignature = null;
+  }
+
   private removeMountedBlock(mounted: MountedBlock): void {
     this.removeBlockQuery(mounted);
+    this.removeComparisonQueries(mounted);
     if (mounted.surface.destroy !== undefined) {
       try {
         mounted.surface.destroy();
@@ -2698,6 +3826,7 @@ export class ViewerHost implements BoardViewHandle {
     this.root.removeEventListener("change", this.onChange);
     for (const mounted of this.blockElements.values()) {
       this.removeBlockQuery(mounted);
+      this.removeComparisonQueries(mounted);
       if (mounted.surface.destroy !== undefined) {
         try {
           mounted.surface.destroy();

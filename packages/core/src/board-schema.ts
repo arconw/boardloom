@@ -83,7 +83,12 @@ export const FILTER_OPERATORS = Object.freeze([
 export const FILTER_TARGET_KINDS = Object.freeze(["board", "group", "block"] as const);
 export const THEME_MODES = Object.freeze(["light", "dark", "system"] as const);
 export const COMPARISON_DISPLAY_MODES = Object.freeze(["overlay", "side-by-side"] as const);
-export const COMPARISON_DELTA_MODES = Object.freeze(["absolute", "percentage", "both"] as const);
+export const COMPARISON_DELTA_MODES = Object.freeze([
+  "absolute",
+  "percentage",
+  "both",
+  "none",
+] as const);
 export const COMPARISON_UNIT_POLICIES = Object.freeze(["identical", "explicit", "none"] as const);
 export const FORMAT_STYLES = Object.freeze(["decimal", "percent", "currency", "compact"] as const);
 export const DATE_STYLES = Object.freeze(["full", "long", "medium", "short"] as const);
@@ -199,6 +204,7 @@ export interface MetricConfig {
 }
 
 export interface TableConfig {
+  readonly comparisonId?: string;
   readonly pageSize?: number;
   readonly columns?: readonly string[];
   readonly sort?: {

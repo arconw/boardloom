@@ -33,6 +33,11 @@ import {
   rendererInput,
 } from "./renderer-adapter.js";
 import {
+  createComparisonChartView,
+  renderComparisonMetric,
+  renderComparisonTable,
+} from "./comparison-view.js";
+import {
   renderDataBanner,
   renderEmptyState,
   renderErrorState,
@@ -370,6 +375,25 @@ function createMetricSurface(environment: BlockSurfaceEnvironment): BlockSurface
       );
       renderDataBanner(bannerContainer, next.messages, next.query, next.formatters);
       renderFilterDiagnostics(filterContainer, next);
+      if (next.comparison !== null && next.comparison !== undefined) {
+        if (next.comparison.phase === "error") {
+          disposeActiveRenderer(active);
+          clearElement(content);
+          renderErrorState(content, next.messages, next.comparison.diagnostics);
+          element.setAttribute("data-state", "error");
+          return;
+        }
+        if (next.comparison.result === null) {
+          disposeActiveRenderer(active);
+          clearElement(content);
+          element.setAttribute("data-state", next.comparison.phase);
+          return;
+        }
+        disposeActiveRenderer(active);
+        renderComparisonMetric(next, content, next.comparison);
+        element.setAttribute("data-state", next.comparison.phase);
+        return;
+      }
       if (!showing) {
         disposeActiveRenderer(active);
         clearElement(content);
@@ -430,6 +454,25 @@ function createTableSurface(environment: BlockSurfaceEnvironment): BlockSurface 
       );
       renderDataBanner(bannerContainer, next.messages, next.query, next.formatters);
       renderFilterDiagnostics(filterContainer, next);
+      if (next.comparison !== null && next.comparison !== undefined) {
+        if (next.comparison.phase === "error") {
+          disposeActiveRenderer(active);
+          clearElement(content);
+          renderErrorState(content, next.messages, next.comparison.diagnostics);
+          element.setAttribute("data-state", "error");
+          return;
+        }
+        if (next.comparison.result === null) {
+          disposeActiveRenderer(active);
+          clearElement(content);
+          element.setAttribute("data-state", next.comparison.phase);
+          return;
+        }
+        disposeActiveRenderer(active);
+        renderComparisonTable(next, content, next.comparison);
+        element.setAttribute("data-state", next.comparison.phase);
+        return;
+      }
       if (!showing) {
         disposeActiveRenderer(active);
         clearElement(content);
@@ -495,6 +538,12 @@ function createChartSurface(environment: BlockSurfaceEnvironment): BlockSurface 
   const bannerContainer = createElement(doc, "div", "bl-surface-banner");
   const filterContainer = createElement(doc, "div", "bl-surface-filter-diagnostics");
   const plotContainer = createElement(doc, "div", "bl-chart-plot-container");
+  const chartHost = createElement(doc, "div", "bl-chart-host");
+  const comparisonHost = createElement(doc, "div", "bl-comparison-chart-host");
+  comparisonHost.setAttribute("hidden", "");
+  plotContainer.append(chartHost, comparisonHost);
+  const comparisonChart = createComparisonChartView(environment);
+  comparisonHost.append(comparisonChart.element);
   const details = createElement(doc, "details", "bl-chart-data");
   details.setAttribute("open", "");
   const summary = createElement(doc, "summary", "bl-chart-data__summary");
@@ -517,9 +566,52 @@ function createChartSurface(environment: BlockSurfaceEnvironment): BlockSurface 
       renderDataBanner(bannerContainer, next.messages, next.query, next.formatters);
       renderFilterDiagnostics(filterContainer, next);
       setKeyedText(summary, "chart.viewDataTable", next.messages.text("chart.viewDataTable"));
+      const comparison = next.comparison;
+      if (comparison !== null && comparison !== undefined) {
+        disposeActiveRenderer(active);
+        clearElement(chartHost);
+        chartHost.setAttribute("hidden", "");
+        comparisonHost.removeAttribute("hidden");
+        if (comparison.phase === "error") {
+          comparisonChart.destroy();
+          clearElement(comparisonChart.element);
+          renderErrorState(comparisonChart.element, next.messages, comparison.diagnostics);
+          details.setAttribute("hidden", "");
+          clearElement(tableContainer);
+          element.setAttribute("data-state", "error");
+          return;
+        }
+        if (comparison.result === null) {
+          comparisonChart.destroy();
+          clearElement(comparisonChart.element);
+          details.setAttribute("hidden", "");
+          clearElement(tableContainer);
+          element.setAttribute("data-state", comparison.phase);
+          return;
+        }
+        const diagnostics = comparisonChart.update(next);
+        if (diagnostics.length > 0) {
+          clearElement(comparisonChart.element);
+          renderErrorState(comparisonChart.element, next.messages, diagnostics);
+          details.setAttribute("hidden", "");
+          clearElement(tableContainer);
+          element.setAttribute("data-state", "error");
+          return;
+        }
+        details.removeAttribute("hidden");
+        renderComparisonTable(next, tableContainer, comparison);
+        element.setAttribute("data-state", comparison.phase);
+        return;
+      }
+      if (!comparisonHost.hasAttribute("hidden")) {
+        comparisonChart.destroy();
+        clearElement(comparisonChart.element);
+        comparisonHost.setAttribute("hidden", "");
+        chartHost.removeAttribute("hidden");
+      }
       if (!showing) {
         disposeActiveRenderer(active);
-        clearElement(plotContainer);
+        clearElement(chartHost);
         details.setAttribute("hidden", "");
         clearElement(tableContainer);
         element.setAttribute("data-state", next.query?.phase ?? "error");
@@ -528,8 +620,8 @@ function createChartSurface(environment: BlockSurfaceEnvironment): BlockSurface 
       const spec = buildChartSpecForBlock(next);
       if (!spec.ok) {
         disposeActiveRenderer(active);
-        clearElement(plotContainer);
-        renderErrorState(plotContainer, next.messages, spec.diagnostics);
+        clearElement(chartHost);
+        renderErrorState(chartHost, next.messages, spec.diagnostics);
         element.setAttribute("data-state", "error");
         renderTable(
           tableContainer,
@@ -544,20 +636,14 @@ function createChartSurface(environment: BlockSurfaceEnvironment): BlockSurface 
       });
       if (definition === undefined) {
         disposeActiveRenderer(active);
-        renderRendererUnavailable(plotContainer, next.messages);
+        renderRendererUnavailable(chartHost, next.messages);
         element.setAttribute("data-state", "fallback");
       } else {
-        const diagnostics = renderActiveRenderer(
-          plotContainer,
-          next,
-          definition,
-          spec.value,
-          active,
-        );
+        const diagnostics = renderActiveRenderer(chartHost, next, definition, spec.value, active);
         if (diagnostics.length > 0) {
           disposeActiveRenderer(active);
-          clearElement(plotContainer);
-          renderErrorState(plotContainer, next.messages, diagnostics);
+          clearElement(chartHost);
+          renderErrorState(chartHost, next.messages, diagnostics);
           element.setAttribute("data-state", "error");
         } else {
           element.setAttribute("data-state", next.query?.phase ?? "settled");
@@ -580,6 +666,7 @@ function createChartSurface(environment: BlockSurfaceEnvironment): BlockSurface 
     },
     destroy(): void {
       disposeActiveRenderer(active);
+      comparisonChart.destroy();
     },
   };
 }

@@ -80,8 +80,14 @@ export function renderDiagnosticList(
     heading.append(severity, code);
     const message = createElement(container.ownerDocument, "p", "bl-diagnostic__message");
     const messageKey = `diagnostic.${diagnostic.code}`;
+    let detail: HTMLElement | null = null;
     if (messages.has(messageKey)) {
-      setKeyedText(message, messageKey, messages.text(messageKey));
+      const localized = messages.text(messageKey);
+      setKeyedText(message, messageKey, localized);
+      if (diagnostic.message !== localized && diagnostic.message.trim() !== "") {
+        detail = createElement(container.ownerDocument, "p", "bl-diagnostic__detail");
+        setText(detail, diagnostic.message);
+      }
     } else {
       setText(message, diagnostic.message);
     }
@@ -91,7 +97,11 @@ export function renderDiagnosticList(
     setText(path, diagnostic.path);
     const pathRow = createElement(container.ownerDocument, "p", "bl-diagnostic__path-row");
     pathRow.append(pathLabel, path);
-    item.append(heading, message, pathRow);
+    item.append(heading, message);
+    if (detail !== null) {
+      item.append(detail);
+    }
+    item.append(pathRow);
     list.append(item);
   }
   container.append(list);

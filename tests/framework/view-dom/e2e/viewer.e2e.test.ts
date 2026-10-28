@@ -351,6 +351,26 @@ describe("T06 browser viewer", () => {
     expect(filterDocumentUpdate.chipText).toContain("Campus");
     expect(filterDocumentUpdate.chipText).toContain("east");
     expect(filterDocumentUpdate.scopeText).toContain("Campus: east");
+    const comparison = result.checks.comparison as {
+      readonly rows: number;
+      readonly zeroReason: string | null;
+      readonly zeroText: string | null;
+      readonly primaryOnly: string | null;
+      readonly summary: string | null;
+      readonly sideBySide: number;
+      readonly rejectionCodes: readonly string[];
+      readonly draftReference: string | null;
+      readonly percentageCells: number;
+    };
+    expect(comparison.rows).toBe(7);
+    expect(comparison.zeroReason).toBe("ZERO_REFERENCE");
+    expect(String(comparison.zeroText)).toContain("not available");
+    expect(comparison.primaryOnly).toBe("primary-only");
+    expect(String(comparison.summary)).toContain("matched");
+    expect(Number(comparison.sideBySide)).toBeGreaterThan(0);
+    expect(comparison.rejectionCodes).toContain("INCOMPATIBLE_COMPARISON");
+    expect(comparison.draftReference).toBe("cmp-previous");
+    expect(Number(comparison.percentageCells)).toBeGreaterThan(0);
     expect(result.checks.remountedBlocks).toBe(5);
     expect(result.checks.complete).toBe(true);
   }, 60_000);

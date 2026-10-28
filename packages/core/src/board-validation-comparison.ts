@@ -370,12 +370,17 @@ export function validateComparison(
     }
   }
 
+  const sideBySide = own(value, "displayMode") === "side-by-side";
+  const deltaDisabled = own(value, "deltaMode") === "none";
   for (const units of measureUnits) {
     if (
       units.primary === undefined ||
       units.reference === undefined ||
       units.primary === units.reference
     ) {
+      continue;
+    }
+    if (sideBySide && deltaDisabled && unitPolicyMode !== "explicit") {
       continue;
     }
     if (unitPolicyMode !== "explicit") {

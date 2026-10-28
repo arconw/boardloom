@@ -816,6 +816,262 @@ async function run() {
     };
     must(multiHandle.unmount());
 
+    const comparisonFields = [
+      {
+        id: "subject",
+        key: "subject",
+        label: "Subject",
+        type: "string",
+        role: "dimension",
+        nullable: false,
+      },
+      {
+        id: "score",
+        key: "score",
+        label: "Score",
+        type: "number",
+        role: "measure",
+        nullable: true,
+        unit: { unit: "points" },
+      },
+    ];
+    const comparisonDescriptor = (id, unit = "points") => ({
+      id,
+      label: id,
+      version: "2026.1",
+      timezone: "UTC",
+      temporalRepresentation: "iso8601-offset",
+      fields: comparisonFields.map((field) =>
+        field.role === "measure" ? { ...field, unit: { unit } } : { ...field },
+      ),
+      slices: [
+        {
+          id: `slice-${id}`,
+          datasetId: id,
+          fieldIds: ["subject", "score"],
+          supportedOperations: ["filter", "group", "aggregate"],
+        },
+      ],
+      capabilities: {
+        grouping: true,
+        aggregations: ["average", "sum", "count"],
+        filterOperators: ["equals"],
+        timeWindow: false,
+        timezoneConversion: false,
+        local: true,
+        pushdownFilters: true,
+        serverPaging: false,
+        realtime: false,
+        comparison: true,
+        maxResultSize: null,
+      },
+    });
+    const comparisonCurrentRows = [
+      { subject: "math", score: 5 },
+      { subject: "negative", score: 10 },
+      { subject: "zero-ref", score: 10 },
+      { subject: "both-zero", score: 0 },
+      { subject: "null-primary", score: null },
+      { subject: "primary-only", score: 7 },
+    ];
+    const comparisonReferenceRows = [
+      { subject: "math", score: 2 },
+      { subject: "negative", score: -5 },
+      { subject: "zero-ref", score: 0 },
+      { subject: "both-zero", score: 0 },
+      { subject: "null-primary", score: 5 },
+      { subject: "reference-only", score: 6 },
+    ];
+    const comparisonDocument = {
+      schemaVersion: 1,
+      id: "comparison-e2e-board",
+      title: "Comparison E2E",
+      createdAt: 1_700_000_000_000,
+      updatedAt: 1_700_000_000_000,
+      theme: { mode: "light" },
+      datasets: [
+        {
+          id: "cmp-current",
+          provider: "comparison-e2e",
+          label: "Current",
+          fields: [
+            { id: "subject", type: "string", role: "dimension" },
+            { id: "score", type: "number", role: "measure", unit: "points" },
+          ],
+        },
+        {
+          id: "cmp-previous",
+          provider: "comparison-e2e",
+          label: "Previous",
+          fields: [
+            { id: "subject", type: "string", role: "dimension" },
+            { id: "score", type: "number", role: "measure", unit: "points" },
+          ],
+        },
+        {
+          id: "cmp-percent",
+          provider: "comparison-e2e",
+          label: "Percent",
+          fields: [
+            { id: "subject", type: "string", role: "dimension" },
+            { id: "score", type: "number", role: "measure", unit: "percent" },
+          ],
+        },
+      ],
+      slices: [
+        {
+          id: "slice-cmp-current",
+          datasetId: "cmp-current",
+          fieldIds: ["subject", "score"],
+        },
+        {
+          id: "slice-cmp-previous",
+          datasetId: "cmp-previous",
+          fieldIds: ["subject", "score"],
+        },
+        {
+          id: "slice-cmp-percent",
+          datasetId: "cmp-percent",
+          fieldIds: ["subject", "score"],
+        },
+      ],
+      blocks: [
+        {
+          id: "comparison-table",
+          type: "table",
+          title: "Comparison by subject",
+          bindings: [
+            {
+              id: "comparison-subject",
+              role: "dimension",
+              field: { datasetId: "cmp-current", fieldId: "subject" },
+              sliceId: "slice-cmp-current",
+            },
+            {
+              id: "comparison-score",
+              role: "measure",
+              field: { datasetId: "cmp-current", fieldId: "score" },
+              sliceId: "slice-cmp-current",
+              aggregation: { type: "average" },
+            },
+          ],
+          config: { comparisonId: "comparison-e2e" },
+        },
+      ],
+      filters: [],
+      comparisons: [
+        {
+          id: "comparison-e2e",
+          label: "Previous term",
+          displayMode: "overlay",
+          deltaMode: "both",
+          base: { datasetId: "cmp-current", sliceId: "slice-cmp-current" },
+          reference: { datasetId: "cmp-previous", sliceId: "slice-cmp-previous" },
+          mapping: [
+            {
+              primary: { datasetId: "cmp-current", fieldId: "subject" },
+              reference: { datasetId: "cmp-previous", fieldId: "subject" },
+              role: "dimension",
+            },
+            {
+              primary: { datasetId: "cmp-current", fieldId: "score" },
+              reference: { datasetId: "cmp-previous", fieldId: "score" },
+              role: "measure",
+            },
+          ],
+          alignment: { keys: ["subject"], collation: "unicode", normalization: "none" },
+          unitPolicy: { mode: "identical" },
+        },
+      ],
+      layout: {
+        desktop: {
+          columns: 12,
+          placements: [{ blockId: "comparison-table", x: 0, y: 0, width: 12, height: 8 }],
+        },
+      },
+      extensions: {},
+    };
+    const comparisonDatasets = [
+      comparisonDescriptor("cmp-current"),
+      comparisonDescriptor("cmp-previous"),
+      comparisonDescriptor("cmp-percent", "percent"),
+    ];
+    const comparisonProvider = must(
+      createLocalDatasetProvider({
+        providerId: "comparison-e2e",
+        datasets: [
+          { descriptor: comparisonDatasets[0], rows: comparisonCurrentRows },
+          { descriptor: comparisonDatasets[1], rows: comparisonReferenceRows },
+          { descriptor: comparisonDatasets[2], rows: comparisonReferenceRows },
+        ],
+      }),
+    );
+    const comparisonRuntime = createRuntime({
+      datasetProvider: comparisonProvider,
+      validationCatalog: createBoardValidationCatalog(comparisonDatasets),
+    });
+    const comparisonSpace = must(
+      comparisonRuntime.createSpace({ document: comparisonDocument, locale: "en" }),
+    );
+    const comparisonTarget = document.getElementById("comparison");
+    const comparisonHandle = must(
+      mountBoardView(comparisonTarget, {
+        space: comparisonSpace,
+        theme: "light",
+        realtime: { status: "historical" },
+      }),
+    );
+    await wait(40);
+    const comparisonElement = comparisonHandle.element;
+    const comparisonZero = comparisonElement.querySelector(
+      'td[data-delta="percentage"][data-reason="ZERO_REFERENCE"]',
+    );
+    const comparisonMissing = comparisonElement.querySelector(
+      '[data-comparison-status="primary-only"]',
+    );
+    const comparisonSummary = comparisonElement.querySelector(".bl-comparison-summary");
+    const comparisonLease = must(
+      comparisonSpace.acquireEditorLease({ sessionId: "comparison-e2e" }),
+    );
+    must(comparisonHandle.setMode("editor", { lease: comparisonLease }));
+    await wait(20);
+    const comparisonDisplay = comparisonElement.querySelector(
+      '[data-comparison-control="displayMode"]',
+    );
+    if (comparisonDisplay) {
+      comparisonDisplay.value = "side-by-side";
+      comparisonDisplay.dispatchEvent(new Event("change", { bubbles: true }));
+      await wait(40);
+    }
+    const comparisonReference = comparisonElement.querySelector(
+      '[data-comparison-control="reference"]',
+    );
+    if (comparisonReference) {
+      comparisonReference.value = "cmp-percent|slice-cmp-percent";
+      comparisonReference.dispatchEvent(new Event("change", { bubbles: true }));
+      await wait(40);
+    }
+    const comparisonDraft = comparisonSpace.getSnapshot().draft?.document;
+    result.checks.comparison = {
+      rows: comparisonElement.querySelectorAll(".bl-comparison-table tbody tr").length,
+      zeroReason: comparisonZero?.getAttribute("data-reason") ?? null,
+      zeroText: comparisonZero?.textContent ?? null,
+      primaryOnly: comparisonMissing?.getAttribute("data-comparison-status") ?? null,
+      summary: comparisonSummary?.textContent ?? null,
+      sideBySide: comparisonElement.querySelectorAll('[data-comparison-mode="side-by-side"]')
+        .length,
+      rejectionCodes: Array.from(comparisonElement.querySelectorAll(".bl-diagnostic__code")).map(
+        (element) => element.textContent,
+      ),
+      draftReference: comparisonDraft?.comparisons?.[0]?.reference?.datasetId ?? null,
+      percentageCells: comparisonElement.querySelectorAll(
+        '.bl-comparison-table td[data-delta="percentage"]',
+      ).length,
+    };
+    must(comparisonSpace.cancelDraft(comparisonLease));
+    must(comparisonHandle.unmount({ draftDecision: "cancel" }));
+    comparisonRuntime.dispose();
+
     const changedDocument = JSON.parse(JSON.stringify(fixture.document));
     const changedFilter = changedDocument.filters.find((filter) => filter.id === "filter-school");
     if (changedFilter) {

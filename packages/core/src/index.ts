@@ -262,6 +262,33 @@ export type {
 } from "./migrations.js";
 
 export {
+  COMPARISON_DELTA_REASONS,
+  COMPARISON_ROW_STATUSES,
+  absoluteDelta,
+  alignComparisonResults,
+  buildComparisonPlan,
+  comparisonDeltaIsAvailable,
+  comparisonRowMeasure,
+  percentageDelta,
+} from "./comparison-model.js";
+export type {
+  BuildComparisonPlanOptions,
+  ComparisonAlignmentKey,
+  ComparisonConversionResolution,
+  ComparisonCounts,
+  ComparisonDelta,
+  ComparisonDeltaReason,
+  ComparisonMeasurePlan,
+  ComparisonMeasureRow,
+  ComparisonOperand,
+  ComparisonPlan,
+  ComparisonResult,
+  ComparisonRow,
+  ComparisonRows,
+  ComparisonRowStatus,
+} from "./comparison-model.js";
+
+export {
   DATA_CONTRACT_VERSION,
   DATA_FIELD_ROLES,
   QUERY_AGGREGATION_TYPES,
@@ -450,6 +477,7 @@ export type {
 } from "./query-async.js";
 
 export type {
+  ComparisonChangedEvent,
   CrossFilterChangedEvent,
   DocumentExportedEvent,
   DocumentInvalidEvent,

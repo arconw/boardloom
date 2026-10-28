@@ -689,7 +689,7 @@ describe("document:invalid events", () => {
     const changedTitles = events
       .filter((event) => event.type === "document:changed")
       .map((event) => event.document.title);
-    expect(changedTitles).toEqual(["Nested", "Outer load"]);
+    expect(changedTitles).toEqual(["Outer load", "Nested"]);
     const outerChanged = events.find(
       (event) => event.type === "document:changed" && event.document.title === "Outer load",
     );
@@ -753,8 +753,8 @@ describe("document:invalid events", () => {
     unwrap(space.updateDraft(lease, outer));
     const changes = events.filter((event) => event.type === "draft:changed");
     expect(changes).toHaveLength(2);
-    expect(changes[0]).toMatchObject({ revision: 2, canUndo: true, canRedo: false });
-    expect(changes[1]).toMatchObject({ revision: 1, canUndo: true, canRedo: false });
+    expect(changes[0]).toMatchObject({ revision: 1, canUndo: true, canRedo: false });
+    expect(changes[1]).toMatchObject({ revision: 2, canUndo: true, canRedo: false });
   });
 
   it("keeps undo notification data under a nested draft update", () => {
@@ -782,8 +782,8 @@ describe("document:invalid events", () => {
     unwrap(space.undoDraft(lease));
     const changes = events.filter((event) => event.type === "draft:changed");
     expect(changes).toHaveLength(2);
-    expect(changes[0]).toMatchObject({ revision: 3, canUndo: true, canRedo: false });
-    expect(changes[1]).toMatchObject({ revision: 2, canUndo: false, canRedo: true });
+    expect(changes[0]).toMatchObject({ revision: 2, canUndo: false, canRedo: true });
+    expect(changes[1]).toMatchObject({ revision: 3, canUndo: true, canRedo: false });
   });
 
   it("keeps redo notification data under a nested draft cancel", () => {

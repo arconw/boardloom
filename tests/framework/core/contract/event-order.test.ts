@@ -53,8 +53,8 @@ describe("event ordering under reentrant listeners", () => {
     expectMonotonic(runtimeEvents.filter((event) => event.spaceId === "nested"));
     expect(second.map((event) => event.type)).toEqual([
       "document:changed",
-      "document:changed",
       "space:loaded",
+      "document:changed",
       "space:loaded",
     ]);
   });

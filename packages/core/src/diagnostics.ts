@@ -51,6 +51,14 @@ export const DIAGNOSTIC_CODES = Object.freeze({
   FILTER_STATE_INVALID: "FILTER_STATE_INVALID",
   CROSS_FILTER_INCOMPATIBLE: "CROSS_FILTER_INCOMPATIBLE",
   INCOMPATIBLE_COMPARISON: "INCOMPATIBLE_COMPARISON",
+  COMPARISON_MAPPING_INCOMPLETE: "COMPARISON_MAPPING_INCOMPLETE",
+  COMPARISON_AGGREGATION_REQUIRED: "COMPARISON_AGGREGATION_REQUIRED",
+  COMPARISON_SLICE_MISMATCH: "COMPARISON_SLICE_MISMATCH",
+  COMPARISON_WINDOW_FIELD_MISSING: "COMPARISON_WINDOW_FIELD_MISSING",
+  COMPARISON_ALIGNMENT_INVALID: "COMPARISON_ALIGNMENT_INVALID",
+  COMPARISON_CONVERSION_UNSUPPORTED: "COMPARISON_CONVERSION_UNSUPPORTED",
+  DUPLICATE_ALIGNMENT_KEY: "DUPLICATE_ALIGNMENT_KEY",
+  NULL_ALIGNMENT_KEY: "NULL_ALIGNMENT_KEY",
   INVALID_THEME_TOKEN: "INVALID_THEME_TOKEN",
   UNKNOWN_PROPERTY: "UNKNOWN_PROPERTY",
   INVALID_EXTENSION_KEY: "INVALID_EXTENSION_KEY",
@@ -192,6 +200,22 @@ export const DIAGNOSTIC_MESSAGES: Readonly<Record<string, string>> = Object.free
   FILTER_STATE_INVALID: "The serialized filter runtime state is invalid.",
   CROSS_FILTER_INCOMPATIBLE: "The cross-filter selection is not compatible with this target block.",
   INCOMPATIBLE_COMPARISON: "The comparison mapping, units or alignment are incompatible.",
+  COMPARISON_MAPPING_INCOMPLETE:
+    "A comparison field used by the block has no explicit mapping on the other side.",
+  COMPARISON_AGGREGATION_REQUIRED:
+    "A comparison requires explicit grouping and aggregation before rows can be aligned.",
+  COMPARISON_SLICE_MISMATCH:
+    "A block binding and its comparison side declare different slices for the same dataset.",
+  COMPARISON_WINDOW_FIELD_MISSING:
+    "A comparison time window was declared but no mapped temporal field is available.",
+  COMPARISON_ALIGNMENT_INVALID:
+    "A comparison alignment key or normalization rule is invalid or unsupported.",
+  COMPARISON_CONVERSION_UNSUPPORTED:
+    "A unit conversion cannot be applied to the selected aggregation without changing its meaning.",
+  DUPLICATE_ALIGNMENT_KEY:
+    "Two rows share the same composite alignment key after grouping and aggregation.",
+  NULL_ALIGNMENT_KEY:
+    "A row has a null component in its composite alignment key and was excluded from matching.",
   INVALID_THEME_TOKEN: "A theme token name or value is invalid.",
   UNKNOWN_PROPERTY: "A property is not recognized by the schema version.",
   INVALID_EXTENSION_KEY: "Extension keys must be namespaced with at least one dot.",

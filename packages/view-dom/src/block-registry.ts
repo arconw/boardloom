@@ -18,6 +18,7 @@ import {
   type Result,
 } from "@boardloom/core";
 import type { DerivedBlockQuery } from "./block-query.js";
+import type { ComparisonViewState } from "./comparison-query.js";
 import type { ViewMessages } from "./messages.js";
 
 export interface BlockSurfaceEnvironment {
@@ -27,6 +28,7 @@ export interface BlockSurfaceEnvironment {
   readonly query: QueryState | null;
   readonly queryError: readonly Diagnostic[] | null;
   readonly queryPlan: DerivedBlockQuery | null;
+  readonly comparison?: ComparisonViewState | null;
   readonly filterState: FilterRuntimeState;
   readonly contextSignature: string;
   readonly messages: ViewMessages;

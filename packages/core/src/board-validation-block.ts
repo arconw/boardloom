@@ -73,7 +73,7 @@ const CHART_OPTION_KEYS = new Set([
 ]);
 const CHART_AXIS_KEYS = new Set(["label", "min", "max", "unit"]);
 const METRIC_CONFIG_KEYS = new Set(["comparisonId", "format"]);
-const TABLE_CONFIG_KEYS = new Set(["pageSize", "columns", "sort"]);
+const TABLE_CONFIG_KEYS = new Set(["comparisonId", "pageSize", "columns", "sort"]);
 const TABLE_SORT_KEYS = new Set(["bindingId", "direction"]);
 const TEXT_CONFIG_KEYS = new Set(["text"]);
 const FILTER_CONFIG_KEYS = new Set(["filterIds"]);
@@ -821,6 +821,16 @@ export function validateBlock(
   }
   if (type === "table") {
     checkUnknownKeys(config, TABLE_CONFIG_KEYS, `${path}/config`, add);
+    const comparisonId = own(config, "comparisonId");
+    if (comparisonId !== undefined) {
+      if (!nonEmptyString(comparisonId)) {
+        add(DIAGNOSTIC_CODES.MISSING_ID, `${path}/config/comparisonId`);
+      } else if (!context.comparisons.has(comparisonId)) {
+        add(DIAGNOSTIC_CODES.INVALID_REFERENCE, `${path}/config/comparisonId`, undefined, {
+          relatedIds: [comparisonId],
+        });
+      }
+    }
     const pageSize = own(config, "pageSize");
     if (
       pageSize !== undefined &&

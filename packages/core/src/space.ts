@@ -776,6 +776,7 @@ class SpaceImpl implements BoardSpace {
     }
     const warnings = validationWarnings(validation);
     const previousDiagnostics = this.combinedDiagnostics();
+    const previousDocument = this.committedDocument as unknown as BoardDocumentV1;
     const loadedDocument = snapshotDocument(document as BoardDocument);
     const loadedSchemaVersion = documentSchemaVersion(loadedDocument);
     this.committedDocument = loadedDocument;
@@ -785,13 +786,23 @@ class SpaceImpl implements BoardSpace {
     );
     this.committedRevision += 1;
     this.setDiagnosticsState(warnings);
-    this.publishDiagnosticsChange(previousDiagnostics);
-    this.emit({
+    this.enqueueDiagnosticsChange(previousDiagnostics);
+    this.enqueueComparisonChanges(
+      previousDocument,
+      loadedDocument as unknown as BoardDocumentV1,
+      "document",
+    );
+    this.enqueue({
       type: "document:changed",
       document: loadedDocument,
       source: options.source ?? "host",
     });
-    this.emitLoaded(warnings, loadedSchemaVersion);
+    this.enqueue({
+      type: "space:loaded",
+      schemaVersion: loadedSchemaVersion,
+      warnings,
+    });
+    this.flushEvents();
     return ok(this.getSnapshot());
   }
 
@@ -1162,14 +1173,26 @@ class SpaceImpl implements BoardSpace {
       }
     }
     draft.redo = [];
+    const previousDocument = draft.document;
     draft.document = next;
     draft.revision += 1;
     this.updatedAt = this.deps.clock.now();
     const changed = this.draftEventData(draft);
     const previousDiagnostics = this.combinedDiagnostics();
     this.setDiagnosticsState(warnings);
-    this.publishDiagnosticsChange(previousDiagnostics);
-    this.emitDraftChanged(changed);
+    this.enqueueDiagnosticsChange(previousDiagnostics);
+    this.enqueueComparisonChanges(
+      previousDocument as unknown as BoardDocumentV1,
+      next as unknown as BoardDocumentV1,
+      "draft",
+    );
+    this.enqueue({
+      type: "draft:changed",
+      revision: changed.revision,
+      canUndo: changed.canUndo,
+      canRedo: changed.canRedo,
+    });
+    this.flushEvents();
     return ok(this.createDraftSnapshot(draft));
   }
 
@@ -1220,6 +1243,8 @@ class SpaceImpl implements BoardSpace {
     if (!previous) {
       return this.failWith([createDiagnostic(DIAGNOSTIC_CODES.DRAFT_HISTORY_EMPTY, "draft")]);
     }
+    const previousDocument = draft.document;
+    const nextDocument = previous;
     draft.redo.push(draft.document);
     if (draft.redo.length > this.deps.historyLimit) {
       draft.redo.shift();
@@ -1228,8 +1253,21 @@ class SpaceImpl implements BoardSpace {
     draft.revision += 1;
     this.updatedAt = this.deps.clock.now();
     const changed = this.draftEventData(draft);
-    this.clearDiagnostics();
-    this.emitDraftChanged(changed);
+    const previousDiagnostics = this.combinedDiagnostics();
+    this.diagnostics = EMPTY_DIAGNOSTICS;
+    this.enqueueDiagnosticsChange(previousDiagnostics);
+    this.enqueueComparisonChanges(
+      previousDocument as unknown as BoardDocumentV1,
+      nextDocument as unknown as BoardDocumentV1,
+      "draft",
+    );
+    this.enqueue({
+      type: "draft:changed",
+      revision: changed.revision,
+      canUndo: changed.canUndo,
+      canRedo: changed.canRedo,
+    });
+    this.flushEvents();
     return ok(this.createDraftSnapshot(draft));
   }
 
@@ -1254,6 +1292,8 @@ class SpaceImpl implements BoardSpace {
     if (!next) {
       return this.failWith([createDiagnostic(DIAGNOSTIC_CODES.DRAFT_HISTORY_EMPTY, "draft")]);
     }
+    const previousDocument = draft.document;
+    const nextDocument = next;
     draft.undo.push(draft.document);
     if (draft.undo.length > this.deps.historyLimit) {
       draft.undo.shift();
@@ -1262,8 +1302,21 @@ class SpaceImpl implements BoardSpace {
     draft.revision += 1;
     this.updatedAt = this.deps.clock.now();
     const changed = this.draftEventData(draft);
-    this.clearDiagnostics();
-    this.emitDraftChanged(changed);
+    const previousDiagnostics = this.combinedDiagnostics();
+    this.diagnostics = EMPTY_DIAGNOSTICS;
+    this.enqueueDiagnosticsChange(previousDiagnostics);
+    this.enqueueComparisonChanges(
+      previousDocument as unknown as BoardDocumentV1,
+      nextDocument as unknown as BoardDocumentV1,
+      "draft",
+    );
+    this.enqueue({
+      type: "draft:changed",
+      revision: changed.revision,
+      canUndo: changed.canUndo,
+      canRedo: changed.canRedo,
+    });
+    this.flushEvents();
     return ok(this.createDraftSnapshot(draft));
   }
 
@@ -1454,23 +1507,6 @@ class SpaceImpl implements BoardSpace {
     });
   }
 
-  private emitDraftChanged(changed?: {
-    readonly revision: number;
-    readonly canUndo: boolean;
-    readonly canRedo: boolean;
-  }): void {
-    const data = changed ?? (this.draft ? this.draftEventData(this.draft) : null);
-    if (!data) {
-      return;
-    }
-    this.emit({
-      type: "draft:changed",
-      revision: data.revision,
-      canUndo: data.canUndo,
-      canRedo: data.canRedo,
-    });
-  }
-
   private emitLoaded(
     warnings: readonly Diagnostic[] = this.validationDiagnostics,
     schemaVersion: number | null = documentSchemaVersion(this.committedDocument),
@@ -1487,6 +1523,17 @@ class SpaceImpl implements BoardSpace {
       return;
     }
     this.events.emit(this.createEvent(input));
+  }
+
+  private enqueue(input: SpaceEventInput): void {
+    if (this.disposedFlag || this.disposing) {
+      return;
+    }
+    this.events.enqueue(this.createEvent(input));
+  }
+
+  private flushEvents(): void {
+    this.events.flush();
   }
 
   private emitTerminal(input: SpaceEventInput): void {
@@ -1516,13 +1563,27 @@ class SpaceImpl implements BoardSpace {
     return Object.freeze([...this.validationDiagnostics, ...this.diagnostics]);
   }
 
-  private publishDiagnosticsChange(previous: readonly Diagnostic[]): void {
+  private diagnosticsChangeInput(previous: readonly Diagnostic[]): SpaceEventInput | null {
     const next = this.combinedDiagnostics();
     if (diagnosticsEqual(previous, next)) {
-      return;
+      return null;
     }
     this.updatedAt = this.deps.clock.now();
-    this.emit({ type: "diagnostics:changed", diagnostics: next });
+    return { type: "diagnostics:changed", diagnostics: next };
+  }
+
+  private publishDiagnosticsChange(previous: readonly Diagnostic[]): void {
+    const input = this.diagnosticsChangeInput(previous);
+    if (input !== null) {
+      this.emit(input);
+    }
+  }
+
+  private enqueueDiagnosticsChange(previous: readonly Diagnostic[]): void {
+    const input = this.diagnosticsChangeInput(previous);
+    if (input !== null) {
+      this.enqueue(input);
+    }
   }
 
   private setDiagnostics(diagnostics: readonly Diagnostic[]): void {
@@ -1644,6 +1705,55 @@ class SpaceImpl implements BoardSpace {
     this.leaseReleaseInProgress = false;
     this.updatedAt = this.deps.clock.now();
     this.diagnostics = EMPTY_DIAGNOSTICS;
+  }
+
+  private comparisonChangeInputs(
+    previous: BoardDocumentV1,
+    next: BoardDocumentV1,
+    reason: "draft" | "document",
+  ): readonly SpaceEventInput[] {
+    const before = new Map(
+      (previous.comparisons ?? []).map((comparison) => [comparison.id, comparison] as const),
+    );
+    const after = new Map(
+      (next.comparisons ?? []).map((comparison) => [comparison.id, comparison] as const),
+    );
+    const inputs: SpaceEventInput[] = [];
+    for (const [comparisonId, comparison] of after) {
+      const existing = before.get(comparisonId);
+      if (existing !== undefined && jsonEqual(existing as never, comparison as never)) {
+        continue;
+      }
+      inputs.push({
+        type: "comparison:changed",
+        comparisonId,
+        label: comparison.label,
+        active: true,
+        reason,
+      });
+    }
+    for (const comparisonId of before.keys()) {
+      if (after.has(comparisonId)) {
+        continue;
+      }
+      inputs.push({
+        type: "comparison:changed",
+        comparisonId,
+        active: false,
+        reason,
+      });
+    }
+    return inputs;
+  }
+
+  private enqueueComparisonChanges(
+    previous: BoardDocumentV1,
+    next: BoardDocumentV1,
+    reason: "draft" | "document",
+  ): void {
+    for (const input of this.comparisonChangeInputs(previous, next, reason)) {
+      this.enqueue(input);
+    }
   }
 
   private emitDraftCommitted(committed: CommittedDraftState): void {

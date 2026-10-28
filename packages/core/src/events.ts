@@ -104,6 +104,14 @@ export interface FilterChangedEvent extends BaseSpaceEvent {
   readonly diagnostics: readonly Diagnostic[];
 }
 
+export interface ComparisonChangedEvent extends BaseSpaceEvent {
+  readonly type: "comparison:changed";
+  readonly comparisonId: string;
+  readonly label?: string;
+  readonly active: boolean;
+  readonly reason: "draft" | "document";
+}
+
 export interface CrossFilterChangedEvent extends BaseSpaceEvent {
   readonly type: "crossfilter:changed";
   readonly sourceBlockId: string;
@@ -243,6 +251,7 @@ export type SpaceEvent =
   | LocaleChangedEvent
   | DiagnosticsChangedEvent
   | FilterChangedEvent
+  | ComparisonChangedEvent
   | CrossFilterChangedEvent
   | FilterRejectedEvent
   | DocumentExportedEvent
@@ -322,10 +331,18 @@ export class EventBus<T> {
   }
 
   emit(value: T): void {
+    this.enqueue(value);
+    this.flush();
+  }
+
+  enqueue(value: T): void {
     if (this.shutdown) {
       return;
     }
     this.queue.push(Object.freeze({ value, terminal: false, final: false }));
+  }
+
+  flush(): void {
     this.drain();
   }
 

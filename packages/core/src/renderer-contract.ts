@@ -12,6 +12,7 @@ import {
   type TIME_STYLES,
   type ThemeMode,
 } from "./board-schema.js";
+import type { ComparisonResult } from "./comparison-model.js";
 import type {
   QueryCounts,
   QueryPhase,
@@ -157,6 +158,7 @@ export interface RendererInput<HostElement = unknown> {
   readonly host: HostElement;
   readonly spec: RendererSpec;
   readonly data: RendererData;
+  readonly comparison?: ComparisonResult | null;
   readonly theme: RendererTheme;
   readonly locale: BoardloomLocale;
   readonly timezone: string;

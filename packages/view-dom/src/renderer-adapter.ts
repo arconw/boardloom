@@ -555,10 +555,20 @@ export function rendererInput(
   host: HTMLElement,
   spec: RendererSpec,
 ): RendererInput<HTMLElement> {
+  return rendererInputWithData(environment, host, spec, rendererData(environment));
+}
+
+export function rendererInputWithData(
+  environment: BlockSurfaceEnvironment,
+  host: HTMLElement,
+  spec: RendererSpec,
+  data: RendererData,
+): RendererInput<HTMLElement> {
   return Object.freeze({
     host,
     spec,
-    data: rendererData(environment),
+    data,
+    comparison: environment.comparison?.result ?? null,
     theme: environment.theme,
     locale: environment.locale,
     timezone: environment.timezone,

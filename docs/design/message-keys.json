@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "status": "T05 proposed catalog for the first UI implementation; T06 publishes the keys in the core English dictionary, T07 adds renderer and accessibility keys, T08 adds binding, aggregation and configuration-lock keys, and T17 completes all built-in locales",
+  "status": "T05 proposed catalog for the first UI implementation; T06 publishes the keys in the core English dictionary, T07 adds renderer and accessibility keys, T08 adds binding, aggregation and configuration-lock keys, T10 adds comparison builder and delta-reason keys, and T17 completes all built-in locales",
   "rules": {
     "namespace": "lowercase namespace followed by dot-separated segments; diagnostic codes may use uppercase segments after diagnostic.",
     "fallback": "English is the deterministic fallback; host overrides win over the selected built-in locale and English.",
@@ -2345,6 +2345,183 @@
       "key": "viewer.filters.reason.timezoneConversion",
       "english": "the target does not declare timezone conversion",
       "context": "Localized reason for a cross-filter target that cannot convert the temporal window timezone",
+      "source": "core"
+    },
+    {
+      "key": "chart.delta.reason.nonFinite",
+      "english": "A value is not a finite number",
+      "context": "Reason for an unavailable delta when an operand is not finite",
+      "source": "core"
+    },
+    {
+      "key": "chart.delta.reason.unitMismatch",
+      "english": "The primary and reference units differ",
+      "context": "Reason for an unavailable delta when units are incompatible",
+      "source": "core"
+    },
+    {
+      "key": "chart.comparison.summary",
+      "english": "{matched} matched, {primaryOnly} primary-only, {referenceOnly} reference-only, {excluded} excluded null keys",
+      "context": "Comparison alignment summary",
+      "source": "core",
+      "placeholders": ["excluded", "matched", "primaryOnly", "referenceOnly"]
+    },
+    {
+      "key": "chart.comparison.nonNullMeasure",
+      "english": "{count} non-null matched values",
+      "context": "Count of matched finite measure values",
+      "source": "core",
+      "placeholders": ["count"]
+    },
+    {
+      "key": "chart.comparison.primaryOnly",
+      "english": "Primary only",
+      "context": "Row status for an outer primary-only comparison row",
+      "source": "core"
+    },
+    {
+      "key": "chart.comparison.referenceOnly",
+      "english": "Reference only",
+      "context": "Row status for an outer reference-only comparison row",
+      "source": "core"
+    },
+    {
+      "key": "chart.comparison.converted",
+      "english": "Reference converted from {from} to {to} by {provider}",
+      "context": "Visible declared unit conversion note",
+      "source": "core",
+      "placeholders": ["from", "provider", "to"]
+    },
+    {
+      "key": "editor.comparison.base",
+      "english": "Primary input",
+      "context": "Comparison primary input selector",
+      "source": "core"
+    },
+    {
+      "key": "editor.comparison.referenceInput",
+      "english": "Reference input",
+      "context": "Comparison reference input selector",
+      "source": "core"
+    },
+    {
+      "key": "editor.comparison.alignmentHint",
+      "english": "Alignment keys must resolve to mapped dimension fields.",
+      "context": "Comparison alignment helper",
+      "source": "core"
+    },
+    {
+      "key": "editor.comparison.incompatible",
+      "english": "These slices cannot be compared with the current mapping.",
+      "context": "Rejected comparison selection helper",
+      "source": "core"
+    },
+    {
+      "key": "editor.comparison.none",
+      "english": "No comparison attached",
+      "context": "Block comparison attachment empty option",
+      "source": "core"
+    },
+    {
+      "key": "editor.comparison.attach",
+      "english": "Attach to block",
+      "context": "Comparison block attachment label",
+      "source": "core"
+    },
+    {
+      "key": "editor.comparison.noFields",
+      "english": "Add datasets with compatible fields before creating comparisons",
+      "context": "Comparison builder empty state",
+      "source": "core"
+    },
+    {
+      "key": "editor.comparison.noComparisons",
+      "english": "No comparisons defined",
+      "context": "Comparison builder empty state",
+      "source": "core"
+    },
+    {
+      "key": "editor.comparison.display.overlay",
+      "english": "Overlay",
+      "context": "Overlay comparison display option",
+      "source": "core"
+    },
+    {
+      "key": "editor.comparison.display.sideBySide",
+      "english": "Side by side",
+      "context": "Side-by-side comparison display option",
+      "source": "core"
+    },
+    {
+      "key": "editor.comparison.delta.absolute",
+      "english": "Absolute",
+      "context": "Absolute delta option",
+      "source": "core"
+    },
+    {
+      "key": "editor.comparison.delta.percentage",
+      "english": "Percentage",
+      "context": "Percentage delta option",
+      "source": "core"
+    },
+    {
+      "key": "editor.comparison.delta.both",
+      "english": "Absolute and percentage",
+      "context": "Combined delta option",
+      "source": "core"
+    },
+    {
+      "key": "editor.comparison.windowPrimary",
+      "english": "Primary window",
+      "context": "Primary comparison window editor",
+      "source": "core"
+    },
+    {
+      "key": "editor.comparison.windowReference",
+      "english": "Reference window",
+      "context": "Reference comparison window editor",
+      "source": "core"
+    },
+    {
+      "key": "editor.comparison.windowTimezone",
+      "english": "Window timezone",
+      "context": "Comparison window timezone label",
+      "source": "core"
+    },
+    {
+      "key": "editor.comparison.windowStart",
+      "english": "Window start",
+      "context": "Comparison window start label",
+      "source": "core"
+    },
+    {
+      "key": "editor.comparison.windowEnd",
+      "english": "Window end",
+      "context": "Comparison window end label",
+      "source": "core"
+    },
+    {
+      "key": "editor.comparison.windowBounds",
+      "english": "Window bounds",
+      "context": "Comparison window bounds label",
+      "source": "core"
+    },
+    {
+      "key": "editor.comparison.windowApply",
+      "english": "Apply window",
+      "context": "Apply comparison window action",
+      "source": "core"
+    },
+    {
+      "key": "editor.comparison.windowClear",
+      "english": "Clear window",
+      "context": "Clear comparison window action",
+      "source": "core"
+    },
+    {
+      "key": "editor.comparison.delta.none",
+      "english": "No delta",
+      "context": "Delta-disabled comparison option",
       "source": "core"
     }
   ]
