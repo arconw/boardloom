@@ -1,4 +1,5 @@
 import type { BoardValidationCatalog } from "./board-validation.js";
+import type { QuerySpec, QueryState } from "./data-contract.js";
 import type { Clock } from "./clock.js";
 import {
   documentSchemaVersion,
@@ -21,6 +22,7 @@ import type { SpaceEvent, SpaceEventInput, Unsubscribe } from "./events.js";
 import { EventBus } from "./events.js";
 import type { BoardSerialization, BoardSerializationOptions } from "./document-io.js";
 import { serializeBoardDocument } from "./document-io.js";
+import { createQueryController, type QueryController } from "./query-controller.js";
 import type { FormatterProvider } from "./formatting.js";
 import type { IdFactory } from "./ids.js";
 import { deepFreeze, jsonEqual } from "./json.js";
@@ -101,6 +103,13 @@ export interface BoardSpace {
   setLocale(config: LocaleConfigInput): Result<SpaceSnapshot>;
   getFormatters(): FormatterProvider;
   getMessageProvider(): MessageProvider;
+  setQuery(queryId: string, spec: QuerySpec): Result<QueryState>;
+  refreshQuery(queryId: string): Result<QueryState>;
+  invalidateQuery(queryId: string, reason?: string): Result<QueryState>;
+  cancelQuery(queryId: string, reason?: string): Result<QueryState>;
+  removeQuery(queryId: string): Result<void>;
+  getQueryState(queryId: string): QueryState | undefined;
+  getQueryStates(): readonly QueryState[];
   pause(): Result<SpaceSnapshot>;
   resume(): Result<SpaceSnapshot>;
   createView(options?: CreateViewOptions): Result<BoardView>;
@@ -142,6 +151,7 @@ class SpaceImpl implements BoardSpace {
   readonly lifetimeId: string;
   private readonly deps: SpaceDependencies;
   private readonly events: EventBus<SpaceEvent>;
+  private readonly queryController: QueryController;
   private readonly viewHost: ViewHost;
   private readonly views = new Map<string, ViewImpl>();
   private readonly tasks = new Map<string, unknown>();
@@ -183,6 +193,16 @@ class SpaceImpl implements BoardSpace {
     });
     this.events.subscribeInternal((event) => {
       deps.forwardEvent(event);
+    });
+    this.queryController = createQueryController({
+      ...(options.datasetProvider === undefined ? {} : { provider: options.datasetProvider }),
+      idFactory: deps.idFactory,
+      clock: deps.clock,
+      emit: (event) => {
+        this.updatedAt = this.deps.clock.now();
+        this.emit(event);
+      },
+      isActive: () => !this.disposedFlag && !this.disposing,
     });
     this.viewHost = {
       spaceId: this.id,
@@ -258,6 +278,7 @@ class SpaceImpl implements BoardSpace {
 
   getSnapshot(): SpaceSnapshot {
     const draft = this.draft ? this.createDraftSnapshot(this.draft) : null;
+    const queries = this.queryController.listQueryStates();
     return deepFreeze({
       spaceId: this.id,
       lifetimeId: this.lifetimeId,
@@ -269,6 +290,8 @@ class SpaceImpl implements BoardSpace {
       locale: this.localeConfig.locale,
       timezone: this.localeConfig.timezone,
       diagnostics: this.combinedDiagnostics(),
+      queries,
+      queryCount: queries.length,
       views: Object.freeze([...this.views.values()].map((view) => view.describe())),
       viewCount: this.views.size,
       listenerCount: this.events.listenerCount,
@@ -388,6 +411,59 @@ class SpaceImpl implements BoardSpace {
       fromTimezone: previous.timezone,
     });
     return ok(this.getSnapshot());
+  }
+
+  setQuery(queryId: string, spec: QuerySpec): Result<QueryState> {
+    const blocked = this.assertActive();
+    if (blocked) {
+      return blocked;
+    }
+    this.updatedAt = this.deps.clock.now();
+    return this.queryController.setQuery(queryId, spec);
+  }
+
+  refreshQuery(queryId: string): Result<QueryState> {
+    const blocked = this.assertActive();
+    if (blocked) {
+      return blocked;
+    }
+    this.updatedAt = this.deps.clock.now();
+    return this.queryController.refreshQuery(queryId);
+  }
+
+  invalidateQuery(queryId: string, reason?: string): Result<QueryState> {
+    const blocked = this.assertActive();
+    if (blocked) {
+      return blocked;
+    }
+    this.updatedAt = this.deps.clock.now();
+    return this.queryController.invalidateQuery(queryId, reason);
+  }
+
+  cancelQuery(queryId: string, reason?: string): Result<QueryState> {
+    const blocked = this.assertActive();
+    if (blocked) {
+      return blocked;
+    }
+    this.updatedAt = this.deps.clock.now();
+    return this.queryController.cancelQuery(queryId, reason);
+  }
+
+  removeQuery(queryId: string): Result<void> {
+    const blocked = this.assertActive();
+    if (blocked) {
+      return blocked;
+    }
+    this.updatedAt = this.deps.clock.now();
+    return this.queryController.removeQuery(queryId);
+  }
+
+  getQueryState(queryId: string): QueryState | undefined {
+    return this.queryController.getQueryState(queryId);
+  }
+
+  getQueryStates(): readonly QueryState[] {
+    return this.queryController.listQueryStates();
   }
 
   pause(): Result<SpaceSnapshot> {
@@ -814,6 +890,7 @@ class SpaceImpl implements BoardSpace {
       return ok(undefined);
     }
     this.disposing = true;
+    this.queryController.dispose();
     this.events.beginShutdown();
 
     for (const handle of this.tasks.values()) {

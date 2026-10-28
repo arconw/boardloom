@@ -58,6 +58,7 @@ export const AGGREGATION_TYPES = Object.freeze([
   "min",
   "max",
   "median",
+  "mode",
 ] as const);
 export const FILTER_OPERATORS = Object.freeze([
   "equals",

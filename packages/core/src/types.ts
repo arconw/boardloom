@@ -1,3 +1,4 @@
+import type { DatasetProvider, QueryState } from "./data-contract.js";
 import type { BoardDocument } from "./document.js";
 import type { Diagnostic } from "./diagnostics.js";
 import type { BoardloomLocale } from "./locale.js";
@@ -42,6 +43,8 @@ export interface SpaceSnapshot {
   readonly locale: BoardloomLocale;
   readonly timezone: string;
   readonly diagnostics: readonly Diagnostic[];
+  readonly queries: readonly QueryState[];
+  readonly queryCount: number;
   readonly views: readonly ViewSummary[];
   readonly viewCount: number;
   readonly listenerCount: number;
@@ -84,6 +87,7 @@ export interface CreateSpaceOptions {
   readonly document: unknown;
   readonly locale?: string;
   readonly timezone?: string;
+  readonly datasetProvider?: DatasetProvider;
 }
 
 export interface CreateViewOptions {

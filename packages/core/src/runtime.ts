@@ -11,6 +11,7 @@ import {
   type Diagnostic,
   type Result,
 } from "./diagnostics.js";
+import type { DatasetProvider } from "./data-contract.js";
 import type { BoardDocumentParseOptions } from "./document-io.js";
 import { parseBoardDocument } from "./document-io.js";
 import type { BoardDocument } from "./document.js";
@@ -48,6 +49,7 @@ export interface RuntimeOptions {
   readonly historyLimit?: number;
   readonly locale?: string;
   readonly timezone?: string;
+  readonly datasetProvider?: DatasetProvider;
 }
 
 export interface ImportDocumentOptions extends Omit<
@@ -57,6 +59,7 @@ export interface ImportDocumentOptions extends Omit<
   readonly sourceSpaceId?: string;
   readonly locale?: string;
   readonly timezone?: string;
+  readonly datasetProvider?: DatasetProvider;
 }
 
 export interface ImportedDocument {
@@ -119,8 +122,10 @@ class RuntimeImpl implements BoardloomRuntime {
     Partial<Record<BoardloomLocale, MessageDictionary>>
   >;
   private readonly historyLimit: number;
+  private readonly datasetProvider?: DatasetProvider;
   private readonly localeInput: { readonly locale?: string; readonly timezone?: string };
   private readonly spaces = new Map<string, SpaceImpl>();
+  private readonly spaceProviders = new Map<string, DatasetProvider>();
   private readonly pendingTerminals = new Map<string, { spaceId: string; remaining: number }>();
   private readonly events: EventBus<SpaceEvent>;
   private disposedFlag = false;
@@ -145,6 +150,7 @@ class RuntimeImpl implements BoardloomRuntime {
     const requestedLimit = options.historyLimit ?? 100;
     this.historyLimit =
       Number.isFinite(requestedLimit) && requestedLimit >= 0 ? Math.floor(requestedLimit) : 100;
+    this.datasetProvider = options.datasetProvider;
     this.localeInput = Object.freeze({
       locale: options.locale,
       timezone: options.timezone,
@@ -227,6 +233,13 @@ class RuntimeImpl implements BoardloomRuntime {
       }
     }
 
+    const sourceProvider =
+      options.sourceSpaceId === undefined
+        ? undefined
+        : this.spaceProviders.get(options.sourceSpaceId);
+    const effectiveImportProvider =
+      options.datasetProvider ?? sourceProvider ?? this.datasetProvider;
+
     const effectiveCatalog = options.catalog ?? this.validationCatalog;
     const prepared = parseBoardDocument(input, {
       ...(options.maxBytes === undefined ? {} : { maxBytes: options.maxBytes }),
@@ -276,6 +289,9 @@ class RuntimeImpl implements BoardloomRuntime {
         document: prepared.value.document,
         ...(options.locale === undefined ? {} : { locale: options.locale }),
         ...(options.timezone === undefined ? {} : { timezone: options.timezone }),
+        ...(effectiveImportProvider === undefined
+          ? {}
+          : { datasetProvider: effectiveImportProvider }),
       },
       importMetadata,
       prepared.value.warnings,
@@ -344,6 +360,7 @@ class RuntimeImpl implements BoardloomRuntime {
       ]);
     }
 
+    const effectiveProvider = options.datasetProvider ?? this.datasetProvider;
     const dependencies: SpaceDependencies = {
       idFactory: this.idFactory,
       clock: this.clock,
@@ -389,6 +406,7 @@ class RuntimeImpl implements BoardloomRuntime {
           ...options,
           id: spaceId,
           localeConfig: localeResult.value,
+          ...(effectiveProvider === undefined ? {} : { datasetProvider: effectiveProvider }),
           warnings,
         },
         dependencies,
@@ -405,6 +423,11 @@ class RuntimeImpl implements BoardloomRuntime {
     }
 
     this.spaces.set(spaceId, space);
+    if (effectiveProvider === undefined) {
+      this.spaceProviders.delete(spaceId);
+    } else {
+      this.spaceProviders.set(spaceId, effectiveProvider);
+    }
     space.start(importMetadata);
     return ok(space);
   }
@@ -442,6 +465,7 @@ class RuntimeImpl implements BoardloomRuntime {
       space.dispose();
     }
     this.spaces.clear();
+    this.spaceProviders.clear();
     this.pendingTerminals.clear();
     this.events.finishShutdownDeferred();
     this.disposing = false;
@@ -481,6 +505,7 @@ class RuntimeImpl implements BoardloomRuntime {
     const current = this.spaces.get(spaceId);
     if (current?.lifetimeId === lifetimeId) {
       this.spaces.delete(spaceId);
+      this.spaceProviders.delete(spaceId);
     }
   }
 }

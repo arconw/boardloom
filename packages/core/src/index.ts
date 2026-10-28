@@ -207,11 +207,95 @@ export type {
   MigrationContext,
 } from "./migrations.js";
 
+export {
+  DATA_CONTRACT_VERSION,
+  DATA_FIELD_ROLES,
+  QUERY_AGGREGATION_TYPES,
+  QUERY_OPERATIONS,
+  QUERY_PHASES,
+  TEMPORAL_REPRESENTATIONS,
+  describeDataContract,
+  emptyQueryCounts,
+  isTemporalField,
+  isTemporalValue,
+  validateDatasetDescriptor,
+  validateDatasetProviderContract,
+} from "./data-contract.js";
+export type {
+  DataFieldDescriptor,
+  DataFieldFormat,
+  DataFieldRole,
+  DatasetCapabilities,
+  DatasetDescriptor,
+  DatasetDescriptorValidation,
+  DatasetProvider,
+  DatasetProviderContext,
+  DatasetQueryResult,
+  DatasetSliceDescriptor,
+  DataUnitDescriptor,
+  DataValueRange,
+  QueryAbortSignal,
+  QueryAggregation,
+  QueryAggregationType,
+  QueryComparisonInput,
+  QueryCounts,
+  QueryFailure,
+  QueryFieldReference,
+  QueryFilter,
+  QueryGrouping,
+  QueryOperation,
+  QueryOrder,
+  QueryPhase,
+  QueryRequest,
+  QueryResultField,
+  QueryResultRow,
+  QuerySpec,
+  QueryState,
+  QuerySuccess,
+  QueryTimeWindow,
+  TemporalRepresentation,
+} from "./data-contract.js";
+
+export {
+  bucketTemporalValue,
+  compareTemporalValues,
+  temporalInstant,
+  withinTemporalWindow,
+  zonedDateStartInstant,
+} from "./temporal.js";
+
+export { createBoardValidationCatalog } from "./dataset-catalog.js";
+
+export { buildQueryPlan, deriveQueryResultFields, queryFilterKey } from "./query-planning.js";
+export type { BuildQueryPlanOptions, CanonicalQueryKey, QueryPlan } from "./query-planning.js";
+
+export { createQueryController } from "./query-controller.js";
+export type { QueryController, QueryControllerOptions } from "./query-controller.js";
+
+export { createLocalDatasetProvider } from "./query-local.js";
+export type { LocalDatasetProviderOptions, LocalDatasetSource } from "./query-local.js";
+
+export { createAsyncDatasetProvider } from "./query-async.js";
+export type {
+  AsyncDatasetProviderOptions,
+  AsyncDatasetQueryApplied,
+  AsyncDatasetQueryInput,
+  AsyncDatasetQueryOutput,
+} from "./query-async.js";
+
 export type {
   DocumentExportedEvent,
   DocumentInvalidEvent,
   DocumentMigratedEvent,
   ImportFailedEvent,
+  QueryCancelledEvent,
+  QueryEvent,
+  QueryEventInput,
+  QueryFailedEvent,
+  QueryInvalidatedEvent,
+  QuerySettledEvent,
+  QueryStartedEvent,
+  QueryStaleEvent,
   SpaceEvent,
   SpaceEventInput,
   SpaceEventListener,

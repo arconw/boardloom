@@ -1,4 +1,5 @@
 import type { BoardDocument } from "./document.js";
+import type { QueryPhase } from "./data-contract.js";
 import type { Diagnostic } from "./diagnostics.js";
 import type { BoardloomLocale } from "./locale.js";
 import type { BoardMigrationReport } from "./migrations.js";
@@ -112,6 +113,74 @@ export interface SpaceImportedEvent extends BaseSpaceEvent {
   readonly warnings: readonly Diagnostic[];
 }
 
+export interface QueryStartedEvent extends BaseSpaceEvent {
+  readonly type: "query:started";
+  readonly queryId: string;
+  readonly requestId: string;
+  readonly requestToken: number;
+  readonly queryKey: string;
+  readonly generation: number;
+  readonly datasetId: string;
+  readonly sliceId?: string;
+}
+
+export interface QuerySettledEvent extends BaseSpaceEvent {
+  readonly type: "query:settled";
+  readonly queryId: string;
+  readonly requestId: string;
+  readonly requestToken: number;
+  readonly queryKey: string;
+  readonly generation: number;
+  readonly datasetId: string;
+  readonly sliceId?: string;
+  readonly phase: Extract<QueryPhase, "settled" | "empty" | "partial">;
+  readonly rowCount: number;
+  readonly nullCount: number;
+  readonly complete: boolean;
+}
+
+export interface QueryFailedEvent extends BaseSpaceEvent {
+  readonly type: "query:failed";
+  readonly queryId: string;
+  readonly requestId: string;
+  readonly queryKey: string;
+  readonly generation: number;
+  readonly datasetId: string;
+  readonly sliceId?: string;
+  readonly diagnostic: Diagnostic;
+  readonly diagnostics: readonly Diagnostic[];
+}
+
+export interface QueryCancelledEvent extends BaseSpaceEvent {
+  readonly type: "query:cancelled";
+  readonly queryId: string;
+  readonly requestId?: string;
+  readonly requestToken?: number;
+  readonly queryKey: string;
+  readonly generation: number;
+  readonly reason: string;
+}
+
+export interface QueryStaleEvent extends BaseSpaceEvent {
+  readonly type: "query:stale";
+  readonly queryId: string;
+  readonly requestId: string;
+  readonly requestToken: number;
+  readonly queryKey: string;
+  readonly generation: number;
+  readonly reason: string;
+}
+
+export interface QueryInvalidatedEvent extends BaseSpaceEvent {
+  readonly type: "query:invalidated";
+  readonly queryId: string;
+  readonly previousQueryKey: string;
+  readonly newQueryKey: string;
+  readonly previousGeneration: number;
+  readonly newGeneration: number;
+  readonly reason: string;
+}
+
 export interface ImportFailedEvent extends BaseSpaceEvent {
   readonly type: "import:failed";
   readonly scope: "runtime";
@@ -119,6 +188,14 @@ export interface ImportFailedEvent extends BaseSpaceEvent {
   readonly sourceSpaceId?: string;
   readonly diagnostics: readonly Diagnostic[];
 }
+
+export type QueryEvent =
+  | QueryStartedEvent
+  | QuerySettledEvent
+  | QueryFailedEvent
+  | QueryCancelledEvent
+  | QueryStaleEvent
+  | QueryInvalidatedEvent;
 
 export type SpaceEvent =
   | SpaceCreatedEvent
@@ -137,7 +214,8 @@ export type SpaceEvent =
   | DocumentInvalidEvent
   | DocumentMigratedEvent
   | SpaceImportedEvent
-  | ImportFailedEvent;
+  | ImportFailedEvent
+  | QueryEvent;
 
 export type SpaceEventType = SpaceEvent["type"];
 export type SpaceEventListener = (event: SpaceEvent) => void;
@@ -145,6 +223,10 @@ export type SpaceEventListener = (event: SpaceEvent) => void;
 type DistributiveOmit<T, K extends PropertyKey> = T extends unknown ? Omit<T, K> : never;
 export type SpaceEventInput = DistributiveOmit<
   SpaceEvent,
+  "spaceId" | "lifetimeId" | "sequence" | "timestamp"
+>;
+export type QueryEventInput = DistributiveOmit<
+  QueryEvent,
   "spaceId" | "lifetimeId" | "sequence" | "timestamp"
 >;
 

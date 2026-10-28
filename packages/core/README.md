@@ -2,7 +2,7 @@
 
 Boardloom headless runtime: isolated spaces, lifecycle, view-local modes, editor lease and draft foundations, locale/timezone configuration, formatting and message-provider contracts. The package has no DOM, UI framework, server, SQL, ORM or database dependency. It imports and runs in Node and in browsers.
 
-Status: T02 implements the headless core. T03 adds the versioned board document schema, canonical export, non-destructive import and a synthetic migration harness. Queries, renderers, filters and comparisons execution, realtime and extension registries belong to later tasks. Full built-in locale dictionaries and RTL layout belong to T17.
+Status: T02 implements the headless core. T03 adds the versioned board document schema, canonical export, non-destructive import and a synthetic migration harness. T04 adds the dataset/field/slice contract, capability validation, local and async query adapters, canonical query keys, generations, cancellation and query states. Renderers, filter and comparison execution, realtime transport and extension registries belong to later tasks. Full built-in locale dictionaries and RTL layout belong to T17.
 
 Distribution target: browser ESM with TypeScript declarations. npm publication is not authorized; planned scoped names are used for tarball consumers only.
 
@@ -59,7 +59,7 @@ const validation = validateBoardDocument(document);
 
 ## Import, export and migration
 
-`runtime.importDocument(textOrObject, options)` enforces a configurable byte limit, depth, node, collection and string limits, measures parsed objects incrementally without building the complete canonical string, parses safely, rejects malformed JSON and future versions, migrates older known versions, validates the result, and only then creates a new space with a fresh runtime space ID. A supplied provider catalog is carried through parsing, target-space creation, later authoring and export instead of being discarded after admission.
+`runtime.importDocument(textOrObject, options)` enforces a configurable byte limit, depth, node, collection and string limits, measures parsed objects incrementally without building the complete canonical string, parses safely, rejects malformed JSON and future versions, migrates older known versions, validates the result, and only then creates a new space with a fresh runtime space ID. A supplied provider catalog is carried through parsing, target-space creation, later authoring and export instead of being discarded after admission. When `sourceSpaceId` is supplied, the imported target inherits that source space's effective dataset provider unless the import options provide one explicitly; otherwise the runtime default applies.
 
 ```ts
 const imported = runtime.importDocument(fileText, {
@@ -76,6 +76,55 @@ A successful import preserves the document and block IDs but never replaces an e
 `space.exportDocument()` validates the committed document again and returns `{ document, canonical, schemaVersion }`. The canonical representation sorts object keys while preserving array order. A successful export emits `document:exported`. Exported JSON contains no runtime handles or ownership metadata.
 
 The built-in migration chain contains one pure synthetic `0 -> 1` step for an unpublished pre-release fixture shape. It is not presented as a historical Boardloom format, and it never invents data values. The harness supports custom multi-step chains and reports each step's from/to versions, warnings, preserved, added and removed fields, and preserved board, dataset, field, slice, block, binding, filter group, filter and comparison IDs. Each step outcome is descriptor-safe, JSON-validated, bounded and byte-limited before the next step. A missing step, malformed result, migration failure or future version never downgrades or partially imports a document.
+
+## Data contract and query adapters
+
+A dataset provider publishes descriptors before any query runs. A dataset descriptor has a stable ID and version, a default IANA timezone, an explicit temporal value representation (`iso8601-offset`, `epoch-milliseconds` or `epoch-seconds`), fields, slices and capabilities. A field has a stable ID and key, value type, semantic role (`dimension`, `measure` or `temporal`), nullability, optional timezone, optional unit descriptor with display scale, allowed values, range, format hints and supported filter operators. Field identity is dataset-qualified; equal keys or labels in different datasets are distinct. Date-only values are interpreted against the declared field or dataset timezone. A civil date that does not occur in that zone is rejected with a diagnostic that identifies the nonexistent start or end, and repeated civil dates resolve to their earliest occurrence; this is a targeted helper contract, not an exhaustive IANA conformance claim. Temporal result metadata resolves field or dataset defaults for representation and timezone, including applicable aggregations.
+
+Capabilities declare grouping, supported aggregations, supported filter operators, time window and timezone conversion support, local/static data, pushdown filtering, server paging, realtime, comparison and the maximum result size. The planner rejects an aggregation, filter operator, grouping, slice operation or version that the descriptor does not declare, and reports the exact path instead of silently dropping the operation. Percentages are represented explicitly: for example a fraction stored in `0..1` uses a unit scale of `100` to display percent. The provider contract is validated from own data properties without executing accessors; accessor-backed providers are rejected with `QUERY_PROVIDER_INVALID`. `createBoardValidationCatalog(datasets)` explicitly adapts these descriptors to the T03 document-validation catalog so field, operator, unit and slice checks use the same provider identity. When a query selects a slice without an explicit projection, the slice field list is the default projection. Sparse or non-index query collections are rejected before normalization. Filter and time-window timezones must match the field timezone unless the dataset declares timezone conversion capability. Query specifications are admitted as descriptor-safe JSON before planning, so accessor-backed or sparse specifications return `QUERY_INVALID` without executing getters. Query plans snapshot and freeze caller-owned filter values, so later mutation of the caller array cannot change a key, an in-flight request or a settled state.
+
+```ts
+import { createLocalDatasetProvider, createRuntime } from "@boardloom/core";
+
+const provider = createLocalDatasetProvider({
+  providerId: "host-fixture",
+  datasets: [
+    {
+      descriptor,
+      rows: syntheticRows,
+    },
+  ],
+});
+if (!provider.ok) {
+  throw new Error(provider.diagnostics[0]?.message);
+}
+
+const runtime = createRuntime({ datasetProvider: provider.value });
+const space = runtime.createSpace({ document });
+if (!space.ok) {
+  throw new Error(space.diagnostics[0]?.message);
+}
+
+const query = space.value.setQuery("scores", {
+  datasetId: descriptor.id,
+  sliceId: "summary",
+  fields: ["school_id"],
+  groupBy: [{ fieldId: "school_id" }],
+  aggregations: [{ output: "attempts", type: "count" }],
+  orderBy: [{ key: "school_id", direction: "ascending" }],
+});
+if (!query.ok) {
+  throw new Error(query.diagnostics[0]?.message);
+}
+```
+
+Every request receives a monotonically increasing request token, a request ID and a canonical query key. The key includes provider and dataset identity, dataset version, slice, projection, grouping and time buckets, aggregations, normalized filters, time window, ordering, limit, cursor and any comparison input identity. A changed key increments the generation, emits `query:invalidated`, cancels the superseded request and starts the replacement. A new request for the same key keeps the generation but supersedes the older request through the token. Cancellation captures its request identity before aborting, so an abort listener may start a replacement without the outer cancellation overwriting it. Late results from an older token, key or generation are ignored and reported through `query:stale`; they never overwrite a newer state, including after cancellation or invalidation without a replacement. Ordering uses planned output semantics, including bucket date types and aggregation output types.
+
+`setQuery`, `refreshQuery`, `invalidateQuery`, `cancelQuery`, `removeQuery`, `getQueryState` and `getQueryStates` are space-owned. Query states are included in `SpaceSnapshot.queries` and are exposed through `query:started`, `query:settled`, `query:failed`, `query:cancelled`, `query:stale` and `query:invalidated` events. Disposal aborts in-flight work, drops the state and ignores late callbacks.
+
+Query phases are `idle`, `loading`, `settled`, `empty`, `partial`, `error`, `cancelled` and `stale`. A successful result with no rows and no diagnostics is `empty`; a real zero measure is a settled row with value `0`; null measures are excluded from aggregation and counted separately. Provider warnings, error diagnostics, an incomplete result, or zero rows carrying diagnostics produce `partial` with `complete: false`. A declared maximum result size truncates explicitly with `QUERY_RESULT_TRUNCATED`. A global aggregate may return one output row for zero filtered input rows; otherwise returned rows cannot exceed filtered rows, and total rows cannot be smaller than filtered rows. Count and distinct-count outputs are dimensionless unless a future explicit count-unit contract is added. A provider failure always carries at least one error-severity diagnostic; warning-only failure results gain `QUERY_FAILED`. Cancellation is a warning state, not a hard provider error.
+
+The async adapter wraps a consumer query function. It forwards the normalized request and an abort signal, requires the consumer to echo the request identity and to declare the filters, groupings, aggregations, time window and comparison input it applied. Missing declarations fail with `QUERY_REQUEST_NOT_HONORED` instead of returning a misleading result. Grouped or aggregated async responses must provide counts; otherwise the result is rejected instead of deriving false null counts from absent source keys. The adapter catches thrown errors without copying raw error payloads into diagnostics. Async consumer output is admitted as descriptor-safe JSON before applied declarations, rows, fields or counts are read. Provider results are likewise admitted without executing accessors before identity and nested metadata are read; accessor or normalization failures become request-owned query diagnostics. Result metadata must match the planned output fields, and counts, cursors and completeness are validated before a state is published. The local adapter applies typed filters, timezone-aware day/week/month/quarter/year buckets, deterministic grouping and aggregation, stable ordering and explicit row limits over in-memory JSON rows. Neither adapter ships a backend, endpoint, credential or real record; tests use a deterministic synthetic assessment fixture.
 
 ## Views, modes and editor lease
 
@@ -120,7 +169,7 @@ if (disposal.ok && disposal.value.retainedLease) {
 
 Event payloads belong to the operation that triggered them: initial creation warnings, successful load document and schema, imported-document identity, draft revision/history, revision-conflict expected/actual revisions, invalid diagnostics and migration data are captured before the first observer notification, so a reentrant observer cannot substitute another operation's document, revision or warnings. Disposal cancels pending normal notifications. If disposal happens while a notification is in flight, that notification stops before remaining listeners, and the terminal `space:disposed` event is delivered exactly once to observers registered at disposal time. The callback that invoked disposal may finish its current execution; the event it was already handling is not a later delivery. Listeners removed by disposal receive no later normal events. Runtime disposal applies the same rule to runtime observers and forwards only terminal space disposal events. A space disposed while the runtime remains active removes its queued normal events from the runtime observation queue and stops remaining delivery of its active normal notification; its terminal event remains exactly once. A terminal event queued before runtime disposal is preserved and delivered through the runtime channel.
 
-The event set covers `space:created`, `space:loaded`, `space:disposed`, `mode:changed`, `editor:lease-changed`, `draft:changed`, `draft:applied`, `draft:cancelled`, `draft:conflict`, `document:changed`, `document:invalid`, `locale:changed`, `diagnostics:changed`, `document:exported`, `document:migrated`, `space:imported` and `import:failed`. Host load emits `document:changed` followed by `space:loaded`; draft apply emits `document:changed` followed by `draft:applied`. Failed structural load, draft update and apply paths emit `document:invalid` with the diagnostics after publishing the diagnostics change, while leaving the committed document and draft unchanged. Each event retains the rejected operation's own immutable diagnostics even if a diagnostics observer reenters. If a listener disposes the space during that event, the existing terminal rules suppress later normal events.
+The event set covers `space:created`, `space:loaded`, `space:disposed`, `mode:changed`, `editor:lease-changed`, `draft:changed`, `draft:applied`, `draft:cancelled`, `draft:conflict`, `document:changed`, `document:invalid`, `locale:changed`, `diagnostics:changed`, `document:exported`, `document:migrated`, `space:imported`, `import:failed`, `query:started`, `query:settled`, `query:failed`, `query:cancelled`, `query:stale` and `query:invalidated`. Host load emits `document:changed` followed by `space:loaded`; draft apply emits `document:changed` followed by `draft:applied`. Failed structural load, draft update and apply paths emit `document:invalid` with the diagnostics after publishing the diagnostics change, while leaving the committed document and draft unchanged. Each event retains the rejected operation's own immutable diagnostics even if a diagnostics observer reenters. If a listener disposes the space during that event, the existing terminal rules suppress later normal events.
 
 ## Locale, timezone, formatting and messages
 

@@ -44,46 +44,47 @@ const TEMPORAL_FILTER_OPERATORS = new Set<FilterOperator>([
   "between",
 ]);
 
-const OPERATORS_BY_FIELD_TYPE: Readonly<Record<FieldValueType, readonly FilterOperator[]>> =
-  Object.freeze({
-    number: [
-      "equals",
-      "notEquals",
-      "greaterThan",
-      "greaterThanOrEqual",
-      "lessThan",
-      "lessThanOrEqual",
-      "between",
-      "in",
-      "notIn",
-      "isNull",
-      "isNotNull",
-    ],
-    string: ["equals", "notEquals", "in", "notIn", "contains", "isNull", "isNotNull"],
-    boolean: ["isTrue", "isFalse", "isNull"],
-    date: [
-      "before",
-      "after",
-      "onOrBefore",
-      "onOrAfter",
-      "between",
-      "in",
-      "notIn",
-      "isNull",
-      "isNotNull",
-    ],
-    datetime: [
-      "before",
-      "after",
-      "onOrBefore",
-      "onOrAfter",
-      "between",
-      "in",
-      "notIn",
-      "isNull",
-      "isNotNull",
-    ],
-  });
+export const FILTER_OPERATORS_BY_FIELD_TYPE: Readonly<
+  Record<FieldValueType, readonly FilterOperator[]>
+> = Object.freeze({
+  number: [
+    "equals",
+    "notEquals",
+    "greaterThan",
+    "greaterThanOrEqual",
+    "lessThan",
+    "lessThanOrEqual",
+    "between",
+    "in",
+    "notIn",
+    "isNull",
+    "isNotNull",
+  ],
+  string: ["equals", "notEquals", "in", "notIn", "contains", "isNull", "isNotNull"],
+  boolean: ["isTrue", "isFalse", "isNull"],
+  date: [
+    "before",
+    "after",
+    "onOrBefore",
+    "onOrAfter",
+    "between",
+    "in",
+    "notIn",
+    "isNull",
+    "isNotNull",
+  ],
+  datetime: [
+    "before",
+    "after",
+    "onOrBefore",
+    "onOrAfter",
+    "between",
+    "in",
+    "notIn",
+    "isNull",
+    "isNotNull",
+  ],
+});
 
 export function validateFilterTemporal(value: unknown, path: string, add: AddDiagnostic): void {
   if (!isRecord(value)) {
@@ -130,7 +131,7 @@ export function validateFilter(
       "A filter requires a supported typed operator.",
     );
   } else if (fieldInfo?.type) {
-    const allowed = fieldInfo.operators ?? OPERATORS_BY_FIELD_TYPE[fieldInfo.type];
+    const allowed = fieldInfo.operators ?? FILTER_OPERATORS_BY_FIELD_TYPE[fieldInfo.type];
     if (!allowed.includes(operator)) {
       add(
         DIAGNOSTIC_CODES.INCOMPATIBLE_FILTER,
