@@ -1,79 +1,42 @@
-import type { FormatterProvider, JsonValue, QueryResultField } from "@boardloom/core";
-
-function isTemporalField(field: QueryResultField): boolean {
-  return field.type === "date" || field.type === "datetime";
-}
-
-function unitText(field: QueryResultField): string {
-  const unit = field.unit;
-  if (!unit) {
-    return "";
-  }
-  return unit.label ?? unit.unit;
-}
+import {
+  formatValueParts,
+  type FormatterProvider,
+  type JsonValue,
+  type QueryResultField,
+  type RendererField,
+  type RendererMessages,
+} from "@boardloom/core";
 
 export function formatFieldValue(
   value: JsonValue,
   field: QueryResultField,
   formatters: FormatterProvider,
+  messages?: RendererMessages,
 ): string | null {
-  if (value === null || value === undefined) {
-    return null;
+  return formatValueParts(
+    value,
+    {
+      type: field.type,
+      ...(field.unit === undefined ? {} : { unit: field.unit }),
+      ...(field.timezone === undefined ? {} : { timezone: field.timezone }),
+      ...(field.temporalRepresentation === undefined
+        ? {}
+        : { temporalRepresentation: field.temporalRepresentation }),
+    },
+    formatters,
+    messages,
+  ).text;
+}
+
+export function formatRendererFieldValue(
+  value: JsonValue,
+  field: QueryResultField,
+  specField: RendererField | undefined,
+  formatters: FormatterProvider,
+  messages?: RendererMessages,
+): string | null {
+  if (specField === undefined) {
+    return formatFieldValue(value, field, formatters, messages);
   }
-  if (isTemporalField(field)) {
-    let temporalValue: string | number;
-    if (typeof value === "string") {
-      temporalValue = value;
-    } else if (typeof value === "number" && Number.isFinite(value)) {
-      if (field.temporalRepresentation === "epoch-seconds") {
-        temporalValue = value * 1_000;
-      } else if (
-        field.temporalRepresentation === "epoch-milliseconds" ||
-        field.temporalRepresentation === undefined
-      ) {
-        temporalValue = value;
-      } else {
-        return null;
-      }
-    } else {
-      return null;
-    }
-    try {
-      return formatters.formatDate(temporalValue, {
-        dateStyle: "medium",
-        ...(field.type === "datetime" ? { timeStyle: "short" as const } : {}),
-        ...(field.timezone === undefined ? {} : { timeZone: field.timezone }),
-      });
-    } catch {
-      return null;
-    }
-  }
-  if (typeof value === "number") {
-    if (!Number.isFinite(value)) {
-      return null;
-    }
-    const precision = 2;
-    if (field.unit?.unit === "percent") {
-      const scale = field.unit.scale ?? 100;
-      if (scale === 100) {
-        return formatters.formatNumber(value, {
-          style: "percent",
-          maximumFractionDigits: precision,
-        });
-      }
-      if (scale === 1) {
-        return formatters.formatNumber(value / 100, {
-          style: "percent",
-          maximumFractionDigits: precision,
-        });
-      }
-    }
-    const text = formatters.formatNumber(value, { maximumFractionDigits: precision });
-    const suffix = unitText(field);
-    return suffix === "" ? text : `${text} ${suffix}`;
-  }
-  if (typeof value === "boolean") {
-    return value ? "true" : "false";
-  }
-  return typeof value === "string" ? value : null;
+  return formatValueParts(value, specField, formatters, messages).text;
 }

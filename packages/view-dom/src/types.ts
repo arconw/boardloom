@@ -5,6 +5,7 @@ import type {
   DatasetProvider,
   EditorLease,
   MessageDictionary,
+  RendererDefinition,
   Result,
   RuntimeOptions,
   SpaceEvent,
@@ -31,6 +32,7 @@ export interface MountBoardViewOptions {
   readonly realtime?: BoardloomRealtimeStatus;
   readonly provenance?: string;
   readonly blockTypes?: readonly BlockTypeDefinition[];
+  readonly renderers?: readonly RendererDefinition<HTMLElement>[];
   readonly onEvent?: (event: SpaceEvent) => void;
 }
 

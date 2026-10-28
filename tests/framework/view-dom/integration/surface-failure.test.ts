@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import type { BoardDocumentV1 } from "../../../../packages/core/src/index.js";
+import {
+  createRendererRegistry,
+  type BoardDocumentV1,
+} from "../../../../packages/core/src/index.js";
 import { createViewMessages } from "../../../../packages/view-dom/src/messages.js";
 import {
   createBlockRegistry,
@@ -101,6 +104,7 @@ describe("T06 surface failure containment", () => {
       null,
       { ownsRuntime: false, ownsSpace: false, ownsView: false },
       registry,
+      unwrap(createRendererRegistry()),
       messages,
       {},
     );

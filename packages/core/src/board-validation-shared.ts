@@ -17,6 +17,7 @@ export interface ProviderFieldDescriptor {
   readonly unit?: string;
   readonly timezone?: string;
   readonly operators?: readonly FilterOperator[];
+  readonly allowedValues?: readonly (string | number | boolean)[];
 }
 
 export interface ProviderDatasetDescriptor {
@@ -45,6 +46,7 @@ export interface FieldInfo {
   readonly unit?: string;
   readonly timezone?: string;
   readonly operators?: readonly FilterOperator[];
+  readonly allowedValues?: readonly (string | number | boolean)[];
 }
 
 export interface ScannedEntry {
@@ -174,6 +176,19 @@ export function catalogFieldEntry(
       return undefined;
     }
   }
+  if (entry.allowedValues !== undefined) {
+    if (
+      !Array.isArray(entry.allowedValues) ||
+      !entry.allowedValues.every(
+        (value) =>
+          typeof value === "string" ||
+          typeof value === "boolean" ||
+          (typeof value === "number" && Number.isFinite(value)),
+      )
+    ) {
+      return undefined;
+    }
+  }
   return entry as ProviderFieldDescriptor;
 }
 
@@ -221,6 +236,9 @@ export function resolveFieldId(
       add(DIAGNOSTIC_CODES.PROVIDER_CAPABILITY_MISMATCH, path, undefined, {
         relatedIds: [datasetId, fieldId],
       });
+    }
+    if (providerInfo.allowedValues === undefined && documentInfo?.allowedValues !== undefined) {
+      return Object.freeze({ ...providerInfo, allowedValues: documentInfo.allowedValues });
     }
     return providerInfo;
   }

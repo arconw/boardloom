@@ -6,6 +6,7 @@ import {
   createDiagnostic,
   fail,
   ok,
+  resolveRendererColors,
   type BoardDocument,
   type BoardDocumentV1,
   type BlockDefinition,
@@ -18,6 +19,8 @@ import {
   type MessageDictionary,
   type MessageProvider,
   type QueryState,
+  type RendererRegistry,
+  type RendererTheme,
   type Result,
   type SpaceEvent,
   type SpaceSnapshot,
@@ -207,15 +210,23 @@ function createUnknownSurface(doc: Document, message: string): BlockSurface {
   };
 }
 
-function createSurfaceFailureSurface(doc: Document, message: string): BlockSurface {
+function createSurfaceFailureSurface(
+  doc: Document,
+  message: string,
+  diagnostics?: readonly Diagnostic[],
+): BlockSurface {
   const element = doc.createElement("div");
   return {
     element,
     update(environment: BlockSurfaceEnvironment): void {
       clearElement(element);
-      renderErrorState(element, environment.messages, [
-        createDiagnostic(DIAGNOSTIC_CODES.BLOCK_SURFACE_FAILED, "block/surface", { message }),
-      ]);
+      renderErrorState(
+        element,
+        environment.messages,
+        diagnostics ?? [
+          createDiagnostic(DIAGNOSTIC_CODES.BLOCK_SURFACE_FAILED, "block/surface", { message }),
+        ],
+      );
     },
   };
 }
@@ -230,6 +241,7 @@ export class ViewerHost implements BoardViewHandle {
   private readonly ownsSpace: boolean;
   private readonly ownsView: boolean;
   private readonly registry: BlockRegistry;
+  private readonly rendererRegistry: RendererRegistry<HTMLElement>;
   private readonly config: ViewerConfig;
   private readonly root: HTMLElement;
   private readonly skipLink: HTMLAnchorElement;
@@ -291,6 +303,7 @@ export class ViewerHost implements BoardViewHandle {
       readonly ownsView: boolean;
     },
     registry: BlockRegistry,
+    rendererRegistry: RendererRegistry<HTMLElement>,
     messages: ViewMessages,
     config: ViewerConfig,
   ) {
@@ -303,6 +316,7 @@ export class ViewerHost implements BoardViewHandle {
     this.ownsSpace = ownership.ownsSpace;
     this.ownsView = ownership.ownsView;
     this.registry = registry;
+    this.rendererRegistry = rendererRegistry;
     this.messagesValue = messages;
     this.messagesLocale = messages.locale;
     this.messageProvider = space.getMessageProvider();
@@ -1117,7 +1131,9 @@ export class ViewerHost implements BoardViewHandle {
     }
     mounted.surface.element.remove();
     const message = error instanceof Error ? error.message : String(error);
-    const fallback = createSurfaceFailureSurface(this.doc, message);
+    const diagnostics =
+      error instanceof BoardloomError ? Object.freeze([error.diagnostic]) : undefined;
+    const fallback = createSurfaceFailureSurface(this.doc, message, diagnostics);
     mounted.body.append(fallback.element);
     mounted.surface = fallback;
     try {
@@ -1178,6 +1194,30 @@ export class ViewerHost implements BoardViewHandle {
     summary?.focus();
   }
 
+  private rendererTheme(document: BoardDocumentV1): RendererTheme {
+    const configured = this.config.theme ?? documentTheme(document);
+    let mode: "light" | "dark";
+    if (configured === "dark") {
+      mode = "dark";
+    } else if (configured === "light") {
+      mode = "light";
+    } else {
+      const viewWindow = this.doc.defaultView as
+        | (Window & { readonly matchMedia?: (query: string) => { readonly matches: boolean } })
+        | null;
+      mode =
+        typeof viewWindow?.matchMedia === "function" &&
+        viewWindow.matchMedia("(prefers-color-scheme: dark)").matches
+          ? "dark"
+          : "light";
+    }
+    const tokens = document.theme?.tokens ?? {};
+    return Object.freeze({
+      mode,
+      colors: resolveRendererColors(mode, tokens),
+    });
+  }
+
   private createEnvironment(
     block: BoardDocumentV1["blocks"][number],
     query: QueryState | null,
@@ -1199,6 +1239,9 @@ export class ViewerHost implements BoardViewHandle {
       formatters,
       locale: snapshot.locale,
       timezone: snapshot.timezone,
+      theme: this.rendererTheme(document),
+      renderers: this.rendererRegistry,
+      getDatasetDescriptor: (datasetId) => this.spaceValue.getDatasetDescriptor(datasetId),
       createElement: (tag, className) => createElement(this.doc, tag, className),
     };
   }

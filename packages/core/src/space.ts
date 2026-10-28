@@ -1,5 +1,5 @@
 import type { BoardValidationCatalog } from "./board-validation.js";
-import type { QuerySpec, QueryState } from "./data-contract.js";
+import type { DatasetDescriptor, DatasetProvider, QuerySpec, QueryState } from "./data-contract.js";
 import type { Clock } from "./clock.js";
 import {
   documentSchemaVersion,
@@ -103,6 +103,7 @@ export interface BoardSpace {
   setLocale(config: LocaleConfigInput): Result<SpaceSnapshot>;
   getFormatters(): FormatterProvider;
   getMessageProvider(): MessageProvider;
+  getDatasetDescriptor(datasetId: string): DatasetDescriptor | undefined;
   setQuery(queryId: string, spec: QuerySpec): Result<QueryState>;
   refreshQuery(queryId: string): Result<QueryState>;
   invalidateQuery(queryId: string, reason?: string): Result<QueryState>;
@@ -152,6 +153,7 @@ class SpaceImpl implements BoardSpace {
   private readonly deps: SpaceDependencies;
   private readonly events: EventBus<SpaceEvent>;
   private readonly queryController: QueryController;
+  private readonly datasetProvider: DatasetProvider | null;
   private readonly viewHost: ViewHost;
   private readonly views = new Map<string, ViewImpl>();
   private readonly tasks = new Map<string, unknown>();
@@ -194,6 +196,7 @@ class SpaceImpl implements BoardSpace {
     this.events.subscribeInternal((event) => {
       deps.forwardEvent(event);
     });
+    this.datasetProvider = options.datasetProvider ?? null;
     this.queryController = createQueryController({
       ...(options.datasetProvider === undefined ? {} : { provider: options.datasetProvider }),
       idFactory: deps.idFactory,
@@ -271,6 +274,17 @@ class SpaceImpl implements BoardSpace {
 
   getFormatters(): FormatterProvider {
     return this.formatters;
+  }
+
+  getDatasetDescriptor(datasetId: string): DatasetDescriptor | undefined {
+    if (this.disposedFlag || this.disposing || this.datasetProvider === null) {
+      return undefined;
+    }
+    try {
+      return this.datasetProvider.getDatasetDescriptor(datasetId);
+    } catch {
+      return undefined;
+    }
   }
 
   getMessageProvider(): MessageProvider {

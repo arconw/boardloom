@@ -62,7 +62,7 @@ const TOP_LEVEL_KEYS = new Set([
 ]);
 
 const DATASET_KEYS = new Set(["id", "provider", "label", "fields"]);
-const FIELD_KEYS = new Set(["id", "type", "role", "unit", "timezone", "nullable"]);
+const FIELD_KEYS = new Set(["id", "type", "role", "unit", "timezone", "nullable", "allowedValues"]);
 const SLICE_KEYS = new Set(["id", "datasetId", "label", "fieldIds"]);
 const GROUP_KEYS = new Set(["id", "label", "blockIds"]);
 const THEME_KEYS = new Set(["mode", "tokens"]);
@@ -484,11 +484,39 @@ export function validateBoardDocument(
         add(DIAGNOSTIC_CODES.INVALID_PROPERTY_TYPE, `${fieldPath}/timezone`);
       }
       optionalBoolean(entry, "nullable", fieldPath);
+      const allowedValuesRaw = optionalArray(entry, "allowedValues", fieldPath);
+      const allowedValues: (string | number | boolean)[] = [];
+      if (allowedValuesRaw !== undefined) {
+        const seenValues = new Set<string>();
+        allowedValuesRaw.forEach((value, index) => {
+          const valid =
+            (type === "number" && typeof value === "number" && Number.isFinite(value)) ||
+            (type === "string" && typeof value === "string") ||
+            (type === "boolean" && typeof value === "boolean") ||
+            ((type === "date" || type === "datetime") && typeof value === "string");
+          if (!valid) {
+            add(
+              DIAGNOSTIC_CODES.INVALID_PROPERTY_TYPE,
+              `${fieldPath}/allowedValues/${index}`,
+              "An allowed value must match the declared field type.",
+            );
+            return;
+          }
+          const key = `${typeof value}:${String(value)}`;
+          if (seenValues.has(key)) {
+            add(DIAGNOSTIC_CODES.DUPLICATE_ID, `${fieldPath}/allowedValues/${index}`);
+            return;
+          }
+          seenValues.add(key);
+          allowedValues.push(value as string | number | boolean);
+        });
+      }
       const info: FieldInfo = {
         type,
         ...(role === undefined ? {} : { role: role as FieldRole }),
         ...(unit === undefined ? {} : { unit }),
         ...(timezone === undefined ? {} : { timezone }),
+        ...(allowedValues.length === 0 ? {} : { allowedValues: Object.freeze(allowedValues) }),
       };
       documentFields.set(fieldKey(datasetId, fieldId), info);
       const providerField = catalogField(datasetId, fieldId);

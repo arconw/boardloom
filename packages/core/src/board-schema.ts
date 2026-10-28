@@ -122,6 +122,7 @@ export interface FieldDescriptor {
   readonly unit?: string;
   readonly timezone?: string;
   readonly nullable?: boolean;
+  readonly allowedValues?: readonly (string | number | boolean)[];
 }
 
 export interface DatasetReference {
@@ -185,6 +186,8 @@ export interface ChartConfig {
   readonly options?: {
     readonly stacked?: boolean;
     readonly legend?: "hidden" | "visible";
+    readonly categoryOrder?: "declared" | "data" | "ascending" | "descending";
+    readonly binnedX?: boolean;
     readonly xAxis?: ChartAxisConfig;
     readonly yAxis?: ChartAxisConfig;
   };

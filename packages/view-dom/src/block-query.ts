@@ -284,6 +284,24 @@ function buildSpec(
   }
 
   if (block.type === "chart") {
+    const visualization = ownValue(block.config, "visualization");
+    if (visualization === "scatter") {
+      const fields = [...new Set(bindings.map((binding) => binding.field.fieldId))];
+      if (fields.length < 2) {
+        return bindingDiagnostic(
+          `blocks/${block.id}/bindings`,
+          "A scatter chart requires numeric X and Y fields.",
+        );
+      }
+      const measure = bindings.find(isMeasureBinding);
+      return ok(
+        Object.freeze({
+          spec: Object.freeze({ ...common, fields: Object.freeze(fields) }),
+          valueBindingId: measure?.id ?? null,
+          valueLabel: measure?.label ?? null,
+        }),
+      );
+    }
     const measured = bindings
       .map((binding) => ({ binding, aggregation: aggregationFor(binding) }))
       .filter(

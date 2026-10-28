@@ -3,7 +3,10 @@ import {
   createIntlFormatterProvider,
   type QueryResultField,
 } from "../../../../packages/core/src/index.js";
-import { formatFieldValue } from "../../../../packages/view-dom/src/format-value.js";
+import {
+  formatFieldValue,
+  formatRendererFieldValue,
+} from "../../../../packages/view-dom/src/format-value.js";
 
 const formatters = createIntlFormatterProvider({ locale: "en", timezone: "UTC" });
 
@@ -30,6 +33,30 @@ describe("T06 value formatting", () => {
       "74%",
     );
     expect(formatFieldValue(12, field({ unit: { unit: "points" } }), formatters)).toBe("12 points");
+  });
+
+  it("shares resolved renderer formatting with data alternatives", () => {
+    const specField = {
+      fieldId: "score",
+      label: "Score",
+      type: "number" as const,
+      format: { precision: 0 },
+      unit: { unit: "points" },
+    };
+    expect(formatRendererFieldValue(12.6, field(), specField, formatters)).toBe("13 points");
+    expect(
+      formatRendererFieldValue(
+        "2025-12-31T20:00:00Z",
+        field({ type: "datetime", role: "temporal", timezone: "UTC" }),
+        {
+          fieldId: "time",
+          label: "Time",
+          type: "datetime",
+          timezone: "Asia/Tokyo",
+        },
+        formatters,
+      ),
+    ).toContain("2026");
   });
 
   it("formats temporal values in the declared field timezone", () => {

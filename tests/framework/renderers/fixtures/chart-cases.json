@@ -1,0 +1,54 @@
+{
+  "null": {
+    "visualization": "bar",
+    "rows": [{ "category": "a", "value": null }],
+    "expected": {
+      "values": [[null]],
+      "nullCount": 1,
+      "zeroCount": 0,
+      "negativeCount": 0,
+      "empty": true,
+      "domainMin": null,
+      "domainMax": null
+    }
+  },
+  "zero": {
+    "visualization": "bar",
+    "rows": [{ "category": "a", "value": 0 }],
+    "expected": {
+      "values": [[0]],
+      "nullCount": 0,
+      "zeroCount": 1,
+      "negativeCount": 0,
+      "empty": false,
+      "domainMin": 0,
+      "domainMax": 0
+    }
+  },
+  "negative": {
+    "visualization": "bar",
+    "rows": [{ "category": "a", "value": -5 }],
+    "expected": {
+      "values": [[-5]],
+      "nullCount": 0,
+      "zeroCount": 0,
+      "negativeCount": 1,
+      "empty": false,
+      "domainMin": -5,
+      "domainMax": 0
+    }
+  },
+  "empty": {
+    "visualization": "bar",
+    "rows": [],
+    "expected": {
+      "values": [],
+      "nullCount": 0,
+      "zeroCount": 0,
+      "negativeCount": 0,
+      "empty": true,
+      "domainMin": null,
+      "domainMax": null
+    }
+  }
+}

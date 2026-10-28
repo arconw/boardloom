@@ -2,7 +2,7 @@
 
 Framework-neutral DOM runtime for the Boardloom viewer shell, design tokens and accessible state surfaces.
 
-Status: T06 implements the browser ESM viewer runtime, mount/update/unmount host contract, view-local mode handling, block registry foundation, locale/timezone forwarding, scoped responsive layout and loading, empty, error, cancelled, stale and partial states. The text, metric, table and filter surfaces are production containers. Chart blocks use an accessible tabular data alternative until the built-in chart renderers arrive in T07. The full editor belongs to T12. No DOM runtime depends on React, Angular, Svelte, a backend or a database.
+Status: T06 implements the browser ESM viewer runtime, mount/update/unmount host contract, view-local mode handling, block registry foundation, locale/timezone forwarding, scoped responsive layout and loading, empty, error, cancelled, stale and partial states. T07 adds the KPI and table renderers on the shared renderer contract, chart renderer composition through `renderers`, accessible chart summaries and data alternatives, and an explicit fallback when no chart renderer is registered. Chart blocks use the accessible tabular data alternative plus a renderer-unavailable notice by default; hosts pass `CHART_RENDERERS` from `@boardloom/renderers-echarts` to render charts. The full editor belongs to T12. No DOM runtime depends on React, Angular, Svelte, a backend or a database, and it does not import ECharts directly.
 
 The package exports browser ESM with TypeScript declarations and `@boardloom/view-dom/styles.css`. npm publication is not authorized; planned scoped names are used for tarball consumers only.
 
@@ -11,6 +11,7 @@ The package exports browser ESM with TypeScript declarations and `@boardloom/vie
 ```ts
 import { createRuntime } from "@boardloom/core";
 import { mountBoardView } from "@boardloom/view-dom";
+import { CHART_RENDERERS } from "@boardloom/renderers-echarts";
 import "@boardloom/view-dom/styles.css";
 
 const runtime = createRuntime({ datasetProvider });
@@ -21,6 +22,7 @@ if (!created.ok) {
 
 const mounted = mountBoardView(document.querySelector("#board"), {
   space: created.value,
+  renderers: CHART_RENDERERS,
   theme: "system",
   locale: "en",
   timezone: "UTC",
@@ -73,7 +75,7 @@ Styles live in the `boardloom` cascade layer and remain scoped to the Boardloom 
 ## Scope boundaries
 
 - No editor controls, draft bar or inspector. The mode group reflects and changes the core view mode, but the editor interface is T12.
-- No built-in chart matrix. Chart blocks expose their query data as an accessible table until T07 replaces the surface.
+- The six built-in chart types are provided by `@boardloom/renderers-echarts` and composed through the `renderers` mount option. Without a registered chart renderer, a chart block shows an explicit renderer-unavailable notice plus its accessible query data table.
 - No filter editing or cross-filter UI. Declared filter defaults are summarized read-only until T09.
 - No realtime transport. The shell renders host-supplied transport status until T11.
 - No locale dictionaries beyond English. Full dictionaries, key parity and RTL acceptance belong to T17.

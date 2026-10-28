@@ -257,6 +257,94 @@ export type {
 } from "./data-contract.js";
 
 export {
+  CATEGORY_ORDERS,
+  FIELD_CLASSES,
+  VISUALIZATION_KINDS,
+  VISUALIZATION_MATRIX,
+  classifyField,
+  describeVisualizationMatrix,
+  isCategoryOrder,
+  isVisualizationKind,
+  validateVisualizationMatrix,
+} from "./field-matrix.js";
+export type {
+  CategoryOrder,
+  FieldClass,
+  MatrixAggregationRule,
+  MatrixFieldInput,
+  MatrixInput,
+  MatrixValidation,
+  VisualizationKind,
+  VisualizationMatrixEntry,
+} from "./field-matrix.js";
+
+export { formatValueParts, formatValueText, unitTextOf } from "./value-format.js";
+export type { FormattedValue, ValueFieldSpec, ValueMessages } from "./value-format.js";
+
+export {
+  DEFAULT_RENDERER_COLORS,
+  RENDERER_API_VERSION,
+  RENDERER_KINDS,
+  createRendererRegistry,
+  destroyRenderer,
+  emptyRendererData,
+  fieldValueOf,
+  mountRenderer,
+  rendererAxisFromConfig,
+  rendererFailure,
+  resolveRendererColors,
+  updateRenderer,
+} from "./renderer-contract.js";
+export type {
+  ChartRendererSpec,
+  KpiRendererSpec,
+  RendererAxis,
+  RendererCapabilities,
+  RendererColors,
+  RendererData,
+  RendererDefinition,
+  RendererField,
+  RendererHandle,
+  RendererInput,
+  RendererKind,
+  RendererLookup,
+  RendererMessages,
+  RendererRegistry,
+  RendererRuntime,
+  RendererSpec,
+  RendererSpecBase,
+  RendererTheme,
+  RendererValidation,
+  TableRendererSpec,
+} from "./renderer-contract.js";
+
+export {
+  buildChartRendererSpec,
+  buildKpiRendererSpec,
+  buildTableRendererSpec,
+  validateChartRendererSpec,
+} from "./renderer-spec.js";
+export type { ChartSpecInput, KpiSpecInput, TableSpecInput } from "./renderer-spec.js";
+
+export {
+  buildChartModel,
+  buildKpiModel,
+  buildTableModel,
+  chartModelDiagnostics,
+} from "./chart-model.js";
+export type {
+  ChartModel,
+  ChartModelCategory,
+  ChartModelSeries,
+  KpiModel,
+  ScatterModelPoint,
+  TableModel,
+  TableModelCell,
+  TableModelColumn,
+  TableModelRow,
+} from "./chart-model.js";
+
+export {
   bucketTemporalValue,
   compareTemporalValues,
   temporalInstant,

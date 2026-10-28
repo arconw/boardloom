@@ -15,6 +15,13 @@ import {
 import { DIAGNOSTIC_CODES } from "./diagnostics.js";
 import { isValidTimeZone } from "./locale.js";
 import {
+  CATEGORY_ORDERS,
+  validateVisualizationMatrix,
+  VISUALIZATION_MATRIX,
+  type MatrixFieldInput,
+  type VisualizationKind,
+} from "./field-matrix.js";
+import {
   checkUnknownKeys,
   isRecord,
   nonEmptyString,
@@ -54,13 +61,231 @@ const FORMAT_KEYS = new Set([
   "timezone",
 ]);
 const CHART_CONFIG_KEYS = new Set(["visualization", "comparisonId", "options"]);
-const CHART_OPTION_KEYS = new Set(["stacked", "legend", "xAxis", "yAxis"]);
+const CHART_OPTION_KEYS = new Set([
+  "stacked",
+  "legend",
+  "categoryOrder",
+  "binnedX",
+  "xAxis",
+  "yAxis",
+]);
 const CHART_AXIS_KEYS = new Set(["label", "min", "max", "unit"]);
 const METRIC_CONFIG_KEYS = new Set(["comparisonId", "format"]);
 const TABLE_CONFIG_KEYS = new Set(["pageSize", "columns", "sort"]);
 const TABLE_SORT_KEYS = new Set(["bindingId", "direction"]);
 const TEXT_CONFIG_KEYS = new Set(["text"]);
 const FILTER_CONFIG_KEYS = new Set(["filterIds"]);
+
+interface ParsedMatrixBinding {
+  readonly role: BindingRole | null;
+  readonly axis: "x" | "y" | "none" | null;
+  readonly field: FieldInfo | null;
+  readonly grain?: string;
+  readonly aggregation: string | null;
+  readonly path: string;
+}
+
+function matrixField(binding: ParsedMatrixBinding | undefined): MatrixFieldInput | null {
+  if (!binding || !binding.field?.type) {
+    return null;
+  }
+  return Object.freeze({
+    type: binding.field.type,
+    ...(binding.field.role === undefined ? {} : { role: binding.field.role }),
+    ...(binding.field.allowedValues === undefined
+      ? {}
+      : { allowedValues: binding.field.allowedValues }),
+    ...(binding.grain === undefined ? {} : { bucket: { grain: binding.grain as never } }),
+  });
+}
+
+function validateFieldMatrix(
+  blockType: string,
+  visualization: VisualizationKind,
+  config: Record<string, unknown>,
+  bindings: readonly ParsedMatrixBinding[],
+  path: string,
+  add: AddDiagnostic,
+): void {
+  if (blockType === "table") {
+    return;
+  }
+  const measures = bindings.filter(
+    (binding) => binding.role === "measure" || binding.role === "value" || binding.axis === "y",
+  );
+  if (visualization === "scatter") {
+    if (measures.length > 2) {
+      add(
+        DIAGNOSTIC_CODES.INCOMPATIBLE_BINDING,
+        `${path}/bindings`,
+        "A scatter chart supports at most two measures, X and Y.",
+      );
+    }
+  } else if (visualization === "kpi") {
+    if (measures.length !== 1) {
+      add(
+        DIAGNOSTIC_CODES.INCOMPATIBLE_BINDING,
+        `${path}/bindings`,
+        "A KPI supports exactly one measure binding.",
+      );
+    }
+  } else if (measures.length > 1) {
+    add(
+      DIAGNOSTIC_CODES.INCOMPATIBLE_BINDING,
+      `${path}/bindings`,
+      "A chart supports one Y measure binding.",
+    );
+  }
+  if (visualization === "kpi") {
+    const kpiMeasure = measures[0];
+    const result = validateVisualizationMatrix({
+      visualization,
+      y: matrixField(kpiMeasure),
+      aggregation:
+        kpiMeasure?.aggregation === null || kpiMeasure?.aggregation === undefined
+          ? null
+          : (kpiMeasure.aggregation as never),
+      paths: {
+        visualization: `${path}/config/visualization`,
+        y: kpiMeasure?.path ?? `${path}/bindings/y`,
+        aggregation: kpiMeasure?.path ?? `${path}/bindings/aggregation`,
+      },
+    });
+    for (const diagnostic of result.diagnostics) {
+      add(diagnostic.code, diagnostic.path, diagnostic.message, {
+        severity: diagnostic.severity,
+        ...(diagnostic.relatedIds === undefined ? {} : { relatedIds: diagnostic.relatedIds }),
+      });
+    }
+    return;
+  }
+  let x: ParsedMatrixBinding | undefined;
+  let y: ParsedMatrixBinding | undefined;
+  let series: ParsedMatrixBinding | undefined;
+  if (visualization === "scatter") {
+    x = measures.find((binding) => binding.axis === "x") ?? measures[0];
+    y =
+      measures.find((binding) => binding.axis === "y" && binding !== x) ??
+      measures.find((binding) => binding !== x);
+    series = bindings.find((binding) => binding.role === "series" || binding.role === "group");
+  } else {
+    x =
+      bindings.find((binding) => binding.axis === "x") ??
+      bindings.find((binding) => binding.role === "dimension") ??
+      bindings.find(
+        (binding) =>
+          binding.role === "series" || binding.role === "group" || binding.role === "label",
+      );
+    y = measures.find((binding) => binding !== x);
+    const candidates = bindings.filter(
+      (binding) =>
+        binding !== x &&
+        binding !== y &&
+        (binding.role === "series" ||
+          binding.role === "group" ||
+          binding.role === "dimension" ||
+          binding.axis === "x"),
+    );
+    series = candidates[0];
+    if (candidates.length > 1) {
+      add(
+        DIAGNOSTIC_CODES.INCOMPATIBLE_BINDING,
+        `${path}/bindings`,
+        "A chart supports at most one series dimension.",
+      );
+    }
+  }
+  const options = own(config, "options");
+  const stackedOption = isRecord(options) ? own(options, "stacked") : undefined;
+  const stacked =
+    visualization === "stacked-bar" ? stackedOption !== false : stackedOption === true;
+  const categoryOrderValue = isRecord(options) ? own(options, "categoryOrder") : undefined;
+  const binnedX = isRecord(options) ? own(options, "binnedX") === true : false;
+  const xBase = matrixField(x);
+  const xMatrix =
+    xBase === null
+      ? null
+      : Object.freeze({
+          ...xBase,
+          ...(categoryOrderValue === "ascending" ? { ordered: true } : {}),
+          ...(binnedX ? { binned: true } : {}),
+        });
+  const aggregation = y?.aggregation;
+  const result = validateVisualizationMatrix({
+    visualization,
+    x: xMatrix,
+    y: matrixField(y),
+    series: matrixField(series),
+    aggregation: aggregation === null || aggregation === undefined ? null : (aggregation as never),
+    stacked,
+    paths: {
+      visualization: `${path}/config/visualization`,
+      x: x?.path ?? `${path}/bindings/x`,
+      y: y?.path ?? `${path}/bindings/y`,
+      series: series?.path ?? `${path}/bindings/series`,
+      aggregation: y?.path ?? `${path}/bindings/aggregation`,
+    },
+  });
+  for (const diagnostic of result.diagnostics) {
+    add(diagnostic.code, diagnostic.path, diagnostic.message, {
+      severity: diagnostic.severity,
+      ...(diagnostic.relatedIds === undefined ? {} : { relatedIds: diagnostic.relatedIds }),
+    });
+  }
+
+  const xAxis = isRecord(options) ? own(options, "xAxis") : undefined;
+  const yAxis = isRecord(options) ? own(options, "yAxis") : undefined;
+  const xBounds =
+    isRecord(xAxis) && (own(xAxis, "min") !== undefined || own(xAxis, "max") !== undefined);
+  const numericXAxis =
+    visualization === "scatter" || (visualization === "line" && x?.field?.type === "number");
+  if (xBounds && !numericXAxis) {
+    add(
+      DIAGNOSTIC_CODES.INCOMPATIBLE_BINDING,
+      `${path}/config/options/xAxis`,
+      "X axis bounds are only supported for numeric axes.",
+    );
+  }
+  if (isRecord(xAxis)) {
+    const unit = own(xAxis, "unit");
+    if (typeof unit === "string" && unit !== (x?.field?.unit ?? "")) {
+      add(
+        DIAGNOSTIC_CODES.INCOMPATIBLE_BINDING,
+        `${path}/config/options/xAxis/unit`,
+        "An X axis unit override must match the field unit.",
+      );
+    }
+  }
+  if (isRecord(yAxis)) {
+    const unit = own(yAxis, "unit");
+    if (typeof unit === "string" && unit !== (y?.field?.unit ?? "")) {
+      add(
+        DIAGNOSTIC_CODES.INCOMPATIBLE_BINDING,
+        `${path}/config/options/yAxis/unit`,
+        "A Y axis unit override must match the field unit.",
+      );
+    }
+    const matrixEntry = VISUALIZATION_MATRIX[visualization];
+    if (matrixEntry.zeroBaseline === "required" || matrixEntry.zeroBaseline === "visible") {
+      const min = own(yAxis, "min");
+      const max = own(yAxis, "max");
+      if (typeof min === "number" && min > 0) {
+        add(
+          DIAGNOSTIC_CODES.INCOMPATIBLE_BINDING,
+          `${path}/config/options/yAxis/min`,
+          "The Y axis must include a visible zero baseline.",
+        );
+      }
+      if (typeof max === "number" && max < 0) {
+        add(
+          DIAGNOSTIC_CODES.INCOMPATIBLE_BINDING,
+          `${path}/config/options/yAxis/max`,
+          "The Y axis must include a visible zero baseline.",
+        );
+      }
+    }
+  }
+}
 
 const BINDING_ROLES_BY_BLOCK: Readonly<Record<string, readonly BindingRole[]>> = Object.freeze({
   chart: ["dimension", "measure", "series", "group", "size", "color", "comparison", "label"],
@@ -244,6 +469,7 @@ export function validateBlock(
   }
 
   const bindingIds = new Map<string, Record<string, unknown>>();
+  const matrixBindings: ParsedMatrixBinding[] = [];
   const bindings = own(value, "bindings");
   if (bindings !== undefined) {
     if (!Array.isArray(bindings)) {
@@ -347,6 +573,19 @@ export function validateBlock(
         if (label !== undefined && typeof label !== "string") {
           add(DIAGNOSTIC_CODES.INVALID_PROPERTY_TYPE, `${bindingPath}/label`);
         }
+        matrixBindings.push({
+          role: oneOf(role, BINDING_ROLES) ? role : null,
+          axis: oneOf(axis, BINDING_AXES) ? axis : null,
+          field: bindingFieldInfo,
+          ...(isRecord(bucket) && oneOf(own(bucket, "grain"), BUCKET_GRAINS)
+            ? { grain: own(bucket, "grain") as string }
+            : {}),
+          aggregation:
+            isRecord(aggregation) && oneOf(own(aggregation, "type"), AGGREGATION_TYPES)
+              ? (own(aggregation, "type") as string)
+              : null,
+          path: bindingPath,
+        });
       });
     }
   }
@@ -389,6 +628,18 @@ export function validateBlock(
         if (legend !== undefined && legend !== "hidden" && legend !== "visible") {
           add(DIAGNOSTIC_CODES.INVALID_PROPERTY_TYPE, `${path}/config/options/legend`);
         }
+        const categoryOrder = own(options, "categoryOrder");
+        if (categoryOrder !== undefined && !oneOf(categoryOrder, CATEGORY_ORDERS)) {
+          add(
+            DIAGNOSTIC_CODES.INVALID_PROPERTY_TYPE,
+            `${path}/config/options/categoryOrder`,
+            "A category order must be declared, data, ascending or descending.",
+          );
+        }
+        const binnedX = own(options, "binnedX");
+        if (binnedX !== undefined && typeof binnedX !== "boolean") {
+          add(DIAGNOSTIC_CODES.INVALID_PROPERTY_TYPE, `${path}/config/options/binnedX`);
+        }
         for (const axisKey of ["xAxis", "yAxis"] as const) {
           const axis = own(options, axisKey);
           if (axis !== undefined) {
@@ -419,6 +670,14 @@ export function validateBlock(
         }
       }
     }
+    validateFieldMatrix(
+      "chart",
+      visualization as VisualizationKind,
+      config,
+      matrixBindings,
+      path,
+      add,
+    );
     return;
   }
   if (type === "metric") {
@@ -441,6 +700,7 @@ export function validateBlock(
         validateFormat(format, `${path}/config/format`, add);
       }
     }
+    validateFieldMatrix("metric", "kpi", config, matrixBindings, path, add);
     return;
   }
   if (type === "table") {

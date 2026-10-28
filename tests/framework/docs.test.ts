@@ -10,11 +10,11 @@ function readDocument(relativePath: string): string {
 }
 
 describe("T01 documentation records", () => {
-  it("keeps seven architecture decision records with explicit cost of change", () => {
+  it("keeps eight architecture decision records with explicit cost of change", () => {
     const adrFiles = readdirSync(decisionsDirectory)
       .filter((file) => /^ADR-\d{4}-.*\.md$/.test(file))
       .sort();
-    expect(adrFiles).toHaveLength(7);
+    expect(adrFiles).toHaveLength(8);
 
     for (const file of adrFiles) {
       const content = readFileSync(path.join(decisionsDirectory, file), "utf8");

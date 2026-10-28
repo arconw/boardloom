@@ -2,7 +2,7 @@
 
 Boardloom headless runtime: isolated spaces, lifecycle, view-local modes, editor lease and draft foundations, locale/timezone configuration, formatting and message-provider contracts. The package has no DOM, UI framework, server, SQL, ORM or database dependency. It imports and runs in Node and in browsers.
 
-Status: T02 implements the headless core. T03 adds the versioned board document schema, canonical export, non-destructive import and a synthetic migration harness. T04 adds the dataset/field/slice contract, capability validation, local and async query adapters, canonical query keys, generations, cancellation and query states. Renderers, filter and comparison execution, realtime transport and extension registries belong to later tasks. Full built-in locale dictionaries and RTL layout belong to T17.
+Status: T02 implements the headless core. T03 adds the versioned board document schema, canonical export, non-destructive import and a synthetic migration harness. T04 adds the dataset/field/slice contract, capability validation, local and async query adapters, canonical query keys, generations, cancellation and query states. T07 adds the DOM-free renderer contract and registry, the normative field-type matrix, shared value formatting, and renderer-neutral chart, KPI and table models plus lifecycle/error containment. Filter and comparison execution, realtime transport and the public extension registries belong to later tasks. Full built-in locale dictionaries and RTL layout belong to T17.
 
 Distribution target: browser ESM with TypeScript declarations. npm publication is not authorized; planned scoped names are used for tarball consumers only.
 
@@ -30,7 +30,7 @@ A runtime owns an explicit space map. Creating a board creates a space. `createS
 
 Every space instance has a `lifetimeId`. Events, snapshots and space summaries expose it so observers can distinguish successive lifetimes that reuse the same public space ID. A disposed ID remains reserved until that lifetime's terminal `space:disposed` event has been delivered through both the space and runtime observation channels; `createSpace` with the same ID returns `SPACE_ALREADY_EXISTS` until then. After terminal delivery the ID can be reused, and old events remain attributed to their original lifetime.
 
-`getSnapshot()` returns a deeply frozen public state snapshot. Documents, drafts, diagnostics, lease records and view summaries are immutable. A new snapshot is produced for each call.
+`getSnapshot()` returns a deeply frozen public state snapshot. Documents, drafts, diagnostics, lease records and view summaries are immutable. A new snapshot is produced for each call. `getDatasetDescriptor(datasetId)` exposes the provider's descriptor for a dataset so renderers can use declared field order, units and value metadata without receiving provider handles; it returns `undefined` for an unknown dataset or after space disposal.
 
 `dispose()` is idempotent at the view, space and runtime level. Disposal cancels space-owned timers, clears listeners, marks views disposed and ignores late callbacks. A space with zero views stays alive until the host disposes it. `space.schedule(callback, delayMs)` creates a space-owned task; cancellation, space disposal and runtime disposal clear it, and late callbacks are ignored.
 

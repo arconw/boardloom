@@ -7,6 +7,15 @@ export {
   type BlockTypeDefinition,
 } from "./block-registry.js";
 export { BUILT_IN_BLOCK_TYPES } from "./built-in-blocks.js";
+export { BUILT_IN_RENDERERS } from "./built-in-renderers.js";
+export {
+  buildChartSpecForBlock,
+  buildKpiSpecForBlock,
+  buildTableSpecForBlock,
+  filterScopeText,
+  rendererData,
+  rendererInput,
+} from "./renderer-adapter.js";
 export { createViewMessages, type ViewMessages } from "./messages.js";
 export {
   realtimeLabel,

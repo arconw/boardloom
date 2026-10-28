@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "status": "T05 proposed catalog for the first UI implementation; T06 publishes the keys in the core English dictionary and T17 completes all built-in locales",
+  "status": "T05 proposed catalog for the first UI implementation; T06 publishes the keys in the core English dictionary, T07 adds renderer and accessibility keys, and T17 completes all built-in locales",
   "rules": {
     "namespace": "lowercase namespace followed by dot-separated segments; diagnostic codes may use uppercase segments after diagnostic.",
     "fallback": "English is the deterministic fallback; host overrides win over the selected built-in locale and English.",
@@ -1811,6 +1811,171 @@
       "english": "Data table",
       "context": "Accessible name for a scrollable table or chart data-table region without a host title",
       "source": "proposed"
+    },
+    {
+      "key": "common.true",
+      "english": "Yes",
+      "context": "Affirmative boolean value",
+      "source": "core"
+    },
+    {
+      "key": "common.false",
+      "english": "No",
+      "context": "Negative boolean value",
+      "source": "core"
+    },
+    {
+      "key": "table.missing.one",
+      "english": "{count} missing cell",
+      "context": "Table missing-cell count for one",
+      "source": "core",
+      "placeholders": ["count"]
+    },
+    {
+      "key": "table.missing.other",
+      "english": "{count} missing cells",
+      "context": "Table missing-cell count for many",
+      "source": "core",
+      "placeholders": ["count"]
+    },
+    {
+      "key": "chart.summary.points.one",
+      "english": "{count} data point",
+      "context": "Chart summary point count for one",
+      "source": "core",
+      "placeholders": ["count"]
+    },
+    {
+      "key": "chart.summary.points.other",
+      "english": "{count} data points",
+      "context": "Chart summary point count for many",
+      "source": "core",
+      "placeholders": ["count"]
+    },
+    {
+      "key": "chart.summary.series.one",
+      "english": "{count} series: {names}",
+      "context": "Chart summary series count for one",
+      "source": "core",
+      "placeholders": ["count", "names"]
+    },
+    {
+      "key": "chart.summary.series.other",
+      "english": "{count} series: {names}",
+      "context": "Chart summary series count for many",
+      "source": "core",
+      "placeholders": ["count", "names"]
+    },
+    {
+      "key": "chart.summary.categories.one",
+      "english": "{count} category",
+      "context": "Chart summary category count for one",
+      "source": "core",
+      "placeholders": ["count"]
+    },
+    {
+      "key": "chart.summary.categories.other",
+      "english": "{count} categories",
+      "context": "Chart summary category count for many",
+      "source": "core",
+      "placeholders": ["count"]
+    },
+    {
+      "key": "chart.summary.missing.one",
+      "english": "{count} missing value excluded",
+      "context": "Chart summary missing-value count for one",
+      "source": "core",
+      "placeholders": ["count"]
+    },
+    {
+      "key": "chart.summary.missing.other",
+      "english": "{count} missing values excluded",
+      "context": "Chart summary missing-value count for many",
+      "source": "core",
+      "placeholders": ["count"]
+    },
+    {
+      "key": "chart.summary.units",
+      "english": "Units: {units}",
+      "context": "Chart summary unit disclosure",
+      "source": "core",
+      "placeholders": ["units"]
+    },
+    {
+      "key": "chart.summary.scope",
+      "english": "Active scope: {scope}",
+      "context": "Chart summary active filter scope",
+      "source": "core",
+      "placeholders": ["scope"]
+    },
+    {
+      "key": "chart.summary.empty",
+      "english": "No chart values for this scope",
+      "context": "Chart empty value disclosure",
+      "source": "core"
+    },
+    {
+      "key": "chart.summary.zeroTotal",
+      "english": "The total is zero, so the donut has no parts",
+      "context": "Donut zero-total disclosure",
+      "source": "core"
+    },
+    {
+      "key": "chart.negative.diverging",
+      "english": "Negative values render below the zero baseline",
+      "context": "Diverging negative-value policy",
+      "source": "core"
+    },
+    {
+      "key": "chart.baseline.zero",
+      "english": "Zero baseline",
+      "context": "Zero baseline disclosure",
+      "source": "core"
+    },
+    {
+      "key": "chart.baseline.padded",
+      "english": "Padded axes",
+      "context": "Padded axis disclosure",
+      "source": "core"
+    },
+    {
+      "key": "chart.baseline.nonZero",
+      "english": "Baseline is not zero",
+      "context": "Non-zero baseline disclosure",
+      "source": "core"
+    },
+    {
+      "key": "chart.rendererUnavailable.title",
+      "english": "Chart renderer unavailable",
+      "context": "Fallback heading when no chart renderer is registered",
+      "source": "core"
+    },
+    {
+      "key": "chart.rendererUnavailable.body",
+      "english": "Showing the accessible data table instead",
+      "context": "Fallback body when no chart renderer is registered",
+      "source": "core"
+    },
+    {
+      "key": "a11y.tableCaption",
+      "english": "Data table for {title}",
+      "context": "Accessible table caption with the block title",
+      "source": "core",
+      "placeholders": ["title"]
+    },
+    {
+      "key": "chart.summary.denominator.one",
+      "english": "Average based on {count} non-null row",
+      "context": "Mean denominator disclosure for one non-null row",
+      "source": "core",
+      "placeholders": ["count"]
+    },
+    {
+      "key": "chart.summary.denominator.other",
+      "english": "Average based on {count} non-null rows",
+      "context": "Mean denominator disclosure for multiple non-null rows",
+      "source": "core",
+      "placeholders": ["count"]
     }
   ]
 }

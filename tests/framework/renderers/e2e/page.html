@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Boardloom T07 renderer gallery</title>
+    <link rel="stylesheet" href="/build/view-dom/styles.css" />
+    <style>
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        background: #dddddd;
+      }
+      body {
+        font-family: sans-serif;
+      }
+      #gallery,
+      #invalid,
+      #empty,
+      #custom {
+        width: 100%;
+      }
+      #result {
+        white-space: pre-wrap;
+      }
+    </style>
+    <script type="importmap">
+      {
+        "imports": {
+          "@boardloom/core": "/build/core/dist/index.js",
+          "@boardloom/view-dom": "/build/view-dom/dist/index.js"
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <div id="gallery"></div>
+    <div id="invalid"></div>
+    <div id="empty"></div>
+    <div id="custom"></div>
+    <div id="edges"></div>
+    <pre id="result"></pre>
+    <script type="module" src="./page.js"></script>
+  </body>
+</html>

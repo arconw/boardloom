@@ -795,4 +795,67 @@
   .boardloom[data-boardloom-breakpoint="narrow"] .bl-block__body {
     padding: var(--bl-space-3);
   }
+  .boardloom .bl-metric-content {
+    min-inline-size: 0;
+  }
+
+  .boardloom .bl-chart-plot-container {
+    min-inline-size: 0;
+    min-block-size: 220px;
+  }
+
+  .boardloom .bl-chart-renderer {
+    display: flex;
+    flex-direction: column;
+    gap: var(--bl-space-2);
+    min-block-size: 220px;
+    block-size: 100%;
+  }
+
+  .boardloom .bl-chart-plot {
+    flex: 1 1 auto;
+    inline-size: 100%;
+    min-block-size: 200px;
+  }
+
+  .boardloom .bl-chart-summary {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .boardloom .bl-chart-empty-state {
+    margin: 0;
+    color: var(--bl-color-text-muted);
+    font-size: var(--bl-font-size-sm);
+  }
+
+  .boardloom .bl-chart-fallback {
+    display: flex;
+    flex-direction: column;
+    gap: var(--bl-space-1);
+    padding: var(--bl-space-3);
+    border: 1px dashed var(--bl-color-border);
+    border-radius: var(--bl-radius-sm);
+    background: var(--bl-color-surface-sunken);
+  }
+
+  .boardloom .bl-chart-fallback__title,
+  .boardloom .bl-chart-fallback__body {
+    margin: 0;
+  }
+
+  .boardloom .bl-chart-fallback__title {
+    font-weight: var(--bl-font-weight-semibold);
+  }
+
+  .boardloom .bl-table-missing {
+    margin: 0;
+    padding: var(--bl-space-2) var(--bl-space-3);
+    color: var(--bl-color-text-muted);
+    font-size: var(--bl-font-size-xs);
+  }
 }

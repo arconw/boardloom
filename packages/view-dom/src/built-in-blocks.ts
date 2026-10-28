@@ -1,8 +1,17 @@
-import type {
-  BindingDefinition,
-  BoardDocumentV1,
-  JsonValue,
-  QueryResultField,
+import {
+  DIAGNOSTIC_CODES,
+  createDiagnostic,
+  destroyRenderer,
+  mountRenderer,
+  updateRenderer,
+  type BoardDocumentV1,
+  type Diagnostic,
+  type JsonValue,
+  type QueryResultField,
+  type RendererDefinition,
+  type RendererField,
+  type RendererHandle,
+  type RendererSpec,
 } from "@boardloom/core";
 import type {
   BlockSurface,
@@ -10,11 +19,23 @@ import type {
   BlockTypeDefinition,
 } from "./block-registry.js";
 import { clearElement, createElement, setHostText, setKeyedText } from "./dom.js";
-import { activeFilterSummaries, filterSummaryEntry, filterValueText } from "./filter-summary.js";
-import { formatFieldValue } from "./format-value.js";
+import { filterSummaryEntry, filterValueText } from "./filter-summary.js";
+import { formatRendererFieldValue } from "./format-value.js";
 import { ownValue } from "./own-value.js";
 import type { ViewMessages } from "./messages.js";
-import { renderDataBanner, renderEmptyState, renderQueryState } from "./states.js";
+import {
+  buildChartSpecForBlock,
+  buildKpiSpecForBlock,
+  buildTableSpecForBlock,
+  filterScopeText,
+  rendererInput,
+} from "./renderer-adapter.js";
+import {
+  renderDataBanner,
+  renderEmptyState,
+  renderErrorState,
+  renderQueryState,
+} from "./states.js";
 
 let surfaceSequence = 0;
 
@@ -32,26 +53,6 @@ function bindingLabel(block: BlockSurfaceEnvironment["block"], fieldId: string):
   return fieldId;
 }
 
-function measureBinding(block: BlockSurfaceEnvironment["block"]): BindingDefinition | null {
-  const bindings = block.bindings ?? [];
-  return (
-    bindings.find(
-      (binding) => binding.role === "measure" || binding.role === "value" || binding.axis === "y",
-    ) ?? null
-  );
-}
-
-function filterScopeText(environment: BlockSurfaceEnvironment): string | null {
-  const filters = activeFilterSummaries(asDocument(environment.document), environment.messages);
-  if (filters.length === 0) {
-    return null;
-  }
-  return filters
-    .map((filter) => `${filter.label}: ${filter.value}`)
-    .filter((entry) => !entry.endsWith(": "))
-    .join("; ");
-}
-
 function numericRun(doc: Document, text: string): HTMLElement {
   const run = createElement(doc, "bdi", "bl-numeric");
   run.setAttribute("dir", "ltr");
@@ -65,19 +66,19 @@ function missingValueCell(messages: ViewMessages, cell: HTMLElement): void {
   cell.setAttribute("aria-label", messages.text("chart.missing"));
 }
 
-function missingValueText(messages: ViewMessages): string {
-  return messages.text("chart.missing");
-}
-
 function renderCell(
   doc: Document,
   messages: ViewMessages,
   formatters: BlockSurfaceEnvironment["formatters"],
   field: QueryResultField,
   value: JsonValue | undefined,
+  specField?: RendererField,
 ): HTMLTableCellElement {
   const cell = createElement(doc, "td", "bl-table__cell");
-  const formatted = value === undefined ? null : formatFieldValue(value, field, formatters);
+  const formatted =
+    value === undefined
+      ? null
+      : formatRendererFieldValue(value, field, specField, formatters, messages);
   if (formatted === null) {
     missingValueCell(messages, cell);
   } else if (field.type === "number") {
@@ -92,6 +93,7 @@ function renderTable(
   container: HTMLElement,
   environment: BlockSurfaceEnvironment,
   captionHostText: string | null,
+  fieldSpecs?: ReadonlyMap<string, RendererField>,
 ): void {
   clearElement(container);
   const state = environment.query;
@@ -121,7 +123,15 @@ function renderTable(
   for (const field of fields) {
     const header = createElement(doc, "th");
     header.setAttribute("scope", "col");
-    setHostText(header, bindingLabel(environment.block, field.fieldId));
+    const specField = fieldSpecs?.get(field.fieldId);
+    const label = specField?.label ?? bindingLabel(environment.block, field.fieldId);
+    const unit =
+      specField?.unit === undefined
+        ? field.unit === undefined
+          ? ""
+          : (field.unit.label ?? field.unit.unit)
+        : (specField.unit.label ?? specField.unit.unit);
+    setHostText(header, unit === "" ? label : `${label} (${unit})`);
     headRow.append(header);
   }
   head.append(headRow);
@@ -133,8 +143,17 @@ function renderTable(
       if (index === 0) {
         const header = createElement(doc, "th");
         header.setAttribute("scope", "row");
+        const specField = fieldSpecs?.get(field.fieldId);
         const formatted =
-          value === undefined ? null : formatFieldValue(value, field, environment.formatters);
+          value === undefined
+            ? null
+            : formatRendererFieldValue(
+                value,
+                field,
+                specField,
+                environment.formatters,
+                environment.messages,
+              );
         if (formatted === null) {
           missingValueCell(environment.messages, header);
         } else if (field.type === "number") {
@@ -145,7 +164,14 @@ function renderTable(
         rowElement.append(header);
       } else {
         rowElement.append(
-          renderCell(doc, environment.messages, environment.formatters, field, value),
+          renderCell(
+            doc,
+            environment.messages,
+            environment.formatters,
+            field,
+            value,
+            fieldSpecs?.get(field.fieldId),
+          ),
         );
       }
     });
@@ -170,77 +196,79 @@ function createTextSurface(environment: BlockSurfaceEnvironment): BlockSurface {
   };
 }
 
+interface ActiveRenderer {
+  definition: RendererDefinition<HTMLElement> | null;
+  handle: RendererHandle<HTMLElement> | null;
+}
+
+function createActiveRenderer(): ActiveRenderer {
+  return { definition: null, handle: null };
+}
+
+function disposeActiveRenderer(active: ActiveRenderer): void {
+  if (active.handle !== null && active.definition !== null) {
+    destroyRenderer(active.definition, active.handle);
+  }
+  active.definition = null;
+  active.handle = null;
+}
+
+function unsupportedDiagnostic(
+  kind: "chart" | "kpi" | "table",
+  visualization?: string,
+): Diagnostic {
+  return createDiagnostic(
+    DIAGNOSTIC_CODES.RENDERER_UNSUPPORTED,
+    visualization === undefined ? `renderer/${kind}` : `renderer/${kind}/${visualization}`,
+    {
+      message:
+        visualization === undefined
+          ? `No ${kind} renderer is registered in this viewer.`
+          : `No chart renderer is registered for ${visualization}.`,
+      relatedIds: visualization === undefined ? [kind] : [visualization],
+    },
+  );
+}
+
+function renderActiveRenderer(
+  host: HTMLElement,
+  environment: BlockSurfaceEnvironment,
+  definition: RendererDefinition<HTMLElement>,
+  spec: RendererSpec,
+  active: ActiveRenderer,
+): readonly Diagnostic[] {
+  if (
+    active.handle !== null &&
+    active.definition !== null &&
+    active.definition.id === definition.id
+  ) {
+    const diagnostics = updateRenderer(
+      definition,
+      active.handle,
+      rendererInput(environment, host, spec),
+    );
+    return diagnostics;
+  }
+  disposeActiveRenderer(active);
+  clearElement(host);
+  const mounted = mountRenderer(definition, rendererInput(environment, host, spec));
+  if (mounted.handle === null) {
+    return mounted.diagnostics;
+  }
+  active.definition = definition;
+  active.handle = mounted.handle;
+  return Object.freeze([]);
+}
+
 function createMetricSurface(environment: BlockSurfaceEnvironment): BlockSurface {
   const doc = environment.dom;
   const element = createElement(doc, "div", "bl-metric-surface");
   const stateContainer = createElement(doc, "div", "bl-surface-state");
   const bannerContainer = createElement(doc, "div", "bl-surface-banner");
-  const content = createElement(doc, "div", "bl-metric");
-  const label = createElement(doc, "p", "bl-metric__label");
-  const value = createElement(doc, "p", "bl-metric__value");
-  const numeric = createElement(doc, "bdi", "bl-numeric");
-  value.append(numeric);
-  content.append(label, value);
+  const content = createElement(doc, "div", "bl-metric-content");
   element.append(stateContainer, bannerContainer, content);
+  const active = createActiveRenderer();
 
-  return {
-    element,
-    update(next: BlockSurfaceEnvironment): void {
-      const showing = renderQueryState(
-        stateContainer,
-        next.messages,
-        next.query,
-        next.queryError,
-        filterScopeText(next),
-      );
-      renderDataBanner(bannerContainer, next.messages, next.query, next.formatters);
-      if (!showing || next.query === null) {
-        clearElement(content);
-        element.setAttribute("data-state", next.query?.phase ?? "error");
-        return;
-      }
-      const binding = measureBinding(next.block);
-      const fieldId = next.queryPlan?.valueBindingId ?? binding?.field.fieldId ?? null;
-      const field =
-        next.query.fields.find((candidate) => candidate.fieldId === fieldId) ??
-        next.query.fields.find((candidate) => candidate.role === "measure") ??
-        null;
-      const row = next.query.rows[0];
-      const raw = field === null || row === undefined ? undefined : ownValue(row, field.fieldId);
-      clearElement(content);
-      setHostText(
-        label,
-        next.queryPlan?.valueLabel ?? binding?.label ?? binding?.field.fieldId ?? "",
-      );
-      if (
-        field === null ||
-        raw === undefined ||
-        formatFieldValue(raw, field, next.formatters) === null
-      ) {
-        numeric.textContent = missingValueText(next.messages);
-        numeric.setAttribute("data-message-key", "chart.missing");
-        numeric.setAttribute("aria-label", missingValueText(next.messages));
-        numeric.removeAttribute("dir");
-      } else {
-        numeric.textContent =
-          formatFieldValue(raw, field, next.formatters) ?? missingValueText(next.messages);
-        numeric.removeAttribute("data-message-key");
-        numeric.removeAttribute("aria-label");
-        numeric.setAttribute("dir", "ltr");
-      }
-      content.append(label, value);
-      element.setAttribute("data-state", next.query.phase);
-    },
-  };
-}
-
-function createTableSurface(environment: BlockSurfaceEnvironment): BlockSurface {
-  const doc = environment.dom;
-  const element = createElement(doc, "div", "bl-table-surface");
-  const stateContainer = createElement(doc, "div", "bl-surface-state");
-  const bannerContainer = createElement(doc, "div", "bl-surface-banner");
-  const content = createElement(doc, "div", "bl-surface-content");
-  element.append(stateContainer, bannerContainer, content);
   return {
     element,
     update(next: BlockSurfaceEnvironment): void {
@@ -253,14 +281,119 @@ function createTableSurface(environment: BlockSurfaceEnvironment): BlockSurface 
       );
       renderDataBanner(bannerContainer, next.messages, next.query, next.formatters);
       if (!showing) {
+        disposeActiveRenderer(active);
         clearElement(content);
         element.setAttribute("data-state", next.query?.phase ?? "error");
         return;
       }
-      renderTable(content, next, typeof next.block.title === "string" ? next.block.title : null);
+      const spec = buildKpiSpecForBlock(next);
+      if (!spec.ok) {
+        disposeActiveRenderer(active);
+        clearElement(content);
+        renderErrorState(content, next.messages, spec.diagnostics);
+        element.setAttribute("data-state", "error");
+        return;
+      }
+      const definition = next.renderers.resolve({ kind: "kpi" });
+      if (definition === undefined) {
+        disposeActiveRenderer(active);
+        clearElement(content);
+        renderErrorState(content, next.messages, [unsupportedDiagnostic("kpi")]);
+        element.setAttribute("data-state", "error");
+        return;
+      }
+      const diagnostics = renderActiveRenderer(content, next, definition, spec.value, active);
+      if (diagnostics.length > 0) {
+        disposeActiveRenderer(active);
+        clearElement(content);
+        renderErrorState(content, next.messages, diagnostics);
+        element.setAttribute("data-state", "error");
+        return;
+      }
       element.setAttribute("data-state", next.query?.phase ?? "settled");
     },
+    destroy(): void {
+      disposeActiveRenderer(active);
+    },
   };
+}
+
+function createTableSurface(environment: BlockSurfaceEnvironment): BlockSurface {
+  const doc = environment.dom;
+  const element = createElement(doc, "div", "bl-table-surface");
+  const stateContainer = createElement(doc, "div", "bl-surface-state");
+  const bannerContainer = createElement(doc, "div", "bl-surface-banner");
+  const content = createElement(doc, "div", "bl-surface-content");
+  element.append(stateContainer, bannerContainer, content);
+  const active = createActiveRenderer();
+
+  return {
+    element,
+    update(next: BlockSurfaceEnvironment): void {
+      const showing = renderQueryState(
+        stateContainer,
+        next.messages,
+        next.query,
+        next.queryError,
+        filterScopeText(next),
+      );
+      renderDataBanner(bannerContainer, next.messages, next.query, next.formatters);
+      if (!showing) {
+        disposeActiveRenderer(active);
+        clearElement(content);
+        element.setAttribute("data-state", next.query?.phase ?? "error");
+        return;
+      }
+      const spec = buildTableSpecForBlock(next);
+      if (!spec.ok) {
+        disposeActiveRenderer(active);
+        clearElement(content);
+        renderErrorState(content, next.messages, spec.diagnostics);
+        element.setAttribute("data-state", "error");
+        return;
+      }
+      const definition = next.renderers.resolve({ kind: "table" });
+      if (definition === undefined) {
+        disposeActiveRenderer(active);
+        clearElement(content);
+        renderErrorState(content, next.messages, [unsupportedDiagnostic("table")]);
+        element.setAttribute("data-state", "error");
+        return;
+      }
+      const diagnostics = renderActiveRenderer(content, next, definition, spec.value, active);
+      if (diagnostics.length > 0) {
+        disposeActiveRenderer(active);
+        clearElement(content);
+        renderErrorState(content, next.messages, diagnostics);
+        element.setAttribute("data-state", "error");
+        return;
+      }
+      element.setAttribute("data-state", next.query?.phase ?? "settled");
+    },
+    destroy(): void {
+      disposeActiveRenderer(active);
+    },
+  };
+}
+
+function renderRendererUnavailable(container: HTMLElement, messages: ViewMessages): void {
+  clearElement(container);
+  const doc = container.ownerDocument;
+  const note = createElement(doc, "div", "bl-chart-fallback");
+  const title = createElement(doc, "p", "bl-chart-fallback__title");
+  setKeyedText(
+    title,
+    "chart.rendererUnavailable.title",
+    messages.text("chart.rendererUnavailable.title"),
+  );
+  const body = createElement(doc, "p", "bl-chart-fallback__body");
+  setKeyedText(
+    body,
+    "chart.rendererUnavailable.body",
+    messages.text("chart.rendererUnavailable.body"),
+  );
+  note.append(title, body);
+  container.append(note);
 }
 
 function createChartSurface(environment: BlockSurfaceEnvironment): BlockSurface {
@@ -268,13 +401,16 @@ function createChartSurface(environment: BlockSurfaceEnvironment): BlockSurface 
   const element = createElement(doc, "div", "bl-chart-surface");
   const stateContainer = createElement(doc, "div", "bl-surface-state");
   const bannerContainer = createElement(doc, "div", "bl-surface-banner");
+  const plotContainer = createElement(doc, "div", "bl-chart-plot-container");
   const details = createElement(doc, "details", "bl-chart-data");
   details.setAttribute("open", "");
   const summary = createElement(doc, "summary", "bl-chart-data__summary");
   setKeyedText(summary, "chart.viewDataTable", environment.messages.text("chart.viewDataTable"));
   const tableContainer = createElement(doc, "div", "bl-chart-data__table");
   details.append(summary, tableContainer);
-  element.append(stateContainer, bannerContainer, details);
+  element.append(stateContainer, bannerContainer, plotContainer, details);
+  const active = createActiveRenderer();
+
   return {
     element,
     update(next: BlockSurfaceEnvironment): void {
@@ -288,18 +424,68 @@ function createChartSurface(environment: BlockSurfaceEnvironment): BlockSurface 
       renderDataBanner(bannerContainer, next.messages, next.query, next.formatters);
       setKeyedText(summary, "chart.viewDataTable", next.messages.text("chart.viewDataTable"));
       if (!showing) {
+        disposeActiveRenderer(active);
+        clearElement(plotContainer);
         details.setAttribute("hidden", "");
         clearElement(tableContainer);
         element.setAttribute("data-state", next.query?.phase ?? "error");
         return;
       }
+      const spec = buildChartSpecForBlock(next);
+      if (!spec.ok) {
+        disposeActiveRenderer(active);
+        clearElement(plotContainer);
+        renderErrorState(plotContainer, next.messages, spec.diagnostics);
+        element.setAttribute("data-state", "error");
+        renderTable(
+          tableContainer,
+          next,
+          typeof next.block.title === "string" ? next.block.title : null,
+        );
+        return;
+      }
+      const definition = next.renderers.resolve({
+        kind: "chart",
+        visualization: spec.value.visualization,
+      });
+      if (definition === undefined) {
+        disposeActiveRenderer(active);
+        renderRendererUnavailable(plotContainer, next.messages);
+        element.setAttribute("data-state", "fallback");
+      } else {
+        const diagnostics = renderActiveRenderer(
+          plotContainer,
+          next,
+          definition,
+          spec.value,
+          active,
+        );
+        if (diagnostics.length > 0) {
+          disposeActiveRenderer(active);
+          clearElement(plotContainer);
+          renderErrorState(plotContainer, next.messages, diagnostics);
+          element.setAttribute("data-state", "error");
+        } else {
+          element.setAttribute("data-state", next.query?.phase ?? "settled");
+        }
+      }
       details.removeAttribute("hidden");
+      const fieldSpecs = new Map<string, RendererField>([
+        [spec.value.x.fieldId, spec.value.x],
+        [spec.value.y.fieldId, spec.value.y],
+      ]);
+      if (spec.value.series !== null) {
+        fieldSpecs.set(spec.value.series.fieldId, spec.value.series);
+      }
       renderTable(
         tableContainer,
         next,
         typeof next.block.title === "string" ? next.block.title : null,
+        fieldSpecs,
       );
-      element.setAttribute("data-state", next.query?.phase ?? "settled");
+    },
+    destroy(): void {
+      disposeActiveRenderer(active);
     },
   };
 }

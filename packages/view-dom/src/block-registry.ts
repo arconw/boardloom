@@ -5,10 +5,13 @@ import {
   ok,
   type BoardDocument,
   type BoardloomLocale,
+  type DatasetDescriptor,
   type BlockDefinition,
   type Diagnostic,
   type FormatterProvider,
   type QueryState,
+  type RendererRegistry,
+  type RendererTheme,
   type Result,
 } from "@boardloom/core";
 import type { DerivedBlockQuery } from "./block-query.js";
@@ -26,6 +29,9 @@ export interface BlockSurfaceEnvironment {
   readonly formatters: FormatterProvider;
   readonly locale: BoardloomLocale;
   readonly timezone: string;
+  readonly theme: RendererTheme;
+  readonly renderers: RendererRegistry<HTMLElement>;
+  getDatasetDescriptor(datasetId: string): DatasetDescriptor | undefined;
   createElement<K extends keyof HTMLElementTagNameMap>(
     tag: K,
     className?: string,

@@ -1,6 +1,7 @@
 import {
   DIAGNOSTIC_CODES,
   createDiagnostic,
+  createRendererRegistry,
   createRuntime,
   fail,
   ok,
@@ -14,6 +15,7 @@ import {
   type ViewMode,
 } from "@boardloom/core";
 import { BUILT_IN_BLOCK_TYPES } from "./built-in-blocks.js";
+import { BUILT_IN_RENDERERS } from "./built-in-renderers.js";
 import { createBlockRegistry } from "./block-registry.js";
 import { createViewMessages, type ViewMessages } from "./messages.js";
 import { claimMountedView, isMountedView, releaseMountedView } from "./mount-registry.js";
@@ -331,6 +333,12 @@ export function mountBoardView(
     rollbackExternalLocale();
     return registryFailure(registry.diagnostics);
   }
+  const renderers = createRendererRegistry([...BUILT_IN_RENDERERS, ...(options.renderers ?? [])]);
+  if (!renderers.ok) {
+    cleanup(space, view, resolved.value.runtime, ownership);
+    rollbackExternalLocale();
+    return registryFailure(renderers.diagnostics);
+  }
   if (!claimMountedView(view)) {
     cleanup(space, view, resolved.value.runtime, ownership);
     rollbackExternalLocale();
@@ -367,6 +375,7 @@ export function mountBoardView(
       resolved.value.runtime,
       ownership,
       registry.value,
+      renderers.value,
       messages.value,
       config,
     );
