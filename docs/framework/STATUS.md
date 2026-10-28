@@ -1,19 +1,19 @@
 # Delivery status
 
-This file reports orchestration status, not implementation acceptance.
+This file reports orchestration status, not implementation acceptance. It is written to the intended pre-commit state before final review and frozen through the accepted commit.
 
 - Repository: https://github.com/arconw/boardloom (public).
-- License decision: MIT, confirmed by the owner; `LICENSE` is part of the T00 public document review scope.
-- Architecture: client library with application-provided data and persistence adapters.
-- Current stage: T00 round-1 independent reviews completed with CHANGES_REQUESTED. Revisions are applied and the package is ready for round-2 re-review on the same final fingerprint and staged tree. No round-2 reviewer session has started.
-- Source inspection and implementation checks: performed by task implementer and reviewers only. The architect manages requirements, review handoffs and Git.
-- Review gate: an independent OC reviewer/tester and a CDX reviewer must both accept the same task snapshot and staged tree before the architect commits it. T00 uses the UNBORN-base, eight-file public fingerprint exception; the fingerprint is recorded only in local evidence.
-- Framework implementation: not started.
-- Packages, integration examples, DEMO deployment, CI and release tags: not yet delivered or verified.
-- Local evidence policy: challenges, implementer/reviewer reports and UI-testing/code walkthrough videos live only under ignored `.evidence/`. They are never committed, pushed, attached to GitHub Releases, uploaded by CI or sent to an external service. Product screenshots selected for public README/docs are separate approved documentation assets. CI may upload only ordinary build/test diagnostics such as logs, coverage and traces; not selected review/test screenshots, review reports or videos.
-- Decision log: local ignored `.questions/`; temporary orchestration files: ignored `.tmp/`.
-- Language policy: project documentation is English; framework UI includes built-in localization and host extension support.
-- Public initial commit scope: only the accepted planning package, `.gitignore` and `LICENSE`; no unreviewed legacy source or real data. T01 preserves existing local code, establishes the framework workspace and documents a reversible migration plan.
-- Status update order: this pre-commit status is written before final review and frozen through the accepted commit. Later status changes belong to the next reviewed task.
-
-Open items at T00 are documented in local task/review reports under `.evidence/reviews/`. No feature is accepted merely because it appears in the specification.
+- License decision: MIT, confirmed by the owner. `LICENSE` is present and uses `Copyright (c) 2026 Boardloom contributors`.
+- Current stage: T00 accepted at commit `7f03027f5810017522d6c0967f3418c938488b93`. T01 repository and quality foundation received CHANGES_REQUESTED from both independent reviewers. The review findings are addressed and the task is ready for re-review on a new snapshot; it is not accepted.
+- Framework implementation: no product feature is implemented. T01 establishes the workspace, pinned toolchain, quality command contract, package skeletons, source and staging boundary checks, ignore rules, CI skeleton, decision records and reversible migration plan.
+- Workspace: root npm workspace with `packages/core`, `packages/view-dom`, `packages/renderers-echarts`, `packages/react`, `packages/angular`, `packages/svelte`, `examples/` and `apps/demo/`. Planned scoped names are used for tarball consumers only.
+- Build and test output: publishable package staging is written to `.tmp/build/packages`, coverage to `.tmp/testing/coverage`, and Vite/Vitest caches to `.tmp/vite`. Source packages do not own generated `dist` directories. `verify:packages` checks staging and the packed tarball surface.
+- Public-surface and metadata-input safety: scanners and quality tools classify every path segment and reject protected names, local-only directories, traversal, absolute paths, symlinks and linked ancestors before content reads or writes. Permitted manifest directories can be created safely for a new task, while protected and unrelated paths remain untouched. Malformed manifest diagnostics do not echo input. Protected values are never printed.
+- Legacy preservation: the original non-sensitive source and configuration remain recoverable from the local `LEGACY` branch, which was not pushed. Local database, environment and private-context files were not read, copied or published.
+- Toolchain: Node.js `24.21.0`, npm `11.19.0`, TypeScript `5.9.3`, ESLint `10.13.0`, Prettier `3.9.10`, Vitest `5.0.5` and Vite `7.3.7` are pinned with one root lockfile. Official-document evidence is recorded in `docs/framework/decisions/toolchain-evidence.md`.
+- Packaging: browser ESM is the v0.1 runtime. Packages declare declarations, exports maps and a DOM CSS entry. UMD and CommonJS are not promised. Packages remain private; npm publication is withheld without a publisher context, and no registry availability is claimed.
+- Browser matrix: current stable Chrome, Edge, Firefox and Safari is the planning default, not a verified compatibility claim. Final browser E2E evidence belongs to T23 and AC-146.
+- Checks: lint, format check, typecheck, unit tests, package boundaries, package staging and pack surface, acceptance-owner uniqueness, ignore rules, public-surface scanning, clean checkout and legacy-branch reproduction are recorded in the local T01 handoff. GitHub CI was authored as a skeleton and was not executed in T01.
+- Local evidence policy: challenges, review reports and videos live only under ignored `.evidence/`. They are never committed, pushed, uploaded by CI or sent to an external service. CI may upload only ordinary build and test diagnostics.
+- Public T01 scope: workspace configuration, package skeletons, quality scripts, tests, CI skeleton, architecture decision records, governance record, migration plan and this status. The legacy `src/`, `frontend/`, `tests/`, `prisma/`, screenshots, database, `.env` and `.ctx` remain local.
+- Status update order: this pre-commit status is frozen through the accepted T01 commit. Later status changes belong to the next reviewed task.

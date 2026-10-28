@@ -1,0 +1,58 @@
+{
+  "name": "boardloom-workspace",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Boardloom framework workspace",
+  "license": "MIT",
+  "type": "module",
+  "packageManager": "npm@11.19.0",
+  "engines": {
+    "node": ">=24.21.0 <25",
+    "npm": ">=11.19.0 <12"
+  },
+  "workspaces": [
+    "packages/*",
+    "examples/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces --if-present",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "typecheck": "tsc -p tsconfig.json --noEmit && npm run typecheck --workspaces --if-present",
+    "test": "npm run test:unit",
+    "test:unit": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "test:contract": "node scripts/pending-tier.mjs test:contract T02",
+    "test:integration": "node scripts/pending-tier.mjs test:integration T02",
+    "test:e2e": "node scripts/pending-tier.mjs test:e2e T22",
+    "test:a11y": "node scripts/pending-tier.mjs test:a11y T18",
+    "test:i18n": "node scripts/pending-tier.mjs test:i18n T17",
+    "verify:boundaries": "node scripts/verify-boundaries.mjs",
+    "verify:packages": "node scripts/verify-packages.mjs",
+    "verify:consumers": "node scripts/pending-tier.mjs verify:consumers T19",
+    "verify:acceptance-owners": "node scripts/verify-acceptance-owners.mjs",
+    "verify:ignore-rules": "node scripts/verify-ignore-rules.mjs",
+    "verify:staged-tree": "node scripts/verify-staged-tree.mjs",
+    "scan:secrets": "node scripts/check-public-surface.mjs",
+    "stage:paths": "node scripts/stage-paths.mjs",
+    "build:docs": "node scripts/pending-tier.mjs build:docs T21",
+    "build:demo": "node scripts/pending-tier.mjs build:demo T20"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "@types/node": "24.19.2",
+    "@vitest/coverage-v8": "5.0.5",
+    "eslint": "10.13.0",
+    "eslint-config-prettier": "10.1.8",
+    "globals": "17.13.0",
+    "prettier": "3.9.10",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.72.1",
+    "vite": "7.3.7",
+    "vitest": "5.0.5"
+  }
+}

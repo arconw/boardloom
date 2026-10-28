@@ -1,0 +1,36 @@
+{
+  "name": "@boardloom/view-dom",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Boardloom framework-neutral viewer and editor DOM runtime",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": [
+    "*.css"
+  ],
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "style": "./styles.css",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./styles.css": "./styles.css",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "styles.css",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "node ../../scripts/build-package.mjs view-dom",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "engines": {
+    "node": ">=24.21.0 <25"
+  }
+}

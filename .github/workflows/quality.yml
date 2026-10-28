@@ -1,0 +1,70 @@
+name: quality
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: quality-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: install, lint, typecheck and unit
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Use the pinned npm version
+        run: |
+          npm install --global npm@11.19.0
+          npm --version
+
+      - name: Install from the committed lockfile
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Check formatting
+        run: npm run format:check
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Build package staging
+        run: npm run build
+
+      - name: Package staging and pack surface
+        run: npm run verify:packages
+
+      - name: Unit tests
+        run: npm run test:unit
+
+      - name: Package boundaries
+        run: npm run verify:boundaries
+
+      - name: Acceptance owners
+        run: npm run verify:acceptance-owners
+
+      - name: Ignore rules
+        run: npm run verify:ignore-rules
+
+      - name: Redacted secret scan
+        run: npm run scan:secrets

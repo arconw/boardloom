@@ -2,8 +2,19 @@ node_modules/
 dist/
 coverage/
 .vite/
+.vitest/
+.eslintcache
 *.tsbuildinfo
 *.log
+npm-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+*.tgz
+*.tar.gz
+playwright-report/
+test-results/
+.nyc_output/
+.DS_Store
 .env.local
 
 # Local SQLite databases
@@ -15,6 +26,8 @@ prisma/test-*.db
 
 .questions/
 .tmp/
+.evidence/
+video-materials/
 
 .ctx/
 .env
@@ -40,7 +53,12 @@ token*
 *.sqlite3
 *.sqlite3-*
 
-.evidence/
-video-materials/
-docs/framework/CHALLENGES.md
-docs/framework/reviews/
+# Local legacy application originals preserved in the LEGACY branch
+/src/
+/frontend/
+/prisma/
+/video-materials/
+/tests/*
+!/tests/framework/
+!/tests/framework/**
+/tsconfig.build.json
