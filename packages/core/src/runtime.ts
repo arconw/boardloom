@@ -17,6 +17,7 @@ import {
   type Result,
 } from "./diagnostics.js";
 import type { DatasetDescriptor, DatasetProvider } from "./data-contract.js";
+import type { RealtimeTransport } from "./realtime-contract.js";
 import type { BoardDocumentParseOptions } from "./document-io.js";
 import { parseBoardDocument } from "./document-io.js";
 import type { BoardDocument } from "./document.js";
@@ -55,6 +56,7 @@ export interface RuntimeOptions {
   readonly locale?: string;
   readonly timezone?: string;
   readonly datasetProvider?: DatasetProvider;
+  readonly realtime?: RealtimeTransport;
 }
 
 export interface ImportDocumentOptions extends Omit<
@@ -65,6 +67,7 @@ export interface ImportDocumentOptions extends Omit<
   readonly locale?: string;
   readonly timezone?: string;
   readonly datasetProvider?: DatasetProvider;
+  readonly realtime?: RealtimeTransport;
 }
 
 export interface ImportedDocument {
@@ -128,6 +131,7 @@ class RuntimeImpl implements BoardloomRuntime {
   >;
   private readonly historyLimit: number;
   private readonly datasetProvider?: DatasetProvider;
+  private readonly realtimeTransport?: RealtimeTransport;
   private readonly localeInput: { readonly locale?: string; readonly timezone?: string };
   private readonly spaces = new Map<string, SpaceImpl>();
   private readonly spaceProviders = new Map<string, DatasetProvider>();
@@ -156,6 +160,7 @@ class RuntimeImpl implements BoardloomRuntime {
     this.historyLimit =
       Number.isFinite(requestedLimit) && requestedLimit >= 0 ? Math.floor(requestedLimit) : 100;
     this.datasetProvider = options.datasetProvider;
+    this.realtimeTransport = options.realtime;
     this.localeInput = Object.freeze({
       locale: options.locale,
       timezone: options.timezone,
@@ -311,6 +316,11 @@ class RuntimeImpl implements BoardloomRuntime {
         ...(effectiveImportProvider === undefined
           ? {}
           : { datasetProvider: effectiveImportProvider }),
+        ...(this.realtimeTransport === undefined
+          ? options.realtime === undefined
+            ? {}
+            : { realtime: options.realtime }
+          : { realtime: this.realtimeTransport }),
       },
       importMetadata,
       prepared.value.warnings,
@@ -385,6 +395,7 @@ class RuntimeImpl implements BoardloomRuntime {
     }
 
     const effectiveProvider = options.datasetProvider ?? this.datasetProvider;
+    const effectiveRealtime = options.realtime ?? this.realtimeTransport;
     const validationCatalog = this.effectiveValidationCatalog(
       catalogOverride ?? this.validationCatalog,
       effectiveProvider,
@@ -458,6 +469,7 @@ class RuntimeImpl implements BoardloomRuntime {
           id: spaceId,
           localeConfig: localeResult.value,
           ...(effectiveProvider === undefined ? {} : { datasetProvider: effectiveProvider }),
+          ...(effectiveRealtime === undefined ? {} : { realtime: effectiveRealtime }),
           warnings,
         },
         dependencies,

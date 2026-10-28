@@ -381,6 +381,56 @@
     color: var(--bl-color-text-faint);
   }
 
+  .boardloom .bl-statusbar__simulated {
+    display: inline-flex;
+    align-items: center;
+    padding-inline: var(--bl-space-2);
+    border: 1px dashed var(--bl-color-warning);
+    border-radius: var(--bl-radius-sm);
+    color: var(--bl-color-warning);
+    font-size: var(--bl-font-size-xs);
+    font-weight: var(--bl-font-weight-semibold);
+    letter-spacing: var(--bl-letter-spacing-wide);
+    text-transform: uppercase;
+  }
+
+  .boardloom [hidden] {
+    display: none !important;
+  }
+
+  .boardloom .bl-realtime-controls {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--bl-space-1);
+  }
+
+  .boardloom .bl-realtime-control {
+    min-block-size: var(--bl-target-min);
+    padding-inline: var(--bl-space-2);
+    border: 1px solid var(--bl-color-border);
+    border-radius: var(--bl-radius-sm);
+    background: var(--bl-color-surface);
+    color: var(--bl-color-text-muted);
+    font: inherit;
+    font-size: var(--bl-font-size-xs);
+    cursor: pointer;
+  }
+
+  .boardloom .bl-realtime-control:hover:not(:disabled) {
+    border-color: var(--bl-color-accent);
+    color: var(--bl-color-accent);
+  }
+
+  .boardloom .bl-realtime-control:focus-visible {
+    outline: 2px solid var(--bl-color-focus);
+    outline-offset: 2px;
+  }
+
+  .boardloom .bl-realtime-control:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+  }
+
   .boardloom .bl-diagnostics {
     margin-inline-start: auto;
     min-inline-size: 0;

@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "status": "T05 proposed catalog for the first UI implementation; T06 publishes the keys in the core English dictionary, T07 adds renderer and accessibility keys, T08 adds binding, aggregation and configuration-lock keys, T10 adds comparison builder and delta-reason keys, and T17 completes all built-in locales",
+  "status": "T05 proposed catalog for the first UI implementation; T06 publishes the keys in the core English dictionary, T07 adds renderer and accessibility keys, T08 adds binding, aggregation and configuration-lock keys, T10 adds comparison builder and delta-reason keys, T11 adds realtime status, simulation and control keys, and T17 completes all built-in locales",
   "rules": {
     "namespace": "lowercase namespace followed by dot-separated segments; diagnostic codes may use uppercase segments after diagnostic.",
     "fallback": "English is the deterministic fallback; host overrides win over the selected built-in locale and English.",
@@ -2522,6 +2522,60 @@
       "key": "editor.comparison.delta.none",
       "english": "No delta",
       "context": "Delta-disabled comparison option",
+      "source": "core"
+    },
+    {
+      "key": "viewer.realtime.resync",
+      "english": "Resynchronize data",
+      "context": "Realtime resynchronization action",
+      "source": "core"
+    },
+    {
+      "key": "viewer.realtime.reconnect",
+      "english": "Reconnect now",
+      "context": "Realtime reconnect action",
+      "source": "core"
+    },
+    {
+      "key": "viewer.realtime.simulated",
+      "english": "Simulated live data",
+      "context": "Visible label for the in-memory simulated realtime transport",
+      "source": "core"
+    },
+    {
+      "key": "viewer.realtime.simulatedNotice",
+      "english": "Synthetic in-memory feed; this is not a real transport verification",
+      "context": "Provenance notice distinguishing the simulation from the WebSocket adapter",
+      "source": "core"
+    },
+    {
+      "key": "a11y.realtimeControls",
+      "english": "Realtime controls",
+      "context": "Accessible name for realtime pause and resync controls",
+      "source": "core"
+    },
+    {
+      "key": "a11y.realtimeStatus",
+      "english": "Realtime status",
+      "context": "Accessible name for the realtime status region",
+      "source": "core"
+    },
+    {
+      "key": "a11y.realtimePause",
+      "english": "Pause realtime updates",
+      "context": "Accessible name for the realtime pause action",
+      "source": "core"
+    },
+    {
+      "key": "a11y.realtimeResume",
+      "english": "Resume realtime updates",
+      "context": "Accessible name for the realtime resume action",
+      "source": "core"
+    },
+    {
+      "key": "a11y.realtimeResync",
+      "english": "Resynchronize realtime data",
+      "context": "Accessible name for the realtime resync action",
       "source": "core"
     }
   ]

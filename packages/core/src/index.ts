@@ -463,7 +463,58 @@ export { buildQueryPlan, deriveQueryResultFields, queryFilterKey } from "./query
 export type { BuildQueryPlanOptions, CanonicalQueryKey, QueryPlan } from "./query-planning.js";
 
 export { createQueryController } from "./query-controller.js";
-export type { QueryController, QueryControllerOptions } from "./query-controller.js";
+export type {
+  QueryController,
+  QueryControllerOptions,
+  QuerySetOptions,
+} from "./query-controller.js";
+
+export {
+  DEFAULT_REALTIME_LIMITS,
+  DEFAULT_REALTIME_RECONNECT,
+  REALTIME_CONNECTION_STATUSES,
+  REALTIME_MESSAGE_KINDS,
+  REALTIME_STATUSES,
+  normalizeRealtimeLimits,
+  realtimeEnvelopeBytes,
+  realtimeRowKey,
+  validateRealtimeEnvelope,
+} from "./realtime-contract.js";
+export type {
+  RealtimeCommand,
+  RealtimeConnectionStatus,
+  RealtimeEnvelope,
+  RealtimeLimits,
+  RealtimeMessageKind,
+  RealtimeStatus,
+  RealtimeSubscriptionRequest,
+  RealtimeSubscriptionState,
+  RealtimeTransport,
+  RealtimeTransportInfo,
+  RealtimeTransportListener,
+  RealtimeTransportStatus,
+  RealtimeTransportSubscription,
+} from "./realtime-contract.js";
+export {
+  createWebSocketRealtimeTransport,
+  type RealtimeSocket,
+  type RealtimeSocketFactory,
+  type RealtimeTimerHost,
+  type WebSocketRealtimeTransport,
+  type WebSocketRealtimeTransportOptions,
+} from "./realtime-websocket.js";
+export {
+  createSimulatedRealtimeTransport,
+  type SimulatedRealtimeTransport,
+  type SimulatedRealtimeTransportOptions,
+} from "./realtime-simulation.js";
+export type {
+  RealtimeSessionHost,
+  RealtimeSessionOptions,
+  RealtimeSnapshotInput,
+  RealtimeUpdateInput,
+  RealtimeUpsertInput,
+} from "./realtime-session.js";
 
 export { createLocalDatasetProvider } from "./query-local.js";
 export type { LocalDatasetProviderOptions, LocalDatasetSource } from "./query-local.js";
@@ -493,6 +544,16 @@ export type {
   QuerySettledEvent,
   QueryStartedEvent,
   QueryStaleEvent,
+  RealtimeBackpressureEvent,
+  RealtimeClosedEvent,
+  RealtimeDuplicateEvent,
+  RealtimeErrorEvent,
+  RealtimeEvent,
+  RealtimeEventInput,
+  RealtimeAppliedEvent,
+  RealtimeResyncEvent,
+  RealtimeStaleEvent,
+  RealtimeStatusEvent,
   SpaceEvent,
   SpaceEventInput,
   SpaceEventListener,

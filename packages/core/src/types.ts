@@ -3,6 +3,7 @@ import type { BoardDocument } from "./document.js";
 import type { Diagnostic } from "./diagnostics.js";
 import type { BoardloomLocale } from "./locale.js";
 import type { FilterRuntimeState } from "./filter-model.js";
+import type { RealtimeTransport } from "./realtime-contract.js";
 
 export type ViewMode = "viewer" | "editor";
 export type SpaceStatus = "active" | "paused" | "disposed";
@@ -90,6 +91,7 @@ export interface CreateSpaceOptions {
   readonly locale?: string;
   readonly timezone?: string;
   readonly datasetProvider?: DatasetProvider;
+  readonly realtime?: RealtimeTransport;
 }
 
 export interface CreateViewOptions {

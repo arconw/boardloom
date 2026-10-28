@@ -46,6 +46,8 @@ import {
   type MessageDictionary,
   type MessageProvider,
   type QueryState,
+  type RealtimeStatus,
+  type RealtimeSubscriptionState,
   type RendererRegistry,
   type RendererTheme,
   type Result,
@@ -87,7 +89,7 @@ import {
 import { releaseMountedView } from "./mount-registry.js";
 import { activeFilterChipSummaries, crossFilterSummaries } from "./filter-summary.js";
 import { createViewMessages, pluralKey, type ViewMessages } from "./messages.js";
-import { realtimeText } from "./realtime.js";
+import { realtimeText, type BoardloomRealtimeStatus } from "./realtime.js";
 import { renderDiagnosticList, renderErrorState } from "./states.js";
 import { themeTokenProperty } from "./theme-tokens.js";
 import type { BoardViewHandle, FocusTarget, UpdateBoardViewOptions } from "./types.js";
@@ -450,6 +452,11 @@ export class ViewerHost implements BoardViewHandle {
   private readonly statusbar: HTMLElement;
   private readonly status: HTMLElement;
   private readonly lastUpdate: HTMLElement;
+  private readonly realtimeBuffered: HTMLElement;
+  private readonly realtimeSimulated: HTMLElement;
+  private readonly realtimeControls: HTMLElement;
+  private readonly realtimePause: HTMLButtonElement;
+  private readonly realtimeResync: HTMLButtonElement;
   private readonly diagnosticsDetails: HTMLDetailsElement;
   private readonly diagnosticsSummary: HTMLElement;
   private readonly diagnosticsPanel: HTMLElement;
@@ -730,11 +737,31 @@ export class ViewerHost implements BoardViewHandle {
     this.status.setAttribute("role", "status");
     this.status.setAttribute("aria-live", "polite");
     this.lastUpdate = createElement(this.doc, "span", "bl-statusbar__meta");
+    this.realtimeBuffered = createElement(this.doc, "span", "bl-statusbar__meta");
+    this.realtimeSimulated = createElement(this.doc, "span", "bl-statusbar__simulated");
+    this.realtimeControls = createElement(this.doc, "div", "bl-realtime-controls");
+    this.realtimeControls.setAttribute("role", "group");
+    this.realtimePause = createElement(this.doc, "button", "bl-realtime-control");
+    this.realtimePause.setAttribute("type", "button");
+    this.realtimePause.setAttribute("data-realtime-action", "pause");
+    this.realtimeResync = createElement(this.doc, "button", "bl-realtime-control");
+    this.realtimeResync.setAttribute("type", "button");
+    this.realtimeResync.setAttribute("data-realtime-action", "resync");
+    this.realtimeControls.append(this.realtimePause, this.realtimeResync);
+    this.realtimePause.addEventListener("click", () => this.toggleRealtimePause());
+    this.realtimeResync.addEventListener("click", () => this.requestRealtimeResync());
     this.diagnosticsDetails = createElement(this.doc, "details", "bl-diagnostics");
     this.diagnosticsSummary = createElement(this.doc, "summary", "bl-diagnostics__summary");
     this.diagnosticsPanel = createElement(this.doc, "div", "bl-diagnostics__panel");
     this.diagnosticsDetails.append(this.diagnosticsSummary, this.diagnosticsPanel);
-    this.statusbar.append(this.status, this.lastUpdate, this.diagnosticsDetails);
+    this.statusbar.append(
+      this.status,
+      this.lastUpdate,
+      this.realtimeBuffered,
+      this.realtimeSimulated,
+      this.realtimeControls,
+      this.diagnosticsDetails,
+    );
     this.root.append(this.statusbar);
 
     this.filterSection = createElement(this.doc, "section", "bl-filters");
@@ -2847,6 +2874,174 @@ export class ViewerHost implements BoardViewHandle {
     this.messageOverrides = this.config.messages;
   }
 
+  private deriveRealtimeStatus(): BoardloomRealtimeStatus | null {
+    const states: readonly RealtimeSubscriptionState[] = this.spaceValue.disposed
+      ? []
+      : this.spaceValue.getRealtimeStates();
+    if (states.length === 0) {
+      return null;
+    }
+    const info = this.spaceValue.getRealtimeInfo();
+    const priority: readonly RealtimeStatus[] = [
+      "error",
+      "degraded",
+      "reconnecting",
+      "resyncing",
+      "connecting",
+      "paused",
+      "live",
+      "closed",
+    ];
+    let status: RealtimeStatus = "closed";
+    for (const candidate of priority) {
+      if (states.some((state) => state.status === candidate)) {
+        status = candidate;
+        break;
+      }
+    }
+    const bufferedMessages = states.reduce((total, state) => total + state.bufferedMessages, 0);
+    const bufferedBytes = states.reduce((total, state) => total + state.bufferedBytes, 0);
+    const attempts = states
+      .map((state) => state.attempt)
+      .filter((attempt) => Number.isInteger(attempt) && attempt > 0);
+    const lastUpdate = states.reduce<number | null>((latest, state) => {
+      if (state.lastUpdate === null) {
+        return latest;
+      }
+      return latest === null ? state.lastUpdate : Math.max(latest, state.lastUpdate);
+    }, null);
+    return Object.freeze({
+      status,
+      ...(attempts.length === 0 ? {} : { attempt: Math.max(...attempts) }),
+      maxAttempts: Math.max(...states.map((state) => state.maxAttempts)),
+      ...(lastUpdate === null ? {} : { lastUpdate }),
+      bufferedMessages,
+      bufferedBytes,
+      simulated: info?.simulated === true || states.some((state) => state.simulated),
+      queryCount: states.length,
+    });
+  }
+
+  private renderRealtimeStatus(
+    snapshot: SpaceSnapshot,
+    messages: ViewMessages,
+    formatters: FormatterProvider,
+  ): void {
+    const states = this.spaceValue.disposed ? [] : this.spaceValue.getRealtimeStates();
+    const realtimeInfo = this.spaceValue.getRealtimeInfo();
+    const status = this.config.realtime ?? this.deriveRealtimeStatus();
+    const derived: BoardloomRealtimeStatus = status ?? { status: "historical" };
+    const realtime = realtimeText(derived, messages);
+    setKeyedText(this.status, realtime.key, realtime.text);
+    this.status.setAttribute("data-status", derived.status);
+    this.status.setAttribute("aria-label", messages.text("a11y.realtimeStatus"));
+    this.status.setAttribute("data-message-key", "a11y.realtimeStatus");
+    const simulated = derived.simulated === true || realtimeInfo?.simulated === true;
+    if (realtimeInfo === null) {
+      this.root.setAttribute("data-boardloom-realtime", "none");
+    } else {
+      this.root.setAttribute(
+        "data-boardloom-realtime",
+        realtimeInfo.simulated ? "simulated" : "websocket",
+      );
+    }
+    this.root.setAttribute("data-boardloom-realtime-status", derived.status);
+    if (derived.lastUpdate !== undefined && Number.isFinite(derived.lastUpdate)) {
+      this.lastUpdate.removeAttribute("hidden");
+      setKeyedText(
+        this.lastUpdate,
+        "viewer.realtime.lastUpdate",
+        messages.text("viewer.realtime.lastUpdate", {
+          time: formatTimestamp(formatters, derived.lastUpdate, snapshot.timezone),
+        }),
+        ["time"],
+      );
+    } else {
+      this.lastUpdate.setAttribute("hidden", "");
+      this.lastUpdate.textContent = "";
+    }
+    if ((derived.bufferedMessages ?? 0) > 0) {
+      this.realtimeBuffered.removeAttribute("hidden");
+      setKeyedText(
+        this.realtimeBuffered,
+        "viewer.realtime.buffered",
+        messages.text("viewer.realtime.buffered", {
+          count: derived.bufferedMessages ?? 0,
+        }),
+        ["count"],
+      );
+    } else {
+      this.realtimeBuffered.setAttribute("hidden", "");
+      this.realtimeBuffered.textContent = "";
+    }
+    if (simulated) {
+      this.realtimeSimulated.removeAttribute("hidden");
+      setKeyedText(
+        this.realtimeSimulated,
+        "viewer.realtime.simulated",
+        messages.text("viewer.realtime.simulated"),
+      );
+      this.realtimeSimulated.setAttribute(
+        "title",
+        messages.text("viewer.realtime.simulatedNotice"),
+      );
+    } else {
+      this.realtimeSimulated.setAttribute("hidden", "");
+      this.realtimeSimulated.textContent = "";
+      this.realtimeSimulated.removeAttribute("title");
+    }
+    const available = realtimeInfo !== null && states.length > 0;
+    this.realtimeControls.setAttribute("aria-label", messages.text("a11y.realtimeControls"));
+    this.realtimeControls.setAttribute("data-message-key", "a11y.realtimeControls");
+    const paused = derived.status === "paused";
+    const pauseKey = paused ? "viewer.realtime.resume" : "viewer.realtime.pause";
+    const pauseA11y = paused ? "a11y.realtimeResume" : "a11y.realtimePause";
+    setKeyedText(this.realtimePause, pauseKey, messages.text(pauseKey));
+    this.realtimePause.setAttribute("aria-label", messages.text(pauseA11y));
+    this.realtimePause.setAttribute("data-paused", String(paused));
+    setKeyedText(
+      this.realtimeResync,
+      "viewer.realtime.resync",
+      messages.text("viewer.realtime.resync"),
+    );
+    this.realtimeResync.setAttribute("aria-label", messages.text("a11y.realtimeResync"));
+    if (available) {
+      this.realtimeControls.removeAttribute("hidden");
+      this.realtimePause.removeAttribute("disabled");
+      this.realtimeResync.removeAttribute("disabled");
+    } else {
+      this.realtimeControls.setAttribute("hidden", "");
+      this.realtimePause.setAttribute("disabled", "");
+      this.realtimeResync.setAttribute("disabled", "");
+    }
+  }
+
+  private toggleRealtimePause(): void {
+    if (this.disposedFlag || !this.mountedFlag) {
+      return;
+    }
+    const states = this.spaceValue.disposed ? [] : this.spaceValue.getRealtimeStates();
+    const paused = states.length > 0 && states.every((state) => state.status === "paused");
+    const result = paused ? this.spaceValue.resumeRealtime() : this.spaceValue.pauseRealtime();
+    if (!result.ok) {
+      this.actionDiagnostics = result.diagnostics;
+      this.announceDiagnostics(result.diagnostics);
+    }
+    this.scheduleRender();
+  }
+
+  private requestRealtimeResync(): void {
+    if (this.disposedFlag || !this.mountedFlag) {
+      return;
+    }
+    const result = this.spaceValue.resyncRealtime(undefined, "viewer-request");
+    if (!result.ok) {
+      this.actionDiagnostics = result.diagnostics;
+      this.announceDiagnostics(result.diagnostics);
+    }
+    this.scheduleRender();
+  }
+
   private renderNow(): void {
     this.renderScheduled = false;
     if (!this.ensureLive()) {
@@ -2938,26 +3133,7 @@ export class ViewerHost implements BoardViewHandle {
       button.setAttribute("data-active", String(this.viewValue.mode === mode));
     }
 
-    const realtime = realtimeText(this.config.realtime, messages);
-    setKeyedText(this.status, realtime.key, realtime.text);
-    this.status.setAttribute("data-status", this.config.realtime?.status ?? "historical");
-    if (
-      this.config.realtime?.lastUpdate !== undefined &&
-      Number.isFinite(this.config.realtime.lastUpdate)
-    ) {
-      this.lastUpdate.removeAttribute("hidden");
-      setKeyedText(
-        this.lastUpdate,
-        "viewer.realtime.lastUpdate",
-        messages.text("viewer.realtime.lastUpdate", {
-          time: formatTimestamp(formatters, this.config.realtime.lastUpdate, snapshot.timezone),
-        }),
-        ["time"],
-      );
-    } else {
-      this.lastUpdate.setAttribute("hidden", "");
-      this.lastUpdate.textContent = "";
-    }
+    this.renderRealtimeStatus(snapshot, messages, formatters);
 
     const diagnostics = dedupeDiagnostics([...snapshot.diagnostics, ...this.actionDiagnostics]);
     if (diagnostics.length === 0) {
@@ -3267,6 +3443,17 @@ export class ViewerHost implements BoardViewHandle {
     };
   }
 
+  private liveQueryOptions(datasetId: string): { readonly live: true } | undefined {
+    if (this.spaceValue.disposed || this.spaceValue.getRealtimeInfo() === null) {
+      return undefined;
+    }
+    const descriptor = this.spaceValue.getDatasetDescriptor(datasetId);
+    if (descriptor === undefined || descriptor.capabilities.realtime !== true) {
+      return undefined;
+    }
+    return { live: true };
+  }
+
   private updateMountedBlock(
     mounted: MountedBlock,
     block: BoardDocumentV1["blocks"][number],
@@ -3336,7 +3523,8 @@ export class ViewerHost implements BoardViewHandle {
     }
     const signature = querySpecSignature(derived.value.spec);
     if (mounted.signature !== signature) {
-      const set = this.spaceValue.setQuery(queryId, derived.value.spec);
+      const live = this.liveQueryOptions(derived.value.spec.datasetId);
+      const set = this.spaceValue.setQuery(queryId, derived.value.spec, live);
       if (!this.ensureLive()) {
         return;
       }
@@ -3416,11 +3604,19 @@ export class ViewerHost implements BoardViewHandle {
     } as never);
     let registrationError: readonly Diagnostic[] | null = null;
     if (mounted.comparisonSignature !== signature) {
-      const primarySet = this.spaceValue.setQuery(ids.primary, plan.primary.request);
+      const primarySet = this.spaceValue.setQuery(
+        ids.primary,
+        plan.primary.request,
+        this.liveQueryOptions(plan.primary.request.datasetId),
+      );
       if (!this.ensureLive()) {
         return;
       }
-      const referenceSet = this.spaceValue.setQuery(ids.reference, plan.reference.request);
+      const referenceSet = this.spaceValue.setQuery(
+        ids.reference,
+        plan.reference.request,
+        this.liveQueryOptions(plan.reference.request.datasetId),
+      );
       if (!this.ensureLive()) {
         return;
       }

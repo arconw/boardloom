@@ -7,6 +7,7 @@ import {
   type BindingSlotChange,
 } from "./binding-model.js";
 import type { DatasetDescriptor, DatasetProvider, QuerySpec, QueryState } from "./data-contract.js";
+import type { RealtimeSubscriptionState, RealtimeTransportInfo } from "./realtime-contract.js";
 import type { Clock } from "./clock.js";
 import {
   documentSchemaVersion,
@@ -29,7 +30,11 @@ import type { SpaceEvent, SpaceEventInput, Unsubscribe } from "./events.js";
 import { EventBus } from "./events.js";
 import type { BoardSerialization, BoardSerializationOptions } from "./document-io.js";
 import { serializeBoardDocument } from "./document-io.js";
-import { createQueryController, type QueryController } from "./query-controller.js";
+import {
+  createQueryController,
+  type QueryController,
+  type QuerySetOptions,
+} from "./query-controller.js";
 import type { FormatterProvider } from "./formatting.js";
 import type { IdFactory } from "./ids.js";
 import { deepFreeze, jsonEqual, type JsonValue } from "./json.js";
@@ -153,13 +158,20 @@ export interface BoardSpace {
   clearCrossFilters(): Result<FilterRuntimeState>;
   getDatasetDescriptor(datasetId: string): DatasetDescriptor | undefined;
   getValidationCatalog(): BoardValidationCatalog | undefined;
-  setQuery(queryId: string, spec: QuerySpec): Result<QueryState>;
+  setQuery(queryId: string, spec: QuerySpec, options?: QuerySetOptions): Result<QueryState>;
   refreshQuery(queryId: string): Result<QueryState>;
   invalidateQuery(queryId: string, reason?: string): Result<QueryState>;
   cancelQuery(queryId: string, reason?: string): Result<QueryState>;
   removeQuery(queryId: string): Result<void>;
   getQueryState(queryId: string): QueryState | undefined;
   getQueryStates(): readonly QueryState[];
+  getRealtimeInfo(): RealtimeTransportInfo | null;
+  getRealtimeState(queryId: string): RealtimeSubscriptionState | undefined;
+  getRealtimeStates(): readonly RealtimeSubscriptionState[];
+  pauseRealtime(queryId?: string): Result<readonly RealtimeSubscriptionState[]>;
+  resumeRealtime(queryId?: string): Result<readonly RealtimeSubscriptionState[]>;
+  resyncRealtime(queryId?: string, reason?: string): Result<readonly RealtimeSubscriptionState[]>;
+  closeRealtime(queryId?: string, reason?: string): Result<readonly RealtimeSubscriptionState[]>;
   pause(): Result<SpaceSnapshot>;
   resume(): Result<SpaceSnapshot>;
   createView(options?: CreateViewOptions): Result<BoardView>;
@@ -250,9 +262,14 @@ class SpaceImpl implements BoardSpace {
     this.datasetProvider = options.datasetProvider ?? null;
     this.queryController = createQueryController({
       ...(options.datasetProvider === undefined ? {} : { provider: options.datasetProvider }),
+      ...(options.realtime === undefined ? {} : { realtime: options.realtime }),
       idFactory: deps.idFactory,
       clock: deps.clock,
       emit: (event) => {
+        this.updatedAt = this.deps.clock.now();
+        this.emit(event);
+      },
+      emitRealtime: (event) => {
         this.updatedAt = this.deps.clock.now();
         this.emit(event);
       },
@@ -855,13 +872,13 @@ class SpaceImpl implements BoardSpace {
     return ok(this.getSnapshot());
   }
 
-  setQuery(queryId: string, spec: QuerySpec): Result<QueryState> {
+  setQuery(queryId: string, spec: QuerySpec, options: QuerySetOptions = {}): Result<QueryState> {
     const blocked = this.assertActive();
     if (blocked) {
       return blocked;
     }
     this.updatedAt = this.deps.clock.now();
-    return this.queryController.setQuery(queryId, spec);
+    return this.queryController.setQuery(queryId, spec, options);
   }
 
   refreshQuery(queryId: string): Result<QueryState> {
@@ -908,6 +925,34 @@ class SpaceImpl implements BoardSpace {
     return this.queryController.listQueryStates();
   }
 
+  getRealtimeInfo(): RealtimeTransportInfo | null {
+    return this.queryController.getRealtimeInfo();
+  }
+
+  getRealtimeState(queryId: string): RealtimeSubscriptionState | undefined {
+    return this.queryController.getRealtimeState(queryId);
+  }
+
+  getRealtimeStates(): readonly RealtimeSubscriptionState[] {
+    return this.queryController.listRealtimeStates();
+  }
+
+  pauseRealtime(queryId?: string): Result<readonly RealtimeSubscriptionState[]> {
+    return this.queryController.pauseRealtime(queryId);
+  }
+
+  resumeRealtime(queryId?: string): Result<readonly RealtimeSubscriptionState[]> {
+    return this.queryController.resumeRealtime(queryId);
+  }
+
+  resyncRealtime(queryId?: string, reason?: string): Result<readonly RealtimeSubscriptionState[]> {
+    return this.queryController.resyncRealtime(queryId, reason);
+  }
+
+  closeRealtime(queryId?: string, reason?: string): Result<readonly RealtimeSubscriptionState[]> {
+    return this.queryController.closeRealtime(queryId, reason);
+  }
+
   pause(): Result<SpaceSnapshot> {
     const blocked = this.assertActive();
     if (blocked) {
@@ -917,6 +962,7 @@ class SpaceImpl implements BoardSpace {
       return ok(this.getSnapshot());
     }
     this.status = "paused";
+    this.queryController.pauseRealtime();
     this.updatedAt = this.deps.clock.now();
     return ok(this.getSnapshot());
   }
@@ -930,6 +976,7 @@ class SpaceImpl implements BoardSpace {
       return ok(this.getSnapshot());
     }
     this.status = "active";
+    this.queryController.resumeRealtime();
     this.updatedAt = this.deps.clock.now();
     return ok(this.getSnapshot());
   }

@@ -1,8 +1,10 @@
 import {
   ENGLISH_MESSAGES,
+  canonicalJson,
   createBoardValidationCatalog,
   createLocalDatasetProvider,
   createRuntime,
+  createSimulatedRealtimeTransport,
 } from "@boardloom/core";
 import { mountBoardView } from "/build/view-dom/dist/index.js";
 
@@ -1071,6 +1073,116 @@ async function run() {
     must(comparisonSpace.cancelDraft(comparisonLease));
     must(comparisonHandle.unmount({ draftDecision: "cancel" }));
     comparisonRuntime.dispose();
+
+    const realtimeDescriptor = {
+      ...fixture.descriptor,
+      capabilities: { ...fixture.descriptor.capabilities, realtime: true },
+    };
+    const realtimeTransport = createSimulatedRealtimeTransport();
+    const realtimeProvider = must(
+      createLocalDatasetProvider({
+        providerId: "realtime-e2e",
+        datasets: [{ descriptor: realtimeDescriptor, rows: fixture.rows }],
+      }),
+    );
+    const realtimeRuntime = createRuntime({
+      datasetProvider: realtimeProvider,
+      realtime: realtimeTransport,
+    });
+    const realtimeSpace = must(realtimeRuntime.createSpace({ document: fixture.document }));
+    const realtimeTarget = document.getElementById("realtime");
+    const realtimeHandle = must(
+      mountBoardView(realtimeTarget, { space: realtimeSpace, theme: "light" }),
+    );
+    await wait(40);
+    const realtimeRoot = realtimeHandle.element;
+    const realtimeStatus = realtimeRoot.querySelector(".bl-status");
+    result.checks.realtimeConnecting = realtimeStatus?.getAttribute("data-status") ?? null;
+    for (const state of realtimeSpace.getQueryStates()) {
+      const realtimeState = realtimeSpace.getRealtimeState(state.queryId);
+      const keyFields = realtimeState?.keyFields ?? [];
+      const row = {};
+      for (const field of state.fields) {
+        row[field.fieldId] = field.type === "number" ? 4 : "north";
+      }
+      realtimeTransport.publish({
+        messageId: `e2e-snapshot-${state.queryId}`,
+        datasetId: state.datasetId,
+        ...(state.sliceId === undefined ? {} : { sliceId: state.sliceId }),
+        queryKey: state.queryKey,
+        generation: state.generation,
+        epoch: "e2e-epoch-1",
+        sequence: 0,
+        kind: "snapshot",
+        rowKeys: [canonicalJson(keyFields.map((field) => row[field] ?? null))],
+        rows: [row],
+        fields: state.fields,
+        counts: {
+          returnedRows: 1,
+          totalRows: null,
+          filteredRows: 1,
+          nullCounts: {},
+        },
+        complete: true,
+        timestamp: Date.now(),
+      });
+    }
+    await wait(40);
+    const simulatedLabel = realtimeRoot.querySelector(".bl-statusbar__simulated");
+    const pauseControl = realtimeRoot.querySelector('[data-realtime-action="pause"]');
+    result.checks.realtimeLive = {
+      status: realtimeStatus?.getAttribute("data-status") ?? null,
+      rootMode: realtimeRoot.getAttribute("data-boardloom-realtime"),
+      simulated: simulatedLabel?.textContent ?? null,
+      controls: realtimeRoot.querySelectorAll(".bl-realtime-control").length,
+      metric: realtimeRoot.querySelector(".bl-metric__value")?.textContent ?? "",
+    };
+    pauseControl?.click();
+    await wait(20);
+    result.checks.realtimePaused = realtimeStatus?.getAttribute("data-status") ?? null;
+    pauseControl?.click();
+    await wait(20);
+    result.checks.realtimeResumed = realtimeStatus?.getAttribute("data-status") ?? null;
+    const resyncControl = realtimeRoot.querySelector('[data-realtime-action="resync"]');
+    resyncControl?.click();
+    await wait(20);
+    result.checks.realtimeResyncing = realtimeStatus?.getAttribute("data-status") ?? null;
+    for (const state of realtimeSpace.getQueryStates()) {
+      const realtimeState = realtimeSpace.getRealtimeState(state.queryId);
+      const keyFields = realtimeState?.keyFields ?? [];
+      const row = {};
+      for (const field of state.fields) {
+        row[field.fieldId] = field.type === "number" ? 6 : "north";
+      }
+      realtimeTransport.publish({
+        messageId: `e2e-resync-${state.queryId}`,
+        datasetId: state.datasetId,
+        ...(state.sliceId === undefined ? {} : { sliceId: state.sliceId }),
+        queryKey: state.queryKey,
+        generation: state.generation,
+        epoch: "e2e-epoch-1",
+        sequence: 1,
+        kind: "snapshot",
+        rowKeys: [canonicalJson(keyFields.map((field) => row[field] ?? null))],
+        rows: [row],
+        fields: state.fields,
+        counts: {
+          returnedRows: 1,
+          totalRows: null,
+          filteredRows: 1,
+          nullCounts: {},
+        },
+        complete: true,
+        timestamp: Date.now(),
+      });
+    }
+    await wait(40);
+    result.checks.realtimeAfterResync = {
+      status: realtimeStatus?.getAttribute("data-status") ?? null,
+      metric: realtimeRoot.querySelector(".bl-metric__value")?.textContent ?? "",
+    };
+    must(realtimeHandle.unmount());
+    realtimeRuntime.dispose();
 
     const changedDocument = JSON.parse(JSON.stringify(fixture.document));
     const changedFilter = changedDocument.filters.find((filter) => filter.id === "filter-school");

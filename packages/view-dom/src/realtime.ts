@@ -17,6 +17,10 @@ export interface BoardloomRealtimeStatus {
   readonly attempt?: number;
   readonly maxAttempts?: number;
   readonly lastUpdate?: number;
+  readonly bufferedMessages?: number;
+  readonly bufferedBytes?: number;
+  readonly simulated?: boolean;
+  readonly queryCount?: number;
 }
 
 export interface RealtimeLabel {

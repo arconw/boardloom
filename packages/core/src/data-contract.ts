@@ -306,6 +306,8 @@ export interface QueryState {
   readonly startedAt: number | null;
   readonly settledAt: number | null;
   readonly updatedAt: number;
+  readonly source?: "query" | "realtime";
+  readonly countsStale?: boolean;
 }
 
 export interface DatasetDescriptorValidation {

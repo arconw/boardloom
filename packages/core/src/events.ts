@@ -1,5 +1,6 @@
 import type { BoardDocument } from "./document.js";
 import type { QueryPhase } from "./data-contract.js";
+import type { RealtimeMessageKind, RealtimeStatus } from "./realtime-contract.js";
 import type { Diagnostic } from "./diagnostics.js";
 import type { BoardloomLocale } from "./locale.js";
 import type { BoardMigrationReport } from "./migrations.js";
@@ -220,6 +221,113 @@ export interface QueryInvalidatedEvent extends BaseSpaceEvent {
   readonly reason: string;
 }
 
+export interface RealtimeStatusEvent extends BaseSpaceEvent {
+  readonly type: "realtime:status";
+  readonly queryId: string;
+  readonly subscriptionId: string;
+  readonly queryKey: string;
+  readonly generation: number;
+  readonly datasetId: string;
+  readonly sliceId?: string;
+  readonly status: RealtimeStatus;
+  readonly attempt: number;
+  readonly maxAttempts: number;
+  readonly simulated: boolean;
+  readonly bufferedMessages: number;
+  readonly bufferedBytes: number;
+}
+
+export interface RealtimeAppliedEvent extends BaseSpaceEvent {
+  readonly type: "realtime:applied";
+  readonly queryId: string;
+  readonly subscriptionId: string;
+  readonly queryKey: string;
+  readonly generation: number;
+  readonly datasetId: string;
+  readonly sliceId?: string;
+  readonly kind: RealtimeMessageKind;
+  readonly epoch: string;
+  readonly streamSequence: number;
+  readonly cursor?: string;
+  readonly appliedCount: number;
+}
+
+export interface RealtimeResyncEvent extends BaseSpaceEvent {
+  readonly type: "realtime:resync";
+  readonly queryId: string;
+  readonly subscriptionId: string;
+  readonly queryKey: string;
+  readonly generation: number;
+  readonly datasetId: string;
+  readonly sliceId?: string;
+  readonly reason: string;
+  readonly fromEpoch: string | null;
+  readonly toEpoch: string | null;
+  readonly streamSequence: number;
+  readonly diagnostic: Diagnostic;
+}
+
+export interface RealtimeStaleEvent extends BaseSpaceEvent {
+  readonly type: "realtime:stale";
+  readonly queryId: string;
+  readonly subscriptionId: string;
+  readonly queryKey: string;
+  readonly generation: number;
+  readonly datasetId: string;
+  readonly sliceId?: string;
+  readonly reason: string;
+  readonly messageId?: string;
+  readonly streamSequence?: number;
+}
+
+export interface RealtimeDuplicateEvent extends BaseSpaceEvent {
+  readonly type: "realtime:duplicate";
+  readonly queryId: string;
+  readonly subscriptionId: string;
+  readonly queryKey: string;
+  readonly generation: number;
+  readonly datasetId: string;
+  readonly sliceId?: string;
+  readonly reason: "duplicate" | "older" | "older-snapshot";
+  readonly streamSequence: number;
+}
+
+export interface RealtimeBackpressureEvent extends BaseSpaceEvent {
+  readonly type: "realtime:backpressure";
+  readonly queryId: string;
+  readonly subscriptionId: string;
+  readonly queryKey: string;
+  readonly generation: number;
+  readonly datasetId: string;
+  readonly sliceId?: string;
+  readonly bufferedMessages: number;
+  readonly bufferedBytes: number;
+  readonly dropped: number;
+  readonly strategy: "count" | "bytes" | "age" | "coalesce" | "drop-oldest";
+}
+
+export interface RealtimeErrorEvent extends BaseSpaceEvent {
+  readonly type: "realtime:error";
+  readonly queryId: string;
+  readonly subscriptionId: string;
+  readonly queryKey: string;
+  readonly generation: number;
+  readonly datasetId: string;
+  readonly sliceId?: string;
+  readonly diagnostic: Diagnostic;
+}
+
+export interface RealtimeClosedEvent extends BaseSpaceEvent {
+  readonly type: "realtime:closed";
+  readonly queryId: string;
+  readonly subscriptionId: string;
+  readonly queryKey: string;
+  readonly generation: number;
+  readonly datasetId: string;
+  readonly sliceId?: string;
+  readonly reason: string;
+}
+
 export interface ImportFailedEvent extends BaseSpaceEvent {
   readonly type: "import:failed";
   readonly scope: "runtime";
@@ -235,6 +343,16 @@ export type QueryEvent =
   | QueryCancelledEvent
   | QueryStaleEvent
   | QueryInvalidatedEvent;
+
+export type RealtimeEvent =
+  | RealtimeStatusEvent
+  | RealtimeAppliedEvent
+  | RealtimeResyncEvent
+  | RealtimeStaleEvent
+  | RealtimeDuplicateEvent
+  | RealtimeBackpressureEvent
+  | RealtimeErrorEvent
+  | RealtimeClosedEvent;
 
 export type SpaceEvent =
   | SpaceCreatedEvent
@@ -259,7 +377,8 @@ export type SpaceEvent =
   | DocumentMigratedEvent
   | SpaceImportedEvent
   | ImportFailedEvent
-  | QueryEvent;
+  | QueryEvent
+  | RealtimeEvent;
 
 export type SpaceEventType = SpaceEvent["type"];
 export type SpaceEventListener = (event: SpaceEvent) => void;
@@ -271,6 +390,10 @@ export type SpaceEventInput = DistributiveOmit<
 >;
 export type QueryEventInput = DistributiveOmit<
   QueryEvent,
+  "spaceId" | "lifetimeId" | "sequence" | "timestamp"
+>;
+export type RealtimeEventInput = DistributiveOmit<
+  RealtimeEvent,
   "spaceId" | "lifetimeId" | "sequence" | "timestamp"
 >;
 

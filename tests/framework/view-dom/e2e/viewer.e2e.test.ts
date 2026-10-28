@@ -371,6 +371,23 @@ describe("T06 browser viewer", () => {
     expect(comparison.rejectionCodes).toContain("INCOMPATIBLE_COMPARISON");
     expect(comparison.draftReference).toBe("cmp-previous");
     expect(Number(comparison.percentageCells)).toBeGreaterThan(0);
+    expect(result.checks.realtimeConnecting).toBe("connecting");
+    expect(result.checks.realtimeLive).toMatchObject({
+      status: "live",
+      rootMode: "simulated",
+      controls: 2,
+    });
+    expect(String((result.checks.realtimeLive as { simulated?: string }).simulated)).toContain(
+      "Simulated live data",
+    );
+    expect(String((result.checks.realtimeLive as { metric?: string }).metric)).toContain("4");
+    expect(result.checks.realtimePaused).toBe("paused");
+    expect(result.checks.realtimeResumed).toBe("live");
+    expect(result.checks.realtimeResyncing).toBe("resyncing");
+    expect(result.checks.realtimeAfterResync).toMatchObject({ status: "live" });
+    expect(String((result.checks.realtimeAfterResync as { metric?: string }).metric)).toContain(
+      "6",
+    );
     expect(result.checks.remountedBlocks).toBe(5);
     expect(result.checks.complete).toBe(true);
   }, 60_000);
