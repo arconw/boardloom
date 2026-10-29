@@ -42,10 +42,6 @@ function runScript(args: string[]): ScriptResult {
   return runCommand(process.execPath, args);
 }
 
-function runNpm(args: string[]): ScriptResult {
-  return runCommand("npm", args);
-}
-
 function runScriptIn(cwd: string, args: string[]): ScriptResult {
   return runCommand(process.execPath, args, cwd);
 }
@@ -260,9 +256,6 @@ describe("foundation quality scripts", () => {
   });
 
   it("builds publishable staging under .tmp without source-local dist", () => {
-    const buildResult = runNpm(["run", "build"]);
-    expect(buildResult.status).toBe(0);
-
     for (const packageName of [
       "core",
       "view-dom",
@@ -271,6 +264,10 @@ describe("foundation quality scripts", () => {
       "angular",
       "svelte",
     ]) {
+      const buildResult = runScript(["scripts/build-package.mjs", packageName]);
+      expect(buildResult.status).toBe(0);
+      expect(buildResult.stdout).toContain(`Built @boardloom/${packageName}`);
+
       const staging = path.join(root, ".tmp", "build", "packages", packageName);
       for (const relativeFile of [
         "package.json",
@@ -286,7 +283,7 @@ describe("foundation quality scripts", () => {
     expect(existsSync(path.join(root, ".tmp", "build", "packages", "view-dom", "styles.css"))).toBe(
       true,
     );
-  });
+  }, 60_000);
 
   it("verifies staged packages and reports actionable missing staging", () => {
     const result = runScript(["scripts/verify-packages.mjs"]);
