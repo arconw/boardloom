@@ -31,10 +31,16 @@ import { noopLogger, type Logger } from "./logger.js";
 import {
   DEFAULT_LOCALE_CONFIG,
   resolveLocaleConfig,
+  isBoardloomLocale,
   type BoardloomLocale,
   type LocaleConfig,
 } from "./locale.js";
-import { normalizeMessageDictionary, type MessageDictionary } from "./messages.js";
+import {
+  mergeMessageDictionaries,
+  normalizeMessageDictionary,
+  type MessageDictionaries,
+  type MessageDictionary,
+} from "./messages.js";
 import {
   createSpace,
   type BoardSpace,
@@ -58,7 +64,7 @@ export interface RuntimeOptions {
   readonly documentValidator?: DocumentValidator;
   readonly validationCatalog?: BoardValidationCatalog;
   readonly formatterFactory?: (config: LocaleConfig) => FormatterProvider;
-  readonly messageDictionaries?: Readonly<Partial<Record<BoardloomLocale, MessageDictionary>>>;
+  readonly messageDictionaries?: MessageDictionaries;
   readonly historyLimit?: number;
   readonly locale?: string;
   readonly timezone?: string;
@@ -138,9 +144,7 @@ class RuntimeImpl implements BoardloomRuntime {
   private readonly customDocumentValidator?: DocumentValidator;
   private readonly validationCatalog?: BoardValidationCatalog;
   private readonly formatterFactory: (config: LocaleConfig) => FormatterProvider;
-  private readonly messageDictionaries: Readonly<
-    Partial<Record<BoardloomLocale, MessageDictionary>>
-  >;
+  private readonly messageDictionaries: MessageDictionaries;
   private readonly historyLimit: number;
   private readonly datasetProvider?: DatasetProvider;
   private readonly realtimeTransport?: RealtimeTransport;
@@ -168,9 +172,15 @@ class RuntimeImpl implements BoardloomRuntime {
     this.formatterFactory = options.formatterFactory ?? createIntlFormatterProvider;
     const dictionaries: Partial<Record<BoardloomLocale, MessageDictionary>> = {};
     for (const [locale, dictionary] of Object.entries(options.messageDictionaries ?? {})) {
-      if (dictionary !== undefined) {
-        dictionaries[locale as BoardloomLocale] = normalizeMessageDictionary(dictionary, locale);
+      if (dictionary === undefined) {
+        continue;
       }
+      if (!isBoardloomLocale(locale)) {
+        throw new BoardloomError(
+          createDiagnostic(DIAGNOSTIC_CODES.INVALID_LOCALE, `messageDictionaries/${locale}`),
+        );
+      }
+      dictionaries[locale] = normalizeMessageDictionary(dictionary, locale);
     }
     this.messageDictionaries = Object.freeze(dictionaries);
     const requestedLimit = options.historyLimit ?? 100;
@@ -606,13 +616,24 @@ class RuntimeImpl implements BoardloomRuntime {
             return created.value;
           }
         : this.formatterFactory;
-    const messageDictionaries: Readonly<Partial<Record<BoardloomLocale, MessageDictionary>>> =
-      extensionSession === null
-        ? this.messageDictionaries
-        : Object.freeze({
-            ...this.messageDictionaries,
-            ...extensionSession.messageDictionaries,
-          });
+    let messageDictionaries: MessageDictionaries;
+    try {
+      messageDictionaries =
+        extensionSession === null
+          ? this.messageDictionaries
+          : mergeMessageDictionaries(
+              extensionSession.messageDictionaries,
+              this.messageDictionaries,
+            );
+    } catch (error) {
+      const disposalDiagnostics = this.disposeExtensionSession(extensionSession);
+      return fail([
+        error instanceof BoardloomError
+          ? error.diagnostic
+          : createDiagnostic(DIAGNOSTIC_CODES.MESSAGE_INVALID_DICTIONARY, "messageDictionaries"),
+        ...disposalDiagnostics,
+      ]);
+    }
 
     const dependencies: SpaceDependencies = {
       idFactory: this.idFactory,

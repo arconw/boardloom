@@ -48,6 +48,9 @@ function contentType(file: string): string {
   if (file.endsWith(".css")) {
     return "text/css; charset=utf-8";
   }
+  if (file.endsWith(".json")) {
+    return "application/json; charset=utf-8";
+  }
   return "text/plain; charset=utf-8";
 }
 
@@ -238,6 +241,80 @@ describe("T12 editor workflow", () => {
       redoChanged: true,
       canRedoAfterUndo: true,
     });
+    const localeRu = result.checks.localeRu as {
+      readonly lang: string | null;
+      readonly dir: string | null;
+      readonly timezone: string | null;
+      readonly mode: string | null;
+      readonly modeLabel: string;
+      readonly expected: string;
+      readonly draft: unknown;
+      readonly draftBefore: unknown;
+    };
+    expect(localeRu.lang).toBe("ru");
+    expect(localeRu.dir).toBe("ltr");
+    expect(localeRu.timezone).toBe("Europe/Moscow");
+    expect(localeRu.mode).toBe("editor");
+    expect(localeRu.modeLabel).toBe(localeRu.expected);
+    expect(localeRu.draft).toEqual(localeRu.draftBefore);
+    const localeJa = result.checks.localeJa as {
+      readonly lang: string | null;
+      readonly dir: string | null;
+      readonly timezone: string | null;
+      readonly mode: string | null;
+      readonly modeLabel: string;
+      readonly expected: string;
+      readonly draft: unknown;
+    };
+    expect(localeJa.lang).toBe("ja");
+    expect(localeJa.dir).toBe("ltr");
+    expect(localeJa.timezone).toBe("Asia/Tokyo");
+    expect(localeJa.mode).toBe("editor");
+    expect(localeJa.modeLabel).toBe(localeJa.expected);
+    expect(localeJa.draft).toEqual(localeRu.draftBefore);
+    const localeAr = result.checks.localeAr as {
+      readonly lang: string | null;
+      readonly dir: string | null;
+      readonly timezone: string | null;
+      readonly mode: string | null;
+      readonly modeLabel: string;
+      readonly expected: string;
+      readonly hostDir: string | null;
+      readonly libraryLabel: string | null;
+      readonly expectedLibrary: string;
+      readonly workspaceLabel: string | null;
+      readonly expectedWorkspace: string;
+      readonly workspaceDir: string | null;
+      readonly workspaceLang: string | null;
+      readonly draft: unknown;
+    };
+    expect(localeAr.lang).toBe("ar");
+    expect(localeAr.dir).toBe("rtl");
+    expect(localeAr.hostDir).toBeNull();
+    expect(localeAr.mode).toBe("editor");
+    expect(localeAr.modeLabel).toBe(localeAr.expected);
+    expect(localeAr.libraryLabel).toBe(localeAr.expectedLibrary);
+    expect(localeAr.workspaceLabel).toBe(localeAr.expectedWorkspace);
+    expect(localeAr.workspaceDir).toBe("rtl");
+    expect(localeAr.workspaceLang).toBe("ar");
+    expect(localeAr.draft).toEqual(localeRu.draftBefore);
+    const localeEn = result.checks.localeEn as {
+      readonly lang: string | null;
+      readonly dir: string | null;
+      readonly timezone: string | null;
+      readonly draft: unknown;
+    };
+    expect(localeEn.lang).toBe("en");
+    expect(localeEn.dir).toBe("ltr");
+    expect(localeEn.timezone).toBe("UTC");
+    expect(localeEn.draft).toEqual(localeRu.draftBefore);
+    expect(result.checks.workspaceInvalidDictionaries).toEqual({ ok: false, children: 0 });
+    expect(result.checks.workspaceDictionaryPrecedence).toEqual({
+      boards: "Host boards",
+      runtimeOnly: "Runtime only",
+      hostOnly: "Host only",
+      heading: "Host boards",
+    });
     expect(result.checks.modeSwitch).toMatchObject({
       viewerMode: "viewer",
       draftPreserved: true,
@@ -297,6 +374,30 @@ describe("T12 editor workflow", () => {
       sourceCanUndo: true,
       sourceDisposed: false,
     });
+    const workspaceScope = result.checks.workspaceScope as {
+      readonly afterImport: {
+        readonly dir: string | null;
+        readonly lang: string | null;
+        readonly heading: string | null;
+      };
+      readonly arabic: {
+        readonly dir: string | null;
+        readonly lang: string | null;
+        readonly heading: string | null;
+      };
+      readonly english: {
+        readonly dir: string | null;
+        readonly lang: string | null;
+        readonly heading: string | null;
+      };
+      readonly expectedArabicHeading: string;
+      readonly expectedEnglishHeading: string;
+    };
+    expect(workspaceScope.afterImport).toMatchObject({ dir: "ltr", lang: "en" });
+    expect(workspaceScope.arabic).toMatchObject({ dir: "rtl", lang: "ar" });
+    expect(workspaceScope.arabic.heading).toBe(workspaceScope.expectedArabicHeading);
+    expect(workspaceScope.english).toMatchObject({ dir: "ltr", lang: "en" });
+    expect(workspaceScope.english.heading).toBe(workspaceScope.expectedEnglishHeading);
     expect(result.checks.importTabs).toMatchObject({
       focused: true,
       marker: "true",

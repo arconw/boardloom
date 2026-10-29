@@ -3,6 +3,7 @@ export {
   DIAGNOSTIC_CODES,
   DIAGNOSTIC_MESSAGES,
   createDiagnostic,
+  defaultDiagnosticMessage,
   fail,
   hasError,
   ok,
@@ -44,15 +45,26 @@ export type {
   TextDirection,
 } from "./locale.js";
 
-export { ENGLISH_MESSAGES, createMessageProvider } from "./messages.js";
+export {
+  ENGLISH_MESSAGES,
+  createMessageProvider,
+  formatEnglishMessage,
+  mergeMessageDictionaries,
+  normalizeMessageDictionary,
+  selectMessageText,
+} from "./messages.js";
 export type {
+  MessageDictionaries,
   MessageDictionary,
   MessageFormatResult,
   MessageParam,
   MessageParams,
   MessageProvider,
   MessageProviderOptions,
+  MessageSelection,
 } from "./messages.js";
+export { BUILT_IN_DICTIONARIES, builtInDictionary } from "./built-in-locales.js";
+export type { LocaleDictionary } from "./built-in-locales.js";
 
 export { createIntlFormatterProvider } from "./formatting.js";
 export type {

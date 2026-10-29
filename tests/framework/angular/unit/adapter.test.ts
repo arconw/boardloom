@@ -4,7 +4,7 @@ import { provideZonelessChangeDetection } from "@angular/core";
 import { TestBed } from "@angular/core/testing";
 import { BrowserTestingModule, platformBrowserTesting } from "@angular/platform-browser/testing";
 import { afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { ENGLISH_MESSAGES, createRuntime, type SpaceEvent } from "@boardloom/core";
+import { BUILT_IN_DICTIONARIES, createRuntime, type SpaceEvent } from "@boardloom/core";
 import {
   REFERENCE_PLUGIN,
   type BlockTypeDefinition,
@@ -217,7 +217,7 @@ describe("T15 Angular adapter", () => {
     expect(host(board).classList.contains("host-board")).toBe(true);
     expect(board.ready).toHaveLength(1);
     expect(board.component.isMounted).toBe(true);
-    expect(modeButton(board, "viewer")?.textContent).toBe("Viewer");
+    expect(modeButton(board, "viewer")?.textContent).toBe(BUILT_IN_DICTIONARIES.de["mode.viewer"]);
     const handle = board.component.handle;
     board.destroy();
     expect(host(board).querySelectorAll(".boardloom")).toHaveLength(0);
@@ -235,7 +235,6 @@ describe("T15 Angular adapter", () => {
     });
     await settle();
     const instance = instanceId(board);
-    const filterChip = host(board).querySelector(".bl-filter-chip")?.textContent ?? "";
     const rows = host(board).querySelectorAll(".bl-table tbody tr").length;
     board.set({
       locale: "ja",
@@ -250,14 +249,50 @@ describe("T15 Angular adapter", () => {
     expect(root.getAttribute("data-boardloom-timezone")).toBe("Asia/Tokyo");
     expect(modeButton(board, "viewer")?.textContent).toBe("Reader");
     expect(modeButton(board, "editor")?.textContent).toBe("Author");
-    expect(host(board).querySelector(".bl-filter-chip")?.textContent ?? "").toBe(filterChip);
+    expect(
+      (host(board).querySelector(".bl-filter-chip")?.textContent ?? "").toLowerCase(),
+    ).toContain("north, south");
     expect(host(board).querySelectorAll(".bl-table tbody tr").length).toBe(rows);
     expect(board.events.some((event) => event.type === "locale:changed")).toBe(true);
     expect(board.ready).toHaveLength(1);
     board.set({ messages: undefined });
     await board.detect();
-    expect(modeButton(board, "viewer")?.textContent).toBe(ENGLISH_MESSAGES["mode.viewer"]);
+    expect(modeButton(board, "viewer")?.textContent).toBe(BUILT_IN_DICTIONARIES.ja["mode.viewer"]);
     expect(instanceId(board)).toBe(instance);
+    board.destroy();
+  });
+
+  it("forwards per-locale message dictionaries without remounting", async () => {
+    const board = await createBoard({
+      document: angularExampleDocument(),
+      datasetProvider: angularExampleProvider(),
+      locale: "en",
+    });
+    await settle();
+    const instance = instanceId(board);
+    board.set({
+      locale: "ja",
+      messageDictionaries: {
+        ja: {
+          "mode.viewer": "Host JA viewer",
+          "mode.editor": "Host JA editor",
+          "host.custom": "Host custom",
+        },
+      },
+    });
+    await board.detect();
+    await settle();
+    expect(instanceId(board)).toBe(instance);
+    expect(
+      board.component.handle?.messageDiagnostics.some(
+        (diagnostic) => diagnostic.code === "MESSAGE_UNKNOWN_KEY",
+      ),
+    ).toBe(true);
+    expect(modeButton(board, "viewer")?.textContent).toBe("Host JA viewer");
+    board.set({ locale: "en" });
+    await board.detect();
+    await settle();
+    expect(modeButton(board, "viewer")?.textContent).toBe(BUILT_IN_DICTIONARIES.en["mode.viewer"]);
     board.destroy();
   });
 

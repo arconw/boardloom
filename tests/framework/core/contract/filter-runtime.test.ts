@@ -178,11 +178,22 @@ describe("T09 space-owned filter runtime", () => {
     const space = unwrap(runtime.createSpace({ document: documentValue() }));
     unwrap(space.setFilterValue("filter-school", ["north"]));
     const before = space.getFilterState();
-    expectFailure(space.setFilterValue("filter-locked", 10), DIAGNOSTIC_CODES.VIEWER_READ_ONLY);
-    expectFailure(
+    const locked = expectFailure(
+      space.setFilterValue("filter-locked", 10),
+      DIAGNOSTIC_CODES.VIEWER_READ_ONLY,
+    );
+    expect((locked[0] as { detailKey?: string } | undefined)?.detailKey).toBe(
+      "diagnostic.detail.filter.notEditable",
+    );
+    expect((locked[0] as { message?: string } | undefined)?.message).toContain("filter-locked");
+    const invalid = expectFailure(
       space.setFilterValue("filter-school", 10 as never),
       DIAGNOSTIC_CODES.FILTER_STATE_INVALID,
     );
+    expect((invalid[0] as { detailKey?: string } | undefined)?.detailKey).toBe(
+      "diagnostic.detail.filter.invalidValue",
+    );
+    expect((invalid[0] as { message?: string } | undefined)?.message).toContain("filter-school");
     expectFailure(
       space.setFilterValue("filter-locked", [5] as never, { allowLocked: true }),
       DIAGNOSTIC_CODES.FILTER_STATE_INVALID,

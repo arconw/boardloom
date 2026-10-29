@@ -3,6 +3,7 @@ import { createServer, type Server } from "node:http";
 import { mkdirSync, readFileSync, rmSync } from "node:fs";
 import path from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { BUILT_IN_DICTIONARIES } from "../../../../packages/core/src/index.js";
 
 interface E2eResult {
   readonly checks: Record<string, unknown>;
@@ -271,6 +272,100 @@ describe("T06 browser viewer", () => {
       "Active filters e2e",
       "Active filters e2e",
     ]);
+    const locales = result.checks.locales as {
+      readonly ar: {
+        readonly mode: string;
+        readonly expected: string;
+        readonly lang: string | null;
+        readonly dir: string | null;
+        readonly hostDir: string | null;
+      };
+      readonly ja: {
+        readonly mode: string;
+        readonly expected: string;
+        readonly lang: string | null;
+        readonly dir: string | null;
+        readonly filterState: string;
+        readonly rows: number;
+        readonly libraryTitle: string | null;
+        readonly expectedLibraryTitle: string;
+        readonly canvasTitle: string | null;
+        readonly expectedCanvasTitle: string;
+        readonly searchPlaceholder: string | null;
+        readonly searchAria: string | null;
+        readonly expectedSearch: string;
+      };
+      readonly ru: {
+        readonly mode: string;
+        readonly expected: string;
+        readonly lang: string | null;
+        readonly dir: string | null;
+        readonly timezone: string | null;
+        readonly filterState: string;
+        readonly rows: number;
+      };
+      readonly en: {
+        readonly mode: string;
+        readonly expected: string;
+        readonly lang: string | null;
+        readonly dir: string | null;
+      };
+      readonly filterStateBefore: string;
+      readonly hostDirAfterJa: string | null;
+    };
+    expect(locales.ar.mode).toBe(locales.ar.expected);
+    expect(locales.ar.lang).toBe("ar");
+    expect(locales.ar.dir).toBe("rtl");
+    expect(locales.ar.hostDir).toBeNull();
+    expect(locales.ja.mode).toBe(locales.ja.expected);
+    expect(locales.ja.lang).toBe("ja");
+    expect(locales.ja.dir).toBe("ltr");
+    expect(locales.ja.filterState).toBe(locales.filterStateBefore);
+    expect(locales.ja.rows).toBeGreaterThan(0);
+    expect(locales.ja.libraryTitle).toBe(locales.ja.expectedLibraryTitle);
+    expect(locales.ja.canvasTitle).toBe(locales.ja.expectedCanvasTitle);
+    expect(locales.ja.searchPlaceholder).toBe(locales.ja.expectedSearch);
+    expect(locales.ja.searchAria).toBe(locales.ja.expectedSearch);
+    expect(locales.ru.mode).toBe(locales.ru.expected);
+    expect(locales.ru.lang).toBe("ru");
+    expect(locales.ru.dir).toBe("ltr");
+    expect(locales.ru.timezone).toBe("Europe/Moscow");
+    expect(locales.ru.filterState).toBe(locales.filterStateBefore);
+    expect(locales.ru.rows).toBeGreaterThan(0);
+    expect(locales.en.mode).toBe(locales.en.expected);
+    expect(locales.en.dir).toBe("ltr");
+    expect(locales.hostDirAfterJa).toBeNull();
+    const realtimeLocalized = result.checks.realtimeLocalized as {
+      readonly key: string;
+      readonly text: string;
+      readonly expected: string | null;
+      readonly ariaLabel: string;
+      readonly expectedAria: string;
+      readonly status: string | null;
+      readonly metric: string;
+      readonly metricBefore: string;
+      readonly lang: string | null;
+      readonly dir: string | null;
+      readonly timezone: string | null;
+    };
+    expect(realtimeLocalized.expected).not.toBeNull();
+    expect(realtimeLocalized.text).toBe(realtimeLocalized.expected);
+    expect(realtimeLocalized.ariaLabel).toBe(realtimeLocalized.expectedAria);
+    expect(realtimeLocalized.status).toBe("live");
+    expect(realtimeLocalized.metric).toBe(realtimeLocalized.metricBefore);
+    expect(realtimeLocalized.lang).toBe("ja");
+    expect(realtimeLocalized.dir).toBe("ltr");
+    expect(realtimeLocalized.timezone).toBe("Asia/Tokyo");
+    const realtimeRtl = result.checks.realtimeRtl as {
+      readonly dir: string | null;
+      readonly lang: string | null;
+      readonly hostDir: string | null;
+      readonly status: string | null;
+    };
+    expect(realtimeRtl.dir).toBe("rtl");
+    expect(realtimeRtl.lang).toBe("ar");
+    expect(realtimeRtl.hostDir).toBeNull();
+    expect(realtimeRtl.status).toBe("live");
     expect(result.checks.metricDir).toBe("ltr");
     expect(Number(result.checks.numericDirCount)).toBeGreaterThan(1);
     const metricAlignment = result.checks.metricAlignment as {
@@ -302,7 +397,7 @@ describe("T06 browser viewer", () => {
       metricMode: "fixed",
     });
     expect(String((result.checks.bindingInspector as { lockText?: string }).lockText)).toContain(
-      "not a security boundary",
+      BUILT_IN_DICTIONARIES.ar["editor.binding.lockedHint"],
     );
     expect(result.checks.bindingDraft).toMatchObject({
       aggregation: "sum",
@@ -369,6 +464,37 @@ describe("T06 browser viewer", () => {
     expect(String(comparison.summary)).toContain("matched");
     expect(Number(comparison.sideBySide)).toBeGreaterThan(0);
     expect(comparison.rejectionCodes).toContain("INCOMPATIBLE_COMPARISON");
+    const comparisonLocaleJa = result.checks.comparisonLocaleJa as {
+      readonly lang: string | null;
+      readonly dir: string | null;
+      readonly rows: number;
+      readonly rowsBefore: number;
+      readonly summary: string;
+      readonly summaryBefore: string;
+      readonly tableText: string;
+      readonly expectedPrimary: string;
+      readonly timezone: string | null;
+    };
+    expect(comparisonLocaleJa.lang).toBe("ja");
+    expect(comparisonLocaleJa.dir).toBe("ltr");
+    expect(comparisonLocaleJa.rows).toBe(comparisonLocaleJa.rowsBefore);
+    expect(comparisonLocaleJa.summary).not.toBe(comparisonLocaleJa.summaryBefore);
+    expect(comparisonLocaleJa.tableText).toContain(comparisonLocaleJa.expectedPrimary);
+    expect(comparisonLocaleJa.timezone).toBe("Asia/Tokyo");
+    const comparisonLocaleAr = result.checks.comparisonLocaleAr as {
+      readonly lang: string | null;
+      readonly dir: string | null;
+      readonly hostDir: string | null;
+      readonly rows: number;
+      readonly rowsBefore: number;
+      readonly summary: string;
+      readonly summaryBefore: string;
+    };
+    expect(comparisonLocaleAr.lang).toBe("ar");
+    expect(comparisonLocaleAr.dir).toBe("rtl");
+    expect(comparisonLocaleAr.hostDir).toBeNull();
+    expect(comparisonLocaleAr.rows).toBe(comparisonLocaleAr.rowsBefore);
+    expect(comparisonLocaleAr.summary).not.toBe(comparisonLocaleAr.summaryBefore);
     expect(comparison.draftReference).toBe("cmp-previous");
     expect(Number(comparison.percentageCells)).toBeGreaterThan(0);
     expect(result.checks.realtimeConnecting).toBe("connecting");

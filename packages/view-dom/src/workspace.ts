@@ -1,6 +1,7 @@
 import {
   DIAGNOSTIC_CODES,
   createDiagnostic,
+  mergeMessageDictionaries,
   createRuntime,
   fail,
   ok,
@@ -15,6 +16,7 @@ import {
   type EventBatchHandle,
   type ExtensionSelection,
   type ImportDocumentOptions,
+  type MessageDictionaries,
   type MessageDictionary,
   type RendererDefinition,
   type Result,
@@ -22,7 +24,8 @@ import {
   type SpaceEvent,
   type ThemeMode,
 } from "@boardloom/core";
-import { createViewMessages } from "./messages.js";
+import { applyLocaleScope } from "./locale-scope.js";
+import { createViewMessages, validateViewMessageOptions } from "./messages.js";
 import type { BoardloomExtensions } from "./extensions.js";
 import { mountBoardView } from "./mount.js";
 import type { BlockTypeDefinition } from "./block-registry.js";
@@ -38,6 +41,7 @@ export interface MountBoardWorkspaceOptions {
   readonly timezone?: string;
   readonly theme?: ThemeMode;
   readonly messages?: MessageDictionary;
+  readonly messageDictionaries?: MessageDictionaries;
   readonly provenance?: string;
   readonly blockTypes?: readonly BlockTypeDefinition[];
   readonly renderers?: readonly RendererDefinition<HTMLElement>[];
@@ -60,6 +64,7 @@ export interface BoardWorkspaceHandle {
   readonly element: HTMLElement;
   readonly activeSpace: BoardSpace;
   readonly entries: readonly WorkspaceEntry[];
+  readonly messageDiagnostics: readonly Diagnostic[];
   readonly disposed: boolean;
   importDocument(input: unknown, options?: ImportDocumentOptions): Result<WorkspaceEntry>;
   activateSpace(spaceId: string): Result<void>;
@@ -72,14 +77,15 @@ interface WorkspaceState {
   readonly runtime: BoardloomRuntime;
   readonly ownsRuntime: boolean;
   readonly root: HTMLElement;
+  readonly heading: HTMLElement;
   readonly stage: HTMLElement;
   readonly tablist: HTMLElement;
   readonly live: HTMLElement;
   readonly entries: WorkspaceEntry[];
   readonly options: MountBoardWorkspaceOptions;
-  readonly importLabel: string;
-  readonly hostErrorMessage: string;
-  readonly activateErrorMessage: string;
+  importLabel: string;
+  hostErrorMessage: string;
+  activateErrorMessage: string;
   active: WorkspaceEntry | null;
   disposed: boolean;
   readonly onEvent: ((event: SpaceEvent) => void) | undefined;
@@ -102,6 +108,7 @@ function createWorkspaceElements(
   boardsLabel: string,
 ): {
   readonly root: HTMLElement;
+  readonly heading: HTMLElement;
   readonly tablist: HTMLElement;
   readonly stage: HTMLElement;
   readonly live: HTMLElement;
@@ -131,7 +138,7 @@ function createWorkspaceElements(
   live.setAttribute("aria-label", boardsLabel);
   root.append(header, stage, live);
   target.append(root);
-  return { root, tablist, stage, live };
+  return { root, heading, tablist, stage, live };
 }
 
 function diagnosticList(error: unknown, path: string): readonly Diagnostic[] {
@@ -174,6 +181,9 @@ function dropWorkspaceEntry(state: WorkspaceState, entry: WorkspaceEntry): void 
     const next = state.entries[0];
     if (next === undefined) {
       state.active = null;
+      state.root.removeAttribute("lang");
+      state.root.removeAttribute("dir");
+      state.root.removeAttribute("data-boardloom-locale");
     } else if (!activateEntry(state, next.space.id).ok) {
       state.active = null;
     }
@@ -184,7 +194,29 @@ function announce(state: WorkspaceState, message: string): void {
   state.live.textContent = message;
 }
 
+function refreshWorkspaceLabels(state: WorkspaceState): void {
+  const space = state.active?.space ?? state.entries[0]?.space;
+  if (space === undefined || space.disposed) {
+    return;
+  }
+  const messages = spaceMessages(state, space);
+  applyLocaleScope(state.root, messages.locale);
+  const boards = messages.text("workspace.boards");
+  state.heading.textContent = boards;
+  state.tablist.setAttribute("aria-label", boards);
+  state.live.setAttribute("aria-label", boards);
+  state.importLabel = messages.text("workspace.imported");
+  state.hostErrorMessage = messages.text("workspace.hostError");
+  state.activateErrorMessage = messages.text("workspace.activateFailed");
+  for (const marker of state.tablist.querySelectorAll(".bl-workspace__tab-imported")) {
+    marker.textContent = state.importLabel;
+  }
+}
+
 function deliverHostEvent(state: WorkspaceState, event: SpaceEvent): void {
+  if (event.type === "locale:changed") {
+    refreshWorkspaceLabels(state);
+  }
   if (state.onEvent === undefined) {
     return;
   }
@@ -212,6 +244,9 @@ function spaceMessages(
   return createViewMessages({
     provider: space.getMessageProvider(),
     ...(state.options.messages === undefined ? {} : { overrides: state.options.messages }),
+    ...(state.options.messageDictionaries === undefined
+      ? {}
+      : { dictionaries: state.options.messageDictionaries }),
   });
 }
 
@@ -255,6 +290,9 @@ function mountEntry(
     ...(state.options.timezone === undefined ? {} : { timezone: state.options.timezone }),
     ...(state.options.theme === undefined ? {} : { theme: state.options.theme }),
     ...(state.options.messages === undefined ? {} : { messages: state.options.messages }),
+    ...(state.options.messageDictionaries === undefined
+      ? {}
+      : { messageDictionaries: state.options.messageDictionaries }),
     ...(state.options.provenance === undefined ? {} : { provenance: state.options.provenance }),
     ...(state.options.blockTypes === undefined ? {} : { blockTypes: state.options.blockTypes }),
     ...(state.options.renderers === undefined ? {} : { renderers: state.options.renderers }),
@@ -356,6 +394,7 @@ function activateEntry(state: WorkspaceState, spaceId: string): Result<void> {
     syncWorkspaceTab(candidate);
   }
   state.active = entry;
+  refreshWorkspaceLabels(state);
   return ok(undefined);
 }
 
@@ -430,6 +469,16 @@ export function mountBoardWorkspace(
       }),
     ]);
   }
+  try {
+    validateViewMessageOptions({
+      ...(options.messages === undefined ? {} : { overrides: options.messages }),
+      ...(options.messageDictionaries === undefined
+        ? {}
+        : { dictionaries: options.messageDictionaries }),
+    });
+  } catch (error) {
+    return fail(diagnosticList(error, "messages"));
+  }
   let runtime: BoardloomRuntime;
   let ownsRuntime = false;
   if (options.runtime !== undefined) {
@@ -439,6 +488,14 @@ export function mountBoardWorkspace(
       const runtimeOptions = options.runtimeOptions;
       runtime = createRuntime({
         ...runtimeOptions,
+        ...(options.messageDictionaries === undefined
+          ? {}
+          : {
+              messageDictionaries: mergeMessageDictionaries(
+                runtimeOptions?.messageDictionaries,
+                options.messageDictionaries,
+              ),
+            }),
         ...(runtimeOptions?.extensions === undefined && options.extensions !== undefined
           ? { extensions: options.extensions.core }
           : {}),
@@ -491,16 +548,21 @@ export function mountBoardWorkspace(
   const initialMessages = createViewMessages({
     provider: space.getMessageProvider(),
     ...(options.messages === undefined ? {} : { overrides: options.messages }),
+    ...(options.messageDictionaries === undefined
+      ? {}
+      : { dictionaries: options.messageDictionaries }),
   });
   const boardsLabel = initialMessages.text("workspace.boards");
   const importLabel = initialMessages.text("workspace.imported");
   const hostErrorMessage = initialMessages.text("workspace.hostError");
   const activateErrorMessage = initialMessages.text("workspace.activateFailed");
   const elements = createWorkspaceElements(target, boardsLabel);
+  applyLocaleScope(elements.root, initialMessages.locale);
   const state: WorkspaceState = {
     runtime,
     ownsRuntime,
     root: elements.root,
+    heading: elements.heading,
     tablist: elements.tablist,
     stage: elements.stage,
     live: elements.live,
@@ -545,6 +607,12 @@ export function mountBoardWorkspace(
     },
     get entries() {
       return Object.freeze([...state.entries]);
+    },
+    get messageDiagnostics() {
+      const space = state.active?.space ?? state.entries[0]?.space;
+      return space === undefined || space.disposed
+        ? Object.freeze([])
+        : spaceMessages(state, space).diagnostics;
     },
     get disposed() {
       return state.disposed;

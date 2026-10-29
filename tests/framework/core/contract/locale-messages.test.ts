@@ -43,7 +43,8 @@ describe("locale, timezone and provider contract", () => {
     expect(space.getFormatters().locale).toBe("ru");
     expect(space.getFormatters().timezone).toBe("Europe/Moscow");
     expect(space.getMessageProvider().locale).toBe("ru");
-    expect(space.getMessageProvider().format("common.apply").usedFallback).toBe(true);
+    expect(space.getMessageProvider().format("common.apply").usedFallback).toBe(false);
+    expect(space.getMessageProvider().format("common.apply").text).not.toBe("Apply");
 
     const localeEvent = events.find((event) => event.type === "locale:changed");
     expect(localeEvent?.type).toBe("locale:changed");
@@ -163,7 +164,8 @@ describe("locale, timezone and provider contract", () => {
     expect(space.getMessageProvider().format("diagnostic.SPACE_DISPOSED").text).toBe(
       "Prostranstvo zakryto.",
     );
-    expect(space.getMessageProvider().format("common.cancel").text).toBe("Cancel");
+    expect(space.getMessageProvider().format("common.cancel").text).not.toBe("Cancel");
+    expect(space.getMessageProvider().format("common.cancel").usedFallback).toBe(false);
   });
 
   it("keeps timezone formatting explicit and independent from the UI language", () => {

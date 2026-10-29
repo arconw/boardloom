@@ -42,7 +42,8 @@ export {
   rendererData,
   rendererInput,
 } from "./renderer-adapter.js";
-export { createViewMessages, type ViewMessages } from "./messages.js";
+export { createViewMessages, validateViewMessageOptions, type ViewMessages } from "./messages.js";
+export { applyLocaleScope, createLocaleScope, type LocaleScope } from "./locale-scope.js";
 export {
   realtimeLabel,
   realtimeText,

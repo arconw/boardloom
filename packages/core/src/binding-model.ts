@@ -1,3 +1,4 @@
+import { formatEnglishMessage } from "./messages.js";
 import {
   AGGREGATION_TYPES,
   type AggregationType,
@@ -482,8 +483,8 @@ function buildCandidate(
   if (existing !== null && fixedBindingMode(existing)) {
     return fail([
       createDiagnostic(DIAGNOSTIC_CODES.FIXED_BINDING_LOCKED, bindingPath, {
-        message:
-          "This binding is fixed by configuration and cannot be changed through the editor or public API. The lock is a configuration constraint, not a security boundary.",
+        message: formatEnglishMessage("diagnostic.detail.binding.fixed"),
+        detailKey: "diagnostic.detail.binding.fixed",
         relatedIds: [change.blockId, String(own(existing, "id") ?? "")],
       }),
     ]);
@@ -567,8 +568,8 @@ function buildCandidate(
     if (intendedId === null || selectedId !== intendedId) {
       return fail([
         createDiagnostic(DIAGNOSTIC_CODES.INCOMPATIBLE_BINDING, bindingPath, {
-          message:
-            "The requested change would resolve as a different binding slot. Set the required X field before adding or changing this binding.",
+          message: formatEnglishMessage("diagnostic.detail.binding.slotChanged"),
+          detailKey: "diagnostic.detail.binding.slotChanged",
           ...(intendedId === null ? {} : { relatedIds: [intendedId] }),
         }),
       ]);
@@ -617,7 +618,9 @@ function fieldCompatibilityReason(
   const type = field.type;
   if (slot === "y" && type !== "number") {
     return createDiagnostic(DIAGNOSTIC_CODES.INCOMPATIBLE_BINDING, "binding/field", {
-      message: `The ${slot} slot requires a numeric measure, not a ${type} field.`,
+      message: formatEnglishMessage("diagnostic.detail.binding.numericMeasure", { slot, type }),
+      detailKey: "diagnostic.detail.binding.numericMeasure",
+      detailParams: { slot, type },
       relatedIds: [field.datasetId, field.fieldId],
     });
   }
@@ -625,7 +628,8 @@ function fieldCompatibilityReason(
     const visualization = visualizationOf(block);
     if (visualization === "scatter" && type !== "number") {
       return createDiagnostic(DIAGNOSTIC_CODES.INCOMPATIBLE_BINDING, "binding/field", {
-        message: "A scatter X slot requires a numeric field.",
+        message: formatEnglishMessage("diagnostic.detail.binding.scatterNumericX"),
+        detailKey: "diagnostic.detail.binding.scatterNumericX",
         relatedIds: [field.datasetId, field.fieldId],
       });
     }
@@ -730,7 +734,8 @@ export function describeBindingSlots(
                     DIAGNOSTIC_CODES.INVALID_ARGUMENT,
                     "binding/aggregation",
                     {
-                      message: "Select a field before choosing an aggregation.",
+                      message: formatEnglishMessage("diagnostic.detail.binding.aggregationField"),
+                      detailKey: "diagnostic.detail.binding.aggregationField",
                     },
                   ),
                 });

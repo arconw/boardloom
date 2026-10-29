@@ -85,7 +85,6 @@ async function run(): Promise<void> {
   const initialMetric = document.querySelector(".bl-metric__value")?.textContent?.trim() ?? "";
   const initialDate =
     document.querySelector(".bl-table tbody td:last-child")?.textContent?.trim() ?? "";
-  const initialFilter = document.querySelector(".bl-filter-chip")?.textContent?.trim() ?? "";
   const checks: Record<string, boolean | number | string> = {
     oneRoot: document.querySelectorAll(".boardloom").length === 1,
     readyCount: text("example-ready"),
@@ -116,8 +115,48 @@ async function run(): Promise<void> {
     document.querySelector(".bl-table tbody td:last-child")?.textContent?.trim() ?? "";
   checks.metricFormatChanged = localizedMetric !== initialMetric;
   checks.dateFormatChanged = localizedDate !== initialDate;
-  checks.filterPreserved =
-    (document.querySelector(".bl-filter-chip")?.textContent?.trim() ?? "") === initialFilter;
+  checks.filterPreserved = (document.querySelector(".bl-filter-chip")?.textContent?.trim() ?? "")
+    .toLowerCase()
+    .includes("north, south");
+  checks.localizedDe =
+    (modeButton("viewer")?.textContent?.trim() ?? "") !== "" &&
+    modeButton("viewer")?.textContent?.trim() !== "Viewer";
+  const rowsBeforeLocales = document.querySelectorAll(".bl-table tbody tr").length;
+  for (const locale of ["ja", "ar", "ru"] as const) {
+    select("locale-select", locale);
+    await waitFor(
+      () =>
+        root()?.getAttribute("data-boardloom-locale") === locale &&
+        (modeButton("viewer")?.textContent?.trim() ?? "") !== "" &&
+        modeButton("viewer")?.textContent?.trim() !== "Viewer",
+      `localized ${locale}`,
+      12000,
+    );
+    checks[`localized_${locale}`] =
+      (modeButton("viewer")?.textContent?.trim() ?? "") !== "" &&
+      modeButton("viewer")?.textContent?.trim() !== "Viewer";
+    checks[`dir_${locale}`] = root()?.getAttribute("dir") ?? "";
+    checks[`hostDir_${locale}`] = document.documentElement.getAttribute("dir") ?? "none";
+    checks[`filter_${locale}`] = (
+      document.querySelector(".bl-filter-chip")?.textContent?.trim() ?? ""
+    )
+      .toLowerCase()
+      .includes("north, south");
+    checks[`rows_${locale}`] =
+      document.querySelectorAll(".bl-table tbody tr").length === rowsBeforeLocales;
+  }
+  checks.rtlAr = checks.dir_ar === "rtl";
+  checks.hostUnaffectedAr = checks.hostDir_ar === "none";
+  select("locale-select", "en");
+  await waitFor(
+    () =>
+      root()?.getAttribute("data-boardloom-locale") === "en" &&
+      modeButton("viewer")?.textContent?.trim() === "Viewer",
+    "english restore",
+  );
+  checks.localeRestoredEn = root()?.getAttribute("dir") === "ltr";
+  select("locale-select", "de");
+  await waitFor(() => root()?.getAttribute("data-boardloom-locale") === "de", "german restore");
   checks.tablePreserved =
     document.querySelectorAll(".bl-table tbody tr").length === checks.tableRows;
 
@@ -129,8 +168,13 @@ async function run(): Promise<void> {
   checks.hostMessages = modeButton("editor")?.textContent?.trim() === "Author";
   checks.sameInstanceAfterMessages = instance() === initialInstance;
   toggle("messages-toggle", false);
-  await waitFor(() => modeButton("viewer")?.textContent?.trim() === "Viewer", "message reset");
-  checks.hostMessagesCleared = true;
+  await waitFor(
+    () =>
+      (modeButton("viewer")?.textContent?.trim() ?? "") !== "" &&
+      modeButton("viewer")?.textContent?.trim() !== "Reader",
+    "message reset",
+  );
+  checks.hostMessagesCleared = modeButton("viewer")?.textContent?.trim() !== "Reader";
 
   click("host-editor");
   await waitFor(() => root()?.getAttribute("data-boardloom-mode") === "editor", "editor mode");

@@ -5,7 +5,9 @@
     "namespace": "lowercase namespace followed by dot-separated segments; diagnostic codes may use uppercase segments after diagnostic.",
     "fallback": "English is the deterministic fallback; host overrides win over the selected built-in locale and English.",
     "interpolation": "Placeholders use single braces with scalar parameter names and are escaped; translations are never assembled from fragments.",
-    "hostData": "Board titles, dataset labels, field labels and data values are host content and are not framework message keys."
+    "hostData": "Board titles, dataset labels, field labels and data values are host content and are not framework message keys.",
+    "kpi": "KPI and metric copy uses the editor.library.metric* and diagnostic.* keys; no separate metric.* or kpi.* keys are defined.",
+    "diagnostics": "Diagnostic keys use diagnostic.<CODE>; localized framework detail uses diagnostic.detail.<detail>. Host diagnostic detail is host content and is shown when its diagnostic declares source host."
   },
   "keys": [
     {
@@ -2787,6 +2789,1370 @@
       "key": "viewer.hostCallbackError",
       "english": "A host event callback failed.",
       "context": "Diagnostic when a viewer host event callback throws",
+      "source": "core"
+    },
+    {
+      "key": "common.rows.zero",
+      "english": "{count} rows",
+      "context": "Plural category zero; shares the plural form used for this category in each locale",
+      "placeholders": ["count"],
+      "source": "core"
+    },
+    {
+      "key": "common.rows.two",
+      "english": "{count} rows",
+      "context": "Plural category two; shares the plural form used for this category in each locale",
+      "placeholders": ["count"],
+      "source": "core"
+    },
+    {
+      "key": "common.rows.few",
+      "english": "{count} rows",
+      "context": "Plural category few; shares the plural form used for this category in each locale",
+      "placeholders": ["count"],
+      "source": "core"
+    },
+    {
+      "key": "common.rows.many",
+      "english": "{count} rows",
+      "context": "Plural category many; shares the plural form used for this category in each locale",
+      "placeholders": ["count"],
+      "source": "core"
+    },
+    {
+      "key": "common.selected.zero",
+      "english": "{count} selected",
+      "context": "Plural category zero; shares the plural form used for this category in each locale",
+      "placeholders": ["count"],
+      "source": "core"
+    },
+    {
+      "key": "common.selected.two",
+      "english": "{count} selected",
+      "context": "Plural category two; shares the plural form used for this category in each locale",
+      "placeholders": ["count"],
+      "source": "core"
+    },
+    {
+      "key": "common.selected.few",
+      "english": "{count} selected",
+      "context": "Plural category few; shares the plural form used for this category in each locale",
+      "placeholders": ["count"],
+      "source": "core"
+    },
+    {
+      "key": "common.selected.many",
+      "english": "{count} selected",
+      "context": "Plural category many; shares the plural form used for this category in each locale",
+      "placeholders": ["count"],
+      "source": "core"
+    },
+    {
+      "key": "common.minutes.zero",
+      "english": "{count} minutes",
+      "context": "Plural category zero; shares the plural form used for this category in each locale",
+      "placeholders": ["count"],
+      "source": "core"
+    },
+    {
+      "key": "common.minutes.two",
+      "english": "{count} minutes",
+      "context": "Plural category two; shares the plural form used for this category in each locale",
+      "placeholders": ["count"],
+      "source": "core"
+    },
+    {
+      "key": "common.minutes.few",
+      "english": "{count} minutes",
+      "context": "Plural category few; shares the plural form used for this category in each locale",
+      "placeholders": ["count"],
+      "source": "core"
+    },
+    {
+      "key": "common.minutes.many",
+      "english": "{count} minutes",
+      "context": "Plural category many; shares the plural form used for this category in each locale",
+      "placeholders": ["count"],
+      "source": "core"
+    },
+    {
+      "key": "viewer.meta.rows.zero",
+      "english": "{count} rows in scope",
+      "context": "Plural category zero; shares the plural form used for this category in each locale",
+      "placeholders": ["count"],
+      "source": "core"
+    },
+    {
+      "key": "viewer.meta.rows.two",
+      "english": "{count} rows in scope",
+      "context": "Plural category two; shares the plural form used for this category in each locale",
+      "placeholders": ["count"],
+      "source": "core"
+    },
+    {
+      "key": "viewer.meta.rows.few",
+      "english": "{count} rows in scope",
+      "context": "Plural category few; shares the plural form used for this category in each locale",
+      "placeholders": ["count"],
+      "source": "core"
+    },
+    {
+      "key": "viewer.meta.rows.many",
+      "english": "{count} rows in scope",
+      "context": "Plural category many; shares the plural form used for this category in each locale",
+      "placeholders": ["count"],
+      "source": "core"
+    },
+    {
+      "key": "viewer.filters.summary.zero",
+      "english": "{count} active filters: {summary}",
+      "context": "Plural category zero; shares the plural form used for this category in each locale",
+      "placeholders": ["count", "summary"],
+      "source": "core"
+    },
+    {
+      "key": "viewer.filters.summary.two",
+      "english": "{count} active filters: {summary}",
+      "context": "Plural category two; shares the plural form used for this category in each locale",
+      "placeholders": ["count", "summary"],
+      "source": "core"
+    },
+    {
+      "key": "viewer.filters.summary.few",
+      "english": "{count} active filters: {summary}",
+      "context": "Plural category few; shares the plural form used for this category in each locale",
+      "placeholders": ["count", "summary"],
+      "source": "core"
+    },
+    {
+      "key": "viewer.filters.summary.many",
+      "english": "{count} active filters: {summary}",
+      "context": "Plural category many; shares the plural form used for this category in each locale",
+      "placeholders": ["count", "summary"],
+      "source": "core"
+    },
+    {
+      "key": "viewer.diagnostics.summary.zero",
+      "english": "{count} data warnings",
+      "context": "Plural category zero; shares the plural form used for this category in each locale",
+      "placeholders": ["count"],
+      "source": "core"
+    },
+    {
+      "key": "viewer.diagnostics.summary.two",
+      "english": "{count} data warnings",
+      "context": "Plural category two; shares the plural form used for this category in each locale",
+      "placeholders": ["count"],
+      "source": "core"
+    },
+    {
+      "key": "viewer.diagnostics.summary.few",
+      "english": "{count} data warnings",
+      "context": "Plural category few; shares the plural form used for this category in each locale",
+      "placeholders": ["count"],
+      "source": "core"
+    },
+    {
+      "key": "viewer.diagnostics.summary.many",
+      "english": "{count} data warnings",
+      "context": "Plural category many; shares the plural form used for this category in each locale",
+      "placeholders": ["count"],
+      "source": "core"
+    },
+    {
+      "key": "state.loading.body.zero",
+      "english": "Preparing {count} blocks for the active filters",
+      "context": "Plural category zero; shares the plural form used for this category in each locale",
+      "placeholders": ["count"],
+      "source": "core"
+    },
+    {
+      "key": "state.loading.body.two",
+      "english": "Preparing {count} blocks for the active filters",
+      "context": "Plural category two; shares the plural form used for this category in each locale",
+      "placeholders": ["count"],
+      "source": "core"
+    },
+    {
+      "key": "state.loading.body.few",
+      "english": "Preparing {count} blocks for the active filters",
+      "context": "Plural category few; shares the plural form used for this category in each locale",
+      "placeholders": ["count"],
+      "source": "core"
+    },
+    {
+      "key": "state.loading.body.many",
+      "english": "Preparing {count} blocks for the active filters",
+      "context": "Plural category many; shares the plural form used for this category in each locale",
+      "placeholders": ["count"],
+      "source": "core"
+    },
+    {
+      "key": "state.partial.body.zero",
+      "english": "Showing {returned} of {total} rows",
+      "context": "Plural category zero; shares the plural form used for this category in each locale",
+      "placeholders": ["returned", "total"],
+      "source": "core"
+    },
+    {
+      "key": "state.partial.body.two",
+      "english": "Showing {returned} of {total} rows",
+      "context": "Plural category two; shares the plural form used for this category in each locale",
+      "placeholders": ["returned", "total"],
+      "source": "core"
+    },
+    {
+      "key": "state.partial.body.few",
+      "english": "Showing {returned} of {total} rows",
+      "context": "Plural category few; shares the plural form used for this category in each locale",
+      "placeholders": ["returned", "total"],
+      "source": "core"
+    },
+    {
+      "key": "state.partial.body.many",
+      "english": "Showing {returned} of {total} rows",
+      "context": "Plural category many; shares the plural form used for this category in each locale",
+      "placeholders": ["returned", "total"],
+      "source": "core"
+    },
+    {
+      "key": "table.missing.zero",
+      "english": "{count} missing cells",
+      "context": "Plural category zero; shares the plural form used for this category in each locale",
+      "placeholders": ["count"],
+      "source": "core"
+    },
+    {
+      "key": "table.missing.two",
+      "english": "{count} missing cells",
+      "context": "Plural category two; shares the plural form used for this category in each locale",
+      "placeholders": ["count"],
+      "source": "core"
+    },
+    {
+      "key": "table.missing.few",
+      "english": "{count} missing cells",
+      "context": "Plural category few; shares the plural form used for this category in each locale",
+      "placeholders": ["count"],
+      "source": "core"
+    },
+    {
+      "key": "table.missing.many",
+      "english": "{count} missing cells",
+      "context": "Plural category many; shares the plural form used for this category in each locale",
+      "placeholders": ["count"],
+      "source": "core"
+    },
+    {
+      "key": "viewer.incidents.summary.zero",
+      "english": "{count} open incidents",
+      "context": "Plural category zero; shares the plural form used for this category in each locale",
+      "placeholders": ["count"],
+      "source": "core"
+    },
+    {
+      "key": "viewer.incidents.summary.two",
+      "english": "{count} open incidents",
+      "context": "Plural category two; shares the plural form used for this category in each locale",
+      "placeholders": ["count"],
+      "source": "core"
+    },
+    {
+      "key": "viewer.incidents.summary.few",
+      "english": "{count} open incidents",
+      "context": "Plural category few; shares the plural form used for this category in each locale",
+      "placeholders": ["count"],
+      "source": "core"
+    },
+    {
+      "key": "viewer.incidents.summary.many",
+      "english": "{count} open incidents",
+      "context": "Plural category many; shares the plural form used for this category in each locale",
+      "placeholders": ["count"],
+      "source": "core"
+    },
+    {
+      "key": "chart.summary.points.zero",
+      "english": "{count} data points",
+      "context": "Plural category zero; shares the plural form used for this category in each locale",
+      "placeholders": ["count"],
+      "source": "core"
+    },
+    {
+      "key": "chart.summary.points.two",
+      "english": "{count} data points",
+      "context": "Plural category two; shares the plural form used for this category in each locale",
+      "placeholders": ["count"],
+      "source": "core"
+    },
+    {
+      "key": "chart.summary.points.few",
+      "english": "{count} data points",
+      "context": "Plural category few; shares the plural form used for this category in each locale",
+      "placeholders": ["count"],
+      "source": "core"
+    },
+    {
+      "key": "chart.summary.points.many",
+      "english": "{count} data points",
+      "context": "Plural category many; shares the plural form used for this category in each locale",
+      "placeholders": ["count"],
+      "source": "core"
+    },
+    {
+      "key": "chart.summary.series.zero",
+      "english": "{count} series: {names}",
+      "context": "Plural category zero; shares the plural form used for this category in each locale",
+      "placeholders": ["count", "names"],
+      "source": "core"
+    },
+    {
+      "key": "chart.summary.series.two",
+      "english": "{count} series: {names}",
+      "context": "Plural category two; shares the plural form used for this category in each locale",
+      "placeholders": ["count", "names"],
+      "source": "core"
+    },
+    {
+      "key": "chart.summary.series.few",
+      "english": "{count} series: {names}",
+      "context": "Plural category few; shares the plural form used for this category in each locale",
+      "placeholders": ["count", "names"],
+      "source": "core"
+    },
+    {
+      "key": "chart.summary.series.many",
+      "english": "{count} series: {names}",
+      "context": "Plural category many; shares the plural form used for this category in each locale",
+      "placeholders": ["count", "names"],
+      "source": "core"
+    },
+    {
+      "key": "chart.summary.categories.zero",
+      "english": "{count} categories",
+      "context": "Plural category zero; shares the plural form used for this category in each locale",
+      "placeholders": ["count"],
+      "source": "core"
+    },
+    {
+      "key": "chart.summary.categories.two",
+      "english": "{count} categories",
+      "context": "Plural category two; shares the plural form used for this category in each locale",
+      "placeholders": ["count"],
+      "source": "core"
+    },
+    {
+      "key": "chart.summary.categories.few",
+      "english": "{count} categories",
+      "context": "Plural category few; shares the plural form used for this category in each locale",
+      "placeholders": ["count"],
+      "source": "core"
+    },
+    {
+      "key": "chart.summary.categories.many",
+      "english": "{count} categories",
+      "context": "Plural category many; shares the plural form used for this category in each locale",
+      "placeholders": ["count"],
+      "source": "core"
+    },
+    {
+      "key": "chart.summary.missing.zero",
+      "english": "{count} missing values excluded",
+      "context": "Plural category zero; shares the plural form used for this category in each locale",
+      "placeholders": ["count"],
+      "source": "core"
+    },
+    {
+      "key": "chart.summary.missing.two",
+      "english": "{count} missing values excluded",
+      "context": "Plural category two; shares the plural form used for this category in each locale",
+      "placeholders": ["count"],
+      "source": "core"
+    },
+    {
+      "key": "chart.summary.missing.few",
+      "english": "{count} missing values excluded",
+      "context": "Plural category few; shares the plural form used for this category in each locale",
+      "placeholders": ["count"],
+      "source": "core"
+    },
+    {
+      "key": "chart.summary.missing.many",
+      "english": "{count} missing values excluded",
+      "context": "Plural category many; shares the plural form used for this category in each locale",
+      "placeholders": ["count"],
+      "source": "core"
+    },
+    {
+      "key": "chart.summary.denominator.zero",
+      "english": "Average based on {count} non-null rows",
+      "context": "Plural category zero; shares the plural form used for this category in each locale",
+      "placeholders": ["count"],
+      "source": "core"
+    },
+    {
+      "key": "chart.summary.denominator.two",
+      "english": "Average based on {count} non-null rows",
+      "context": "Plural category two; shares the plural form used for this category in each locale",
+      "placeholders": ["count"],
+      "source": "core"
+    },
+    {
+      "key": "chart.summary.denominator.few",
+      "english": "Average based on {count} non-null rows",
+      "context": "Plural category few; shares the plural form used for this category in each locale",
+      "placeholders": ["count"],
+      "source": "core"
+    },
+    {
+      "key": "chart.summary.denominator.many",
+      "english": "Average based on {count} non-null rows",
+      "context": "Plural category many; shares the plural form used for this category in each locale",
+      "placeholders": ["count"],
+      "source": "core"
+    },
+    {
+      "key": "editor.draft.edits.zero",
+      "english": "{count} edits",
+      "context": "Plural category zero; shares the plural form used for this category in each locale",
+      "placeholders": ["count"],
+      "source": "core"
+    },
+    {
+      "key": "editor.draft.edits.two",
+      "english": "{count} edits",
+      "context": "Plural category two; shares the plural form used for this category in each locale",
+      "placeholders": ["count"],
+      "source": "core"
+    },
+    {
+      "key": "editor.draft.edits.few",
+      "english": "{count} edits",
+      "context": "Plural category few; shares the plural form used for this category in each locale",
+      "placeholders": ["count"],
+      "source": "core"
+    },
+    {
+      "key": "editor.draft.edits.many",
+      "english": "{count} edits",
+      "context": "Plural category many; shares the plural form used for this category in each locale",
+      "placeholders": ["count"],
+      "source": "core"
+    },
+    {
+      "key": "editor.draft.ageMinutes.zero",
+      "english": "{count} minutes ago",
+      "context": "Plural category zero; shares the plural form used for this category in each locale",
+      "placeholders": ["count"],
+      "source": "core"
+    },
+    {
+      "key": "editor.draft.ageMinutes.two",
+      "english": "{count} minutes ago",
+      "context": "Plural category two; shares the plural form used for this category in each locale",
+      "placeholders": ["count"],
+      "source": "core"
+    },
+    {
+      "key": "editor.draft.ageMinutes.few",
+      "english": "{count} minutes ago",
+      "context": "Plural category few; shares the plural form used for this category in each locale",
+      "placeholders": ["count"],
+      "source": "core"
+    },
+    {
+      "key": "editor.draft.ageMinutes.many",
+      "english": "{count} minutes ago",
+      "context": "Plural category many; shares the plural form used for this category in each locale",
+      "placeholders": ["count"],
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.SPACE_ALREADY_EXISTS",
+      "english": "A space with this ID already exists in the runtime.",
+      "context": "Localized copy for the SPACE_ALREADY_EXISTS diagnostic code",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.SPACE_DISPOSED",
+      "english": "The space has been disposed and no longer accepts commands.",
+      "context": "Localized copy for the SPACE_DISPOSED diagnostic code",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.SPACE_NOT_FOUND",
+      "english": "The requested space does not exist in the runtime.",
+      "context": "Localized copy for the SPACE_NOT_FOUND diagnostic code",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.RUNTIME_DISPOSED",
+      "english": "The runtime has been disposed and no longer creates spaces.",
+      "context": "Localized copy for the RUNTIME_DISPOSED diagnostic code",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.VIEW_DISPOSED",
+      "english": "The view has been disposed and no longer accepts commands.",
+      "context": "Localized copy for the VIEW_DISPOSED diagnostic code",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.VIEW_SESSION_RESTORE_FAILED",
+      "english": "The external view's original mode or session could not be restored.",
+      "context": "Localized copy for the VIEW_SESSION_RESTORE_FAILED diagnostic code",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.VIEWER_READ_ONLY",
+      "english": "A viewer-bound command cannot change the board structure or configuration.",
+      "context": "Localized copy for the VIEWER_READ_ONLY diagnostic code",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.EDITOR_LEASE_REQUIRED",
+      "english": "An active editor lease is required for this authoring command.",
+      "context": "Localized copy for the EDITOR_LEASE_REQUIRED diagnostic code",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.EDITOR_LEASE_CONFLICT",
+      "english": "Another editor lease already holds the authoring lock for this space.",
+      "context": "Localized copy for the EDITOR_LEASE_CONFLICT diagnostic code",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.EDITOR_LEASE_INVALID",
+      "english": "The editor lease does not belong to this space or is no longer active.",
+      "context": "Localized copy for the EDITOR_LEASE_INVALID diagnostic code",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.DRAFT_REQUIRES_DECISION",
+      "english": "The draft has unsaved changes and requires an explicit apply or cancel decision.",
+      "context": "Localized copy for the DRAFT_REQUIRES_DECISION diagnostic code",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.DISPOSAL_PARTIAL",
+      "english": "Disposal stopped after some spaces were already resolved or closed.",
+      "context": "Localized copy for the DISPOSAL_PARTIAL diagnostic code",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.DRAFT_HISTORY_EMPTY",
+      "english": "There is no draft change available in that direction.",
+      "context": "Localized copy for the DRAFT_HISTORY_EMPTY diagnostic code",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.DRAFT_INVALID",
+      "english": "The draft failed document validation and was not applied.",
+      "context": "Localized copy for the DRAFT_INVALID diagnostic code",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.REVISION_CONFLICT",
+      "english": "The committed document advanced after the draft started; the draft was preserved.",
+      "context": "Localized copy for the REVISION_CONFLICT diagnostic code",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.DOCUMENT_INVALID",
+      "english": "The value is not a valid board document.",
+      "context": "Localized copy for the DOCUMENT_INVALID diagnostic code",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.MALFORMED_JSON",
+      "english": "The imported text is not valid JSON.",
+      "context": "Localized copy for the MALFORMED_JSON diagnostic code",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.IMPORT_TOO_LARGE",
+      "english": "The imported document exceeds the configured size limit.",
+      "context": "Localized copy for the IMPORT_TOO_LARGE diagnostic code",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.IMPORT_LIMIT_EXCEEDED",
+      "english": "The imported document exceeds a configured structural limit.",
+      "context": "Localized copy for the IMPORT_LIMIT_EXCEEDED diagnostic code",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.SCHEMA_VERSION_INVALID",
+      "english": "The document schema version must be a non-negative integer.",
+      "context": "Localized copy for the SCHEMA_VERSION_INVALID diagnostic code",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.UNSUPPORTED_SCHEMA_VERSION",
+      "english": "The document schema version is older than this Boardloom build supports.",
+      "context": "Localized copy for the UNSUPPORTED_SCHEMA_VERSION diagnostic code",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.FUTURE_SCHEMA_VERSION",
+      "english": "The document was written by a newer Boardloom schema and cannot be downgraded.",
+      "context": "Localized copy for the FUTURE_SCHEMA_VERSION diagnostic code",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.MISSING_REQUIRED_PROPERTY",
+      "english": "A required board document property is missing.",
+      "context": "Localized copy for the MISSING_REQUIRED_PROPERTY diagnostic code",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.INVALID_PROPERTY_TYPE",
+      "english": "A board document property has the wrong type or value.",
+      "context": "Localized copy for the INVALID_PROPERTY_TYPE diagnostic code",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.MISSING_ID",
+      "english": "A required stable identifier is missing or empty.",
+      "context": "Localized copy for the MISSING_ID diagnostic code",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.DUPLICATE_ID",
+      "english": "An identifier is duplicated within its namespace.",
+      "context": "Localized copy for the DUPLICATE_ID diagnostic code",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.UNKNOWN_BLOCK_TYPE",
+      "english": "The block type is not a registered built-in or extension block type.",
+      "context": "Localized copy for the UNKNOWN_BLOCK_TYPE diagnostic code",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.UNKNOWN_RENDERER_TYPE",
+      "english": "The chart or renderer type is not registered.",
+      "context": "Localized copy for the UNKNOWN_RENDERER_TYPE diagnostic code",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.RENDERER_INVALID",
+      "english": "The renderer definition is invalid or already registered.",
+      "context": "Localized copy for the RENDERER_INVALID diagnostic code",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.RENDERER_FAILED",
+      "english": "The renderer failed while mounting, updating or destroying a block.",
+      "context": "Localized copy for the RENDERER_FAILED diagnostic code",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.RENDERER_INCOMPATIBLE",
+      "english": "The renderer spec or field combination is not compatible with the selected visualization.",
+      "context": "Localized copy for the RENDERER_INCOMPATIBLE diagnostic code",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.RENDERER_DATA_INVALID",
+      "english": "The data violates a renderer policy such as a non-negative stacked or donut total.",
+      "context": "Localized copy for the RENDERER_DATA_INVALID diagnostic code",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.RENDERER_DUPLICATE_POINT",
+      "english": "The query produced duplicate category and series points. Adjust the X, series or label bindings so each point is unique.",
+      "context": "Localized copy for the RENDERER_DUPLICATE_POINT diagnostic code",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.RENDERER_UNSUPPORTED",
+      "english": "No registered renderer supports this block and visualization.",
+      "context": "Localized copy for the RENDERER_UNSUPPORTED diagnostic code",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.BLOCK_SURFACE_FAILED",
+      "english": "The block surface failed while rendering or updating.",
+      "context": "Localized copy for the BLOCK_SURFACE_FAILED diagnostic code",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.LAYOUT_INVALID",
+      "english": "The layout geometry is invalid or outside the breakpoint grid.",
+      "context": "Localized copy for the LAYOUT_INVALID diagnostic code",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.LAYOUT_OVERLAP",
+      "english": "Two block placements overlap within the same breakpoint.",
+      "context": "Localized copy for the LAYOUT_OVERLAP diagnostic code",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.LAYOUT_FALLBACK",
+      "english": "A block has no placement for this breakpoint and falls back to a larger one.",
+      "context": "Localized copy for the LAYOUT_FALLBACK diagnostic code",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.INVALID_REFERENCE",
+      "english": "A document reference does not resolve to an existing value.",
+      "context": "Localized copy for the INVALID_REFERENCE diagnostic code",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.REFERENCE_UNVERIFIED",
+      "english": "A field or provider reference could not be verified without a host provider catalog.",
+      "context": "Localized copy for the REFERENCE_UNVERIFIED diagnostic code",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.INCOMPATIBLE_BINDING",
+      "english": "A block binding is incompatible with its block or field.",
+      "context": "Localized copy for the INCOMPATIBLE_BINDING diagnostic code",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.FIXED_BINDING_LOCKED",
+      "english": "A fixed binding is locked by configuration and cannot be changed. Locking is not a security boundary.",
+      "context": "Localized copy for the FIXED_BINDING_LOCKED diagnostic code",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.FIXED_BINDING_CHANGED",
+      "english": "A document replacement changed or removed a fixed binding; the document was rejected.",
+      "context": "Localized copy for the FIXED_BINDING_CHANGED diagnostic code",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.INCOMPATIBLE_FILTER",
+      "english": "A filter operator or value is incompatible with its field or target.",
+      "context": "Localized copy for the INCOMPATIBLE_FILTER diagnostic code",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.FILTER_CONFLICT",
+      "english": "Two active filters on the same field contradict each other and produce an empty result.",
+      "context": "Localized copy for the FILTER_CONFLICT diagnostic code",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.FILTER_TARGET_UNMAPPED",
+      "english": "A filter target uses a different dataset and has no explicit field mapping.",
+      "context": "Localized copy for the FILTER_TARGET_UNMAPPED diagnostic code",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.FILTER_TARGET_INCOMPATIBLE",
+      "english": "A filter field mapping is incompatible in type, unit or time semantics.",
+      "context": "Localized copy for the FILTER_TARGET_INCOMPATIBLE diagnostic code",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.FILTER_SCHEMA_PENDING",
+      "english": "The filter target schema is not known yet; the filter is pending rather than guessed.",
+      "context": "Localized copy for the FILTER_SCHEMA_PENDING diagnostic code",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.FILTER_STATE_INVALID",
+      "english": "The serialized filter runtime state is invalid.",
+      "context": "Localized copy for the FILTER_STATE_INVALID diagnostic code",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.CROSS_FILTER_INCOMPATIBLE",
+      "english": "The cross-filter selection is not compatible with this target block.",
+      "context": "Localized copy for the CROSS_FILTER_INCOMPATIBLE diagnostic code",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.INCOMPATIBLE_COMPARISON",
+      "english": "The comparison mapping, units or alignment are incompatible.",
+      "context": "Localized copy for the INCOMPATIBLE_COMPARISON diagnostic code",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.COMPARISON_MAPPING_INCOMPLETE",
+      "english": "A comparison field used by the block has no explicit mapping on the other side.",
+      "context": "Localized copy for the COMPARISON_MAPPING_INCOMPLETE diagnostic code",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.COMPARISON_AGGREGATION_REQUIRED",
+      "english": "A comparison requires explicit grouping and aggregation before rows can be aligned.",
+      "context": "Localized copy for the COMPARISON_AGGREGATION_REQUIRED diagnostic code",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.COMPARISON_SLICE_MISMATCH",
+      "english": "A block binding and its comparison side declare different slices for the same dataset.",
+      "context": "Localized copy for the COMPARISON_SLICE_MISMATCH diagnostic code",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.COMPARISON_WINDOW_FIELD_MISSING",
+      "english": "A comparison time window was declared but no mapped temporal field is available.",
+      "context": "Localized copy for the COMPARISON_WINDOW_FIELD_MISSING diagnostic code",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.COMPARISON_ALIGNMENT_INVALID",
+      "english": "A comparison alignment key or normalization rule is invalid or unsupported.",
+      "context": "Localized copy for the COMPARISON_ALIGNMENT_INVALID diagnostic code",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.COMPARISON_CONVERSION_UNSUPPORTED",
+      "english": "A unit conversion cannot be applied to the selected aggregation without changing its meaning.",
+      "context": "Localized copy for the COMPARISON_CONVERSION_UNSUPPORTED diagnostic code",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.DUPLICATE_ALIGNMENT_KEY",
+      "english": "Two rows share the same composite alignment key after grouping and aggregation.",
+      "context": "Localized copy for the DUPLICATE_ALIGNMENT_KEY diagnostic code",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.NULL_ALIGNMENT_KEY",
+      "english": "A row has a null component in its composite alignment key and was excluded from matching.",
+      "context": "Localized copy for the NULL_ALIGNMENT_KEY diagnostic code",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.INVALID_THEME_TOKEN",
+      "english": "A theme token name or value is invalid.",
+      "context": "Localized copy for the INVALID_THEME_TOKEN diagnostic code",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.UNKNOWN_PROPERTY",
+      "english": "A property is not recognized by the schema version.",
+      "context": "Localized copy for the UNKNOWN_PROPERTY diagnostic code",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.INVALID_EXTENSION_KEY",
+      "english": "Extension keys must be namespaced with at least one dot.",
+      "context": "Localized copy for the INVALID_EXTENSION_KEY diagnostic code",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.PROVIDER_CAPABILITY_MISMATCH",
+      "english": "The document uses a provider capability that is unavailable.",
+      "context": "Localized copy for the PROVIDER_CAPABILITY_MISMATCH diagnostic code",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.DATASET_DESCRIPTOR_INVALID",
+      "english": "The dataset descriptor does not satisfy the Boardloom data contract.",
+      "context": "Localized copy for the DATASET_DESCRIPTOR_INVALID diagnostic code",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.DATASET_CAPABILITY_INVALID",
+      "english": "The dataset capability declaration is invalid.",
+      "context": "Localized copy for the DATASET_CAPABILITY_INVALID diagnostic code",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.QUERY_PROVIDER_MISSING",
+      "english": "No dataset provider is configured for this space.",
+      "context": "Localized copy for the QUERY_PROVIDER_MISSING diagnostic code",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.QUERY_PROVIDER_INVALID",
+      "english": "The dataset provider does not satisfy the provider contract.",
+      "context": "Localized copy for the QUERY_PROVIDER_INVALID diagnostic code",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.QUERY_INVALID",
+      "english": "The query specification is invalid.",
+      "context": "Localized copy for the QUERY_INVALID diagnostic code",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.QUERY_NOT_FOUND",
+      "english": "The requested query does not exist in this space.",
+      "context": "Localized copy for the QUERY_NOT_FOUND diagnostic code",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.QUERY_ROW_INVALID",
+      "english": "A provider row contains invalid or non-finite data.",
+      "context": "Localized copy for the QUERY_ROW_INVALID diagnostic code",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.QUERY_RESULT_INVALID",
+      "english": "The provider result does not satisfy the query result contract.",
+      "context": "Localized copy for the QUERY_RESULT_INVALID diagnostic code",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.QUERY_RESULT_TRUNCATED",
+      "english": "The provider truncated the result at its declared size limit.",
+      "context": "Localized copy for the QUERY_RESULT_TRUNCATED diagnostic code",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.QUERY_REQUEST_NOT_HONORED",
+      "english": "The async provider did not confirm every requested filter, grouping, aggregation or time window.",
+      "context": "Localized copy for the QUERY_REQUEST_NOT_HONORED diagnostic code",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.QUERY_FAILED",
+      "english": "The dataset provider failed to execute the query.",
+      "context": "Localized copy for the QUERY_FAILED diagnostic code",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.QUERY_CANCELLED",
+      "english": "The query was cancelled.",
+      "context": "Localized copy for the QUERY_CANCELLED diagnostic code",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.QUERY_STALE",
+      "english": "An older or superseded query result was ignored.",
+      "context": "Localized copy for the QUERY_STALE diagnostic code",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.REALTIME_NOT_CONFIGURED",
+      "english": "No realtime transport is configured for this space.",
+      "context": "Localized copy for the REALTIME_NOT_CONFIGURED diagnostic code",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.REALTIME_PROVIDER_UNSUPPORTED",
+      "english": "The dataset does not declare realtime capability.",
+      "context": "Localized copy for the REALTIME_PROVIDER_UNSUPPORTED diagnostic code",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.REALTIME_TRANSPORT_UNAVAILABLE",
+      "english": "The realtime transport could not open a subscription.",
+      "context": "Localized copy for the REALTIME_TRANSPORT_UNAVAILABLE diagnostic code",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.REALTIME_SUBSCRIPTION_FAILED",
+      "english": "The realtime subscription failed to start.",
+      "context": "Localized copy for the REALTIME_SUBSCRIPTION_FAILED diagnostic code",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.REALTIME_ENVELOPE_INVALID",
+      "english": "A realtime envelope does not satisfy the live contract.",
+      "context": "Localized copy for the REALTIME_ENVELOPE_INVALID diagnostic code",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.REALTIME_QUERY_MISMATCH",
+      "english": "A realtime message belongs to a different query, dataset or slice.",
+      "context": "Localized copy for the REALTIME_QUERY_MISMATCH diagnostic code",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.REALTIME_GENERATION_MISMATCH",
+      "english": "A realtime message belongs to an older query generation.",
+      "context": "Localized copy for the REALTIME_GENERATION_MISMATCH diagnostic code",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.REALTIME_EPOCH_MISMATCH",
+      "english": "A realtime message belongs to an incomparable provider epoch.",
+      "context": "Localized copy for the REALTIME_EPOCH_MISMATCH diagnostic code",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.REALTIME_SEQUENCE_GAP",
+      "english": "A realtime sequence gap requires resynchronization.",
+      "context": "Localized copy for the REALTIME_SEQUENCE_GAP diagnostic code",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.REALTIME_DUPLICATE",
+      "english": "A duplicate or older realtime message was ignored.",
+      "context": "Localized copy for the REALTIME_DUPLICATE diagnostic code",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.REALTIME_STALE_MESSAGE",
+      "english": "A stale realtime message was ignored.",
+      "context": "Localized copy for the REALTIME_STALE_MESSAGE diagnostic code",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.REALTIME_BUFFER_OVERFLOW",
+      "english": "The bounded realtime buffer dropped or coalesced messages.",
+      "context": "Localized copy for the REALTIME_BUFFER_OVERFLOW diagnostic code",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.REALTIME_ROW_INVALID",
+      "english": "A realtime row does not match the query-shaped result contract.",
+      "context": "Localized copy for the REALTIME_ROW_INVALID diagnostic code",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.REALTIME_ROW_MISSING",
+      "english": "A realtime delete referenced a row that is not present.",
+      "context": "Localized copy for the REALTIME_ROW_MISSING diagnostic code",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.REALTIME_RESYNC_COMPLETED",
+      "english": "Realtime resynchronization completed with a new baseline.",
+      "context": "Localized copy for the REALTIME_RESYNC_COMPLETED diagnostic code",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.REALTIME_ERROR",
+      "english": "The realtime provider reported an error.",
+      "context": "Localized copy for the REALTIME_ERROR diagnostic code",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.MIGRATION_FAILED",
+      "english": "The document cannot be migrated to the current schema version.",
+      "context": "Localized copy for the MIGRATION_FAILED diagnostic code",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.MIGRATION_SYNTHETIC_SOURCE",
+      "english": "The source document is a synthetic pre-release fixture, not a published historical format.",
+      "context": "Localized copy for the MIGRATION_SYNTHETIC_SOURCE diagnostic code",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.EXPORT_INVALID",
+      "english": "The document cannot be exported because it does not pass schema validation.",
+      "context": "Localized copy for the EXPORT_INVALID diagnostic code",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.INVALID_LOCALE",
+      "english": "The locale is not one of the supported Boardloom UI locales.",
+      "context": "Localized copy for the INVALID_LOCALE diagnostic code",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.INVALID_TIMEZONE",
+      "english": "The timezone is not a valid IANA time zone identifier.",
+      "context": "Localized copy for the INVALID_TIMEZONE diagnostic code",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.INVALID_ARGUMENT",
+      "english": "An argument does not satisfy the documented contract.",
+      "context": "Localized copy for the INVALID_ARGUMENT diagnostic code",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.FORMATTER_INIT_FAILED",
+      "english": "The formatter provider could not be created for this locale configuration.",
+      "context": "Localized copy for the FORMATTER_INIT_FAILED diagnostic code",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.FORMAT_INVALID_VALUE",
+      "english": "The value cannot be formatted with the requested options.",
+      "context": "Localized copy for the FORMAT_INVALID_VALUE diagnostic code",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.FORMAT_NON_FINITE",
+      "english": "Non-finite numbers are invalid data and are not rendered as zero.",
+      "context": "Localized copy for the FORMAT_NON_FINITE diagnostic code",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.FORMAT_INVALID_DATE",
+      "english": "The value is not a valid date or timestamp.",
+      "context": "Localized copy for the FORMAT_INVALID_DATE diagnostic code",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.MESSAGE_MISSING_KEY",
+      "english": "The message key is missing from every provider in the fallback chain.",
+      "context": "Localized copy for the MESSAGE_MISSING_KEY diagnostic code",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.MESSAGE_MISSING_PARAM",
+      "english": "A message placeholder has no matching interpolation parameter.",
+      "context": "Localized copy for the MESSAGE_MISSING_PARAM diagnostic code",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.MESSAGE_INVALID_PARAM",
+      "english": "Interpolation parameters must be plain scalar values.",
+      "context": "Localized copy for the MESSAGE_INVALID_PARAM diagnostic code",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.MESSAGE_INVALID_DICTIONARY",
+      "english": "A message dictionary is not a plain string-to-string record.",
+      "context": "Localized copy for the MESSAGE_INVALID_DICTIONARY diagnostic code",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.MESSAGE_UNKNOWN_KEY",
+      "english": "A host message key is not documented in the English message catalog.",
+      "context": "Localized copy for the MESSAGE_UNKNOWN_KEY diagnostic code",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.EXTENSION_INVALID",
+      "english": "The extension definition is missing required metadata or has an invalid shape.",
+      "context": "Localized copy for the EXTENSION_INVALID diagnostic code",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.EXTENSION_DUPLICATE",
+      "english": "An extension with this kind and ID is already registered.",
+      "context": "Localized copy for the EXTENSION_DUPLICATE diagnostic code",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.EXTENSION_INCOMPATIBLE_API",
+      "english": "The extension targets an API version that this Boardloom build does not support.",
+      "context": "Localized copy for the EXTENSION_INCOMPATIBLE_API diagnostic code",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.EXTENSION_FAILED",
+      "english": "The extension failed while it was being created, used or disposed.",
+      "context": "Localized copy for the EXTENSION_FAILED diagnostic code",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.EXTENSION_DISPOSAL_FAILED",
+      "english": "An extension failed during disposal; other extensions were still disposed.",
+      "context": "Localized copy for the EXTENSION_DISPOSAL_FAILED diagnostic code",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.EXTENSION_STYLE_INVALID",
+      "english": "The extension style sheet is invalid or escapes the Boardloom host scope.",
+      "context": "Localized copy for the EXTENSION_STYLE_INVALID diagnostic code",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.detail.chart.oneMeasure",
+      "english": "A chart supports one Y measure binding.",
+      "context": "Localized framework diagnostic detail for chart.oneMeasure",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.detail.chart.oneSeries",
+      "english": "A chart supports at most one series dimension.",
+      "context": "Localized framework diagnostic detail for chart.oneSeries",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.detail.chart.requiresX",
+      "english": "A chart requires an X dimension binding.",
+      "context": "Localized framework diagnostic detail for chart.requiresX",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.detail.chart.requiresY",
+      "english": "A chart requires a Y measure binding.",
+      "context": "Localized framework diagnostic detail for chart.requiresY",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.detail.metric.oneMeasure",
+      "english": "A metric block supports exactly one measure binding.",
+      "context": "Localized framework diagnostic detail for metric.oneMeasure",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.detail.metric.requiresMeasure",
+      "english": "A metric block requires a measure binding.",
+      "context": "Localized framework diagnostic detail for metric.requiresMeasure",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.detail.renderer.kpi.aggregation",
+      "english": "A KPI requires a declared aggregation.",
+      "context": "Localized framework diagnostic detail for renderer.kpi.aggregation",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.detail.renderer.kpi.kind",
+      "english": "Renderer {renderer} only accepts KPI specs.",
+      "context": "Localized framework diagnostic detail for renderer.kpi.kind",
+      "source": "core",
+      "placeholders": ["renderer"]
+    },
+    {
+      "key": "diagnostic.detail.renderer.kpi.numeric",
+      "english": "A KPI requires a numeric measure.",
+      "context": "Localized framework diagnostic detail for renderer.kpi.numeric",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.detail.renderer.table.columns",
+      "english": "A table renderer requires at least one column.",
+      "context": "Localized framework diagnostic detail for renderer.table.columns",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.detail.renderer.table.kind",
+      "english": "Renderer {renderer} only accepts table specs.",
+      "context": "Localized framework diagnostic detail for renderer.table.kind",
+      "source": "core",
+      "placeholders": ["renderer"]
+    },
+    {
+      "key": "diagnostic.detail.scatter.maxMeasures",
+      "english": "A scatter chart supports at most two measures, X and Y.",
+      "context": "Localized framework diagnostic detail for scatter.maxMeasures",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.detail.scatter.requiresMeasures",
+      "english": "A scatter chart requires two numeric measures for X and Y.",
+      "context": "Localized framework diagnostic detail for scatter.requiresMeasures",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.detail.table.columnsArray",
+      "english": "Table columns must be an array of binding IDs.",
+      "context": "Localized framework diagnostic detail for table.columnsArray",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.detail.table.requiresBinding",
+      "english": "A table block requires at least one binding.",
+      "context": "Localized framework diagnostic detail for table.requiresBinding",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.detail.unitConflict",
+      "english": "Unit \"{unit}\" conflicts with field unit \"{baseUnit}\".",
+      "context": "Localized framework diagnostic detail for unitConflict",
+      "source": "core",
+      "placeholders": ["baseUnit", "unit"]
+    },
+    {
+      "key": "diagnostic.detail.comparison.chartAlignment",
+      "english": "The chart X field must be one of the comparison alignment keys.",
+      "context": "Localized framework diagnostic detail for comparison.chartAlignment",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.detail.comparison.chartComposite",
+      "english": "A chart comparison requires composite alignment keys.",
+      "context": "Localized framework diagnostic detail for comparison.chartComposite",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.detail.comparison.chartRequiresMeasure",
+      "english": "A comparison chart requires one measure and a visualization.",
+      "context": "Localized framework diagnostic detail for comparison.chartRequiresMeasure",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.detail.comparison.chartRequiresX",
+      "english": "A comparison chart requires an X binding.",
+      "context": "Localized framework diagnostic detail for comparison.chartRequiresX",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.detail.comparison.rendererMissing",
+      "english": "No chart renderer is registered for this comparison.",
+      "context": "Localized framework diagnostic detail for comparison.rendererMissing",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.detail.filter.invalidValue",
+      "english": "The active value for \"{filter}\" does not match the declared filter operator and field type.",
+      "context": "Localized framework diagnostic detail for filter.invalidValue",
+      "source": "core",
+      "placeholders": ["filter"]
+    },
+    {
+      "key": "diagnostic.detail.filter.notEditable",
+      "english": "Filter \"{filter}\" is not viewer-editable.",
+      "context": "Localized framework diagnostic detail for filter.notEditable",
+      "source": "core",
+      "placeholders": ["filter"]
+    },
+    {
+      "key": "diagnostic.detail.comparison.addDataBlock",
+      "english": "Add a data block with bindings before creating a comparison.",
+      "context": "Localized framework diagnostic detail for comparison.addDataBlock",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.detail.comparison.distinctInputs",
+      "english": "A comparison needs two distinct inputs.",
+      "context": "Localized framework diagnostic detail for comparison.distinctInputs",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.detail.comparison.incompatibleInputs",
+      "english": "The selected inputs do not share compatible dimension and measure fields.",
+      "context": "Localized framework diagnostic detail for comparison.incompatibleInputs",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.detail.comparison.noCompatibleInputs",
+      "english": "No other dataset or slice has compatible dimension and measure fields for an explicit mapping.",
+      "context": "Localized framework diagnostic detail for comparison.noCompatibleInputs",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.detail.comparison.unitsIncompatible",
+      "english": "The selected inputs use incompatible measure units.",
+      "context": "Localized framework diagnostic detail for comparison.unitsIncompatible",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.detail.comparison.windowIncomplete",
+      "english": "A comparison window requires a timezone, start and end.",
+      "context": "Localized framework diagnostic detail for comparison.windowIncomplete",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.detail.binding.aggregationField",
+      "english": "Select a field before choosing an aggregation.",
+      "context": "Localized framework diagnostic detail for binding.aggregationField",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.detail.binding.fixed",
+      "english": "This binding is fixed by configuration and cannot be changed through the editor or public API. The lock is a configuration constraint, not a security boundary.",
+      "context": "Localized framework diagnostic detail for binding.fixed",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.detail.binding.numericMeasure",
+      "english": "The {slot} slot requires a numeric measure, not a {type} field.",
+      "context": "Localized framework diagnostic detail for binding.numericMeasure",
+      "source": "core",
+      "placeholders": ["slot", "type"]
+    },
+    {
+      "key": "diagnostic.detail.binding.scatterNumericX",
+      "english": "A scatter X slot requires a numeric field.",
+      "context": "Localized framework diagnostic detail for binding.scatterNumericX",
+      "source": "core"
+    },
+    {
+      "key": "diagnostic.detail.binding.slotChanged",
+      "english": "The requested change would resolve as a different binding slot. Set the required X field before adding or changing this binding.",
+      "context": "Localized framework diagnostic detail for binding.slotChanged",
       "source": "core"
     }
   ]

@@ -1,4 +1,4 @@
-import type { Diagnostic, QueryState } from "@boardloom/core";
+import { defaultDiagnosticMessage, type Diagnostic, type QueryState } from "@boardloom/core";
 import { clearElement, createElement, setHostText, setText, setKeyedText } from "./dom.js";
 import { pluralKey, type ViewMessages } from "./messages.js";
 
@@ -80,14 +80,18 @@ export function renderDiagnosticList(
     heading.append(severity, code);
     const message = createElement(container.ownerDocument, "p", "bl-diagnostic__message");
     const messageKey = `diagnostic.${diagnostic.code}`;
-    let detail: HTMLElement | null = null;
+    let detailText: string | null = null;
+    if (diagnostic.detailKey !== undefined && messages.has(diagnostic.detailKey)) {
+      detailText = messages.text(diagnostic.detailKey, diagnostic.detailParams);
+    } else if (
+      diagnostic.source === "host" &&
+      diagnostic.message.trim() !== "" &&
+      diagnostic.message !== defaultDiagnosticMessage(diagnostic.code)
+    ) {
+      detailText = diagnostic.message;
+    }
     if (messages.has(messageKey)) {
-      const localized = messages.text(messageKey);
-      setKeyedText(message, messageKey, localized);
-      if (diagnostic.message !== localized && diagnostic.message.trim() !== "") {
-        detail = createElement(container.ownerDocument, "p", "bl-diagnostic__detail");
-        setText(detail, diagnostic.message);
-      }
+      setKeyedText(message, messageKey, messages.text(messageKey));
     } else {
       setText(message, diagnostic.message);
     }
@@ -98,7 +102,9 @@ export function renderDiagnosticList(
     const pathRow = createElement(container.ownerDocument, "p", "bl-diagnostic__path-row");
     pathRow.append(pathLabel, path);
     item.append(heading, message);
-    if (detail !== null) {
+    if (detailText !== null) {
+      const detail = createElement(container.ownerDocument, "p", "bl-diagnostic__detail");
+      setText(detail, detailText);
       item.append(detail);
     }
     item.append(pathRow);

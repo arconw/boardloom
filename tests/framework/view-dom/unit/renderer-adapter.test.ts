@@ -333,6 +333,11 @@ describe("T07 renderer adapter metadata", () => {
       ),
     );
     expect(conflictingUnit.ok).toBe(false);
+    if (!conflictingUnit.ok) {
+      const diagnostic = conflictingUnit.diagnostics[0];
+      expect(diagnostic?.detailKey).toBe("diagnostic.detail.unitConflict");
+      expect(diagnostic?.detailParams).toEqual({ unit: "USD", baseUnit: "points" });
+    }
   });
 
   it("preserves provider unit scale and label when an override repeats the code", () => {

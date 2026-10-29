@@ -1,4 +1,5 @@
 import {
+  BUILT_IN_DICTIONARIES,
   ENGLISH_MESSAGES,
   canonicalJson,
   createBoardValidationCatalog,
@@ -440,6 +441,72 @@ async function run() {
     check("undo changed revision", result.checks.undoRedo.undoChanged);
     check("redo changed revision", result.checks.undoRedo.redoChanged);
 
+    const draftBeforeLocales = sourceSpace.getSnapshot().draft;
+    const draftState = () => {
+      const snapshot = sourceSpace.getSnapshot();
+      return {
+        revision: snapshot.draft?.revision ?? null,
+        dirty: snapshot.draft?.dirty ?? null,
+        canUndo: snapshot.draft?.canUndo ?? null,
+        canRedo: snapshot.draft?.canRedo ?? null,
+        blocks: snapshot.draft?.document.blocks.length ?? null,
+        title: snapshot.draft?.document.blocks.find((block) => block.id === "chart")?.title ?? null,
+        committedRevision: snapshot.committedRevision,
+      };
+    };
+    const draftBefore = draftState();
+    const editorModeLabel = () => element.querySelector('[data-mode="editor"]')?.textContent ?? "";
+    sourceHost.update({ locale: "ru", timezone: "Europe/Moscow" });
+    await wait(40);
+    result.checks.localeRu = {
+      lang: element.getAttribute("lang"),
+      dir: element.getAttribute("dir"),
+      timezone: element.getAttribute("data-boardloom-timezone"),
+      mode: element.getAttribute("data-boardloom-mode"),
+      modeLabel: editorModeLabel(),
+      expected: BUILT_IN_DICTIONARIES.ru["mode.editor"],
+      draft: draftState(),
+      draftBefore,
+    };
+    sourceHost.update({ locale: "ja", timezone: "Asia/Tokyo" });
+    await wait(40);
+    result.checks.localeJa = {
+      lang: element.getAttribute("lang"),
+      dir: element.getAttribute("dir"),
+      timezone: element.getAttribute("data-boardloom-timezone"),
+      mode: element.getAttribute("data-boardloom-mode"),
+      modeLabel: editorModeLabel(),
+      expected: BUILT_IN_DICTIONARIES.ja["mode.editor"],
+      draft: draftState(),
+    };
+    sourceHost.update({ locale: "ar", timezone: "Asia/Tokyo" });
+    await wait(40);
+    result.checks.localeAr = {
+      lang: element.getAttribute("lang"),
+      dir: element.getAttribute("dir"),
+      timezone: element.getAttribute("data-boardloom-timezone"),
+      mode: element.getAttribute("data-boardloom-mode"),
+      modeLabel: editorModeLabel(),
+      expected: BUILT_IN_DICTIONARIES.ar["mode.editor"],
+      hostDir: document.documentElement.getAttribute("dir"),
+      libraryLabel: element.querySelector(".bl-library")?.getAttribute("aria-label") ?? null,
+      expectedLibrary: BUILT_IN_DICTIONARIES.ar["a11y.libraryRegion"],
+      workspaceLabel:
+        document.querySelector(".bl-workspace__header .bl-overline")?.textContent ?? null,
+      expectedWorkspace: BUILT_IN_DICTIONARIES.ar["workspace.boards"],
+      workspaceDir: document.querySelector(".bl-workspace")?.getAttribute("dir") ?? null,
+      workspaceLang: document.querySelector(".bl-workspace")?.getAttribute("lang") ?? null,
+      draft: draftState(),
+    };
+    sourceHost.update({ locale: "en", timezone: "UTC" });
+    await wait(40);
+    result.checks.localeEn = {
+      lang: element.getAttribute("lang"),
+      dir: element.getAttribute("dir"),
+      timezone: element.getAttribute("data-boardloom-timezone"),
+      draft: draftState(),
+    };
+
     sourceHost.setMode("viewer");
     await wait(60);
     const viewerMode = sourceHost.element.getAttribute("data-boardloom-mode");
@@ -626,6 +693,8 @@ async function run() {
     const sourceCanUndo = sourceSpace.getSnapshot().draft.canUndo;
     const sourceFilters = canonicalJson(sourceSpace.getFilterState());
     const sourceQueries = sourceSpace.getQueryStates().length;
+    must(sourceSpace.setLocale({ locale: "ar" }));
+    await wait(40);
     const exported = must(sourceHost.exportDocument());
     const importPayload = exported.canonical;
     const importInput = element.querySelector('[data-editor-import-input="true"]');
@@ -666,8 +735,39 @@ async function run() {
     );
     check("source space remains alive", result.checks.importNewSpace.sourceDisposed === false);
 
-    const sourceEntryTab = workspace.entries[0].tab;
+    const workspaceRoot = document.querySelector(".bl-workspace");
+    const workspaceAfterImport = {
+      dir: workspaceRoot?.getAttribute("dir") ?? null,
+      lang: workspaceRoot?.getAttribute("lang") ?? null,
+      heading:
+        workspaceRoot?.querySelector(".bl-workspace__header .bl-overline")?.textContent ?? null,
+    };
+    must(workspace.activateSpace(sourceSpace.id));
+    await wait(40);
+    const workspaceAfterArabicActivation = {
+      dir: workspaceRoot?.getAttribute("dir") ?? null,
+      lang: workspaceRoot?.getAttribute("lang") ?? null,
+      heading:
+        workspaceRoot?.querySelector(".bl-workspace__header .bl-overline")?.textContent ?? null,
+    };
     const importedEntry = workspace.entries[1];
+    must(workspace.activateSpace(importedEntry.space.id));
+    await wait(40);
+    const workspaceAfterEnglishActivation = {
+      dir: workspaceRoot?.getAttribute("dir") ?? null,
+      lang: workspaceRoot?.getAttribute("lang") ?? null,
+      heading:
+        workspaceRoot?.querySelector(".bl-workspace__header .bl-overline")?.textContent ?? null,
+    };
+    result.checks.workspaceScope = {
+      afterImport: workspaceAfterImport,
+      arabic: workspaceAfterArabicActivation,
+      english: workspaceAfterEnglishActivation,
+      expectedArabicHeading: BUILT_IN_DICTIONARIES.ar["workspace.boards"],
+      expectedEnglishHeading: BUILT_IN_DICTIONARIES.en["workspace.boards"],
+    };
+
+    const sourceEntryTab = workspace.entries[0].tab;
     result.checks.importTabs = {
       focused: document.activeElement === importedEntry.tab,
       marker: importedEntry.tab.getAttribute("data-imported"),
@@ -1753,6 +1853,48 @@ async function run() {
         keepSibling.draftDirty === true &&
         keepSibling.hasLease === true,
     );
+
+    const invalidWorkspaceTarget = document.createElement("div");
+    document.body.append(invalidWorkspaceTarget);
+    const invalidWorkspace = mountBoardWorkspace(invalidWorkspaceTarget, {
+      document: fixtureData.document,
+      runtimeOptions: {
+        messageDictionaries: { de: { "mode.viewer": 42 } },
+      },
+      messageDictionaries: { en: { "host.custom": "Custom" } },
+    });
+    result.checks.workspaceInvalidDictionaries = {
+      ok: invalidWorkspace.ok,
+      children: invalidWorkspaceTarget.children.length,
+    };
+    invalidWorkspaceTarget.remove();
+
+    const mergeTarget = document.createElement("div");
+    document.body.append(mergeTarget);
+    const mergeWorkspace = must(
+      mountBoardWorkspace(mergeTarget, {
+        document: fixtureData.document,
+        runtimeOptions: {
+          messageDictionaries: {
+            en: { "workspace.boards": "Runtime boards", "runtime.only": "Runtime only" },
+          },
+        },
+        messageDictionaries: {
+          en: { "workspace.boards": "Host boards", "host.only": "Host only" },
+        },
+      }),
+    );
+    await wait(120);
+    const mergeProvider = mergeWorkspace.activeSpace.getMessageProvider();
+    result.checks.workspaceDictionaryPrecedence = {
+      boards: mergeProvider.format("workspace.boards").text,
+      runtimeOnly: mergeProvider.format("runtime.only").text,
+      hostOnly: mergeProvider.format("host.only").text,
+      heading:
+        mergeWorkspace.element.querySelector(".bl-workspace__header .bl-overline")?.textContent ??
+        null,
+    };
+    must(mergeWorkspace.dispose({ draftDecision: "cancel" }));
 
     runtime.dispose();
     result.checks.complete = true;

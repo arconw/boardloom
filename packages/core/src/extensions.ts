@@ -11,7 +11,11 @@ import {
 } from "./diagnostics.js";
 import type { FormatterProvider } from "./formatting.js";
 import { isBoardloomLocale, type BoardloomLocale, type LocaleConfig } from "./locale.js";
-import { normalizeMessageDictionary, type MessageDictionary } from "./messages.js";
+import {
+  mergeMessageDictionaries,
+  normalizeMessageDictionary,
+  type MessageDictionary,
+} from "./messages.js";
 import type { RealtimeTransport } from "./realtime-contract.js";
 import { validateExtensionStyles } from "./extension-style.js";
 
@@ -482,15 +486,6 @@ function freezeDefinition<K extends CoreExtensionKind>(
   }) as unknown as ExtensionDefinitionMap[K];
 }
 
-function setOwn<T>(record: Record<string, T>, key: string, value: T): void {
-  Object.defineProperty(record, key, {
-    value,
-    enumerable: true,
-    configurable: false,
-    writable: false,
-  });
-}
-
 function sessionFailure(
   path: string,
   message: string,
@@ -850,28 +845,23 @@ class ExtensionRegistryImpl implements ExtensionRegistry {
   resolveMessageDictionaries(
     ids?: readonly string[],
   ): Readonly<Partial<Record<BoardloomLocale, MessageDictionary>>> {
-    const selected = new Map<string, MessageDictionaryDefinition>();
+    const selected: MessageDictionaryDefinition[] = [];
     if (ids === undefined) {
       for (const definition of this.list("messageDictionary")) {
-        selected.set(
-          (definition as MessageDictionaryDefinition).locale,
-          definition as MessageDictionaryDefinition,
-        );
+        selected.push(definition as MessageDictionaryDefinition);
       }
     } else {
       for (const id of ids) {
         const definition = this.get("messageDictionary", id) as
           MessageDictionaryDefinition | undefined;
         if (definition !== undefined) {
-          selected.set(definition.locale, definition);
+          selected.push(definition);
         }
       }
     }
-    const dictionaries: Partial<Record<BoardloomLocale, MessageDictionary>> = {};
-    for (const [locale, definition] of selected) {
-      setOwn(dictionaries, locale, definition.dictionary);
-    }
-    return Object.freeze(dictionaries);
+    return mergeMessageDictionaries(
+      ...selected.map((definition) => ({ [definition.locale]: definition.dictionary })),
+    );
   }
 
   resolveThemeTokens(ids?: readonly string[]): Readonly<Record<string, string>> {

@@ -1,4 +1,5 @@
 import {
+  BUILT_IN_DICTIONARIES,
   ENGLISH_MESSAGES,
   canonicalJson,
   createBoardValidationCatalog,
@@ -485,6 +486,63 @@ async function run() {
       headerDirection: scoreHeader ? getComputedStyle(scoreHeader).direction : null,
       valueDirection: scoreCell ? getComputedStyle(scoreCell).direction : null,
     };
+
+    const filterStateBeforeLocales = JSON.stringify(space.getFilterState());
+    const modeLabel = () => element.querySelector('[data-mode="viewer"]')?.textContent ?? "";
+    const localizedMode = (locale) => BUILT_IN_DICTIONARIES[locale]["mode.viewer"];
+    result.checks.locales = {
+      ar: {
+        mode: modeLabel(),
+        expected: localizedMode("ar"),
+        lang: element.getAttribute("lang"),
+        dir: element.getAttribute("dir"),
+        hostDir: document.documentElement.getAttribute("dir"),
+      },
+    };
+    must(handle.update({ locale: "ja" }));
+    await wait(20);
+    result.checks.locales.ja = {
+      mode: modeLabel(),
+      expected: localizedMode("ja"),
+      lang: element.getAttribute("lang"),
+      dir: element.getAttribute("dir"),
+      filterState: JSON.stringify(space.getFilterState()),
+      rows: element.querySelectorAll("tbody tr").length,
+      libraryTitle: element.querySelector(".bl-library__title")?.textContent ?? null,
+      expectedLibraryTitle: BUILT_IN_DICTIONARIES.ja["editor.library"],
+      canvasTitle: element.querySelector(".bl-canvas__title")?.textContent ?? null,
+      expectedCanvasTitle: BUILT_IN_DICTIONARIES.ja["editor.canvas"],
+      searchPlaceholder: element
+        .querySelector(".bl-library input[type='search']")
+        ?.getAttribute("placeholder"),
+      searchAria: element
+        .querySelector(".bl-library input[type='search']")
+        ?.getAttribute("aria-label"),
+      expectedSearch: BUILT_IN_DICTIONARIES.ja["editor.library.search"],
+    };
+    must(handle.update({ locale: "ru", timezone: "Europe/Moscow" }));
+    await wait(20);
+    result.checks.locales.ru = {
+      mode: modeLabel(),
+      expected: localizedMode("ru"),
+      lang: element.getAttribute("lang"),
+      dir: element.getAttribute("dir"),
+      timezone: element.getAttribute("data-boardloom-timezone"),
+      filterState: JSON.stringify(space.getFilterState()),
+      rows: element.querySelectorAll("tbody tr").length,
+    };
+    result.checks.locales.filterStateBefore = filterStateBeforeLocales;
+    result.checks.locales.hostDirAfterJa = document.documentElement.getAttribute("dir");
+    must(handle.update({ locale: "en", timezone: "UTC" }));
+    await wait(20);
+    result.checks.locales.en = {
+      mode: modeLabel(),
+      expected: ENGLISH_MESSAGES["mode.viewer"],
+      lang: element.getAttribute("lang"),
+      dir: element.getAttribute("dir"),
+    };
+    must(handle.update({ locale: "ar", timezone: "UTC" }));
+    await wait(20);
 
     const lease = must(space.acquireEditorLease({ sessionId: "e2e-session" }));
     must(handle.setMode("editor", { lease }));
@@ -1070,6 +1128,36 @@ async function run() {
         '.bl-comparison-table td[data-delta="percentage"]',
       ).length,
     };
+    const comparisonRowsBeforeLocales = comparisonElement.querySelectorAll(
+      ".bl-comparison-table tbody tr",
+    ).length;
+    const comparisonSummaryBeforeLocales = comparisonSummary?.textContent ?? "";
+    must(comparisonHandle.update({ locale: "ja", timezone: "Asia/Tokyo" }));
+    await wait(40);
+    result.checks.comparisonLocaleJa = {
+      lang: comparisonElement.getAttribute("lang"),
+      dir: comparisonElement.getAttribute("dir"),
+      rows: comparisonElement.querySelectorAll(".bl-comparison-table tbody tr").length,
+      rowsBefore: comparisonRowsBeforeLocales,
+      summary: comparisonElement.querySelector(".bl-comparison-summary")?.textContent ?? "",
+      summaryBefore: comparisonSummaryBeforeLocales,
+      tableText: comparisonElement.querySelector(".bl-comparison-table")?.textContent ?? "",
+      expectedPrimary: BUILT_IN_DICTIONARIES.ja["editor.comparison.primary"],
+      timezone: comparisonElement.getAttribute("data-boardloom-timezone"),
+    };
+    must(comparisonHandle.update({ locale: "ar", timezone: "Asia/Tokyo" }));
+    await wait(40);
+    result.checks.comparisonLocaleAr = {
+      lang: comparisonElement.getAttribute("lang"),
+      dir: comparisonElement.getAttribute("dir"),
+      hostDir: document.documentElement.getAttribute("dir"),
+      rows: comparisonElement.querySelectorAll(".bl-comparison-table tbody tr").length,
+      rowsBefore: comparisonRowsBeforeLocales,
+      summary: comparisonElement.querySelector(".bl-comparison-summary")?.textContent ?? "",
+      summaryBefore: comparisonSummaryBeforeLocales,
+    };
+    must(comparisonHandle.update({ locale: "en", timezone: "UTC" }));
+    await wait(20);
     must(comparisonSpace.cancelDraft(comparisonLease));
     must(comparisonHandle.unmount({ draftDecision: "cancel" }));
     comparisonRuntime.dispose();
@@ -1181,6 +1269,33 @@ async function run() {
       status: realtimeStatus?.getAttribute("data-status") ?? null,
       metric: realtimeRoot.querySelector(".bl-metric__value")?.textContent ?? "",
     };
+    const realtimeStatusKey = realtimeStatus?.getAttribute("data-message-key") ?? "";
+    const realtimeMetricBefore = realtimeRoot.querySelector(".bl-metric__value")?.textContent ?? "";
+    must(realtimeHandle.update({ locale: "ja", timezone: "Asia/Tokyo" }));
+    await wait(20);
+    result.checks.realtimeLocalized = {
+      key: realtimeStatusKey,
+      text: realtimeStatus?.textContent ?? "",
+      expected: BUILT_IN_DICTIONARIES.ja["viewer.realtime.live"] ?? null,
+      ariaLabel: realtimeStatus?.getAttribute("aria-label") ?? "",
+      expectedAria: BUILT_IN_DICTIONARIES.ja["a11y.realtimeStatus"],
+      status: realtimeStatus?.getAttribute("data-status") ?? null,
+      metric: realtimeRoot.querySelector(".bl-metric__value")?.textContent ?? "",
+      metricBefore: realtimeMetricBefore,
+      lang: realtimeRoot.getAttribute("lang"),
+      dir: realtimeRoot.getAttribute("dir"),
+      timezone: realtimeRoot.getAttribute("data-boardloom-timezone"),
+    };
+    must(realtimeHandle.update({ locale: "ar", timezone: "Asia/Tokyo" }));
+    await wait(20);
+    result.checks.realtimeRtl = {
+      dir: realtimeRoot.getAttribute("dir"),
+      lang: realtimeRoot.getAttribute("lang"),
+      hostDir: document.documentElement.getAttribute("dir"),
+      status: realtimeStatus?.getAttribute("data-status") ?? null,
+    };
+    must(realtimeHandle.update({ locale: "en", timezone: "UTC" }));
+    await wait(20);
     must(realtimeHandle.unmount());
     realtimeRuntime.dispose();
 

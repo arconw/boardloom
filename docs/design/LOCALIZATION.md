@@ -1,26 +1,29 @@
 # Boardloom localization and RTL design
 
-Status: T05 design annotation. The message-key catalog is proposed for the first UI implementation. Full dictionaries, key-parity checks, browser switching and Arabic RTL implementation belong to T17.
+Status: T17 implementation update. The message-key catalog and all eleven built-in dictionaries are implemented; key parity, fallback, interpolation, plural categories, locale switching, timezone independence and Arabic RTL are verified by the localization suite. T21 may publish the locale contract and integration guidance from this document.
 
 ## 1. Contract
 
 - Project documentation and prose are English. Product UI copy comes from locale dictionaries, not from hard-coded English in components.
 - Built-in locales: `en`, `ru`, `es`, `fr`, `de`, `pt-BR`, `zh-CN`, `ja`, `ko`, `ar` and `hi`.
-- English is the deterministic fallback. Host overrides take precedence over the selected built-in locale; the selected built-in locale takes precedence over English.
+- English is the deterministic fallback. Per key, host overrides win over extension dictionaries, extensions win over the built-in selected locale, and the built-in selected locale wins over English. Multiple extension dictionaries merge in registration order.
 - The persisted board document is locale-neutral. It stores stable IDs, values and timestamps, not UI locale, translated labels or display timezone.
+- React, Angular, Svelte and the plain DOM runtime accept per-locale host dictionaries. The workspace and board roots both receive the scoped locale direction; nested board roots can differ from the workspace chrome.
 - Dataset field labels and data values are host content. Boardloom localizes its own messages, ARIA names, status, empty/loading/error copy, diagnostics, editor controls and chart guidance. A host may provide localized dataset labels through its own data contract.
 - No professional or native-speaker translation certification is claimed. T17 records functional coverage and linguistic limitations.
 
-The machine-readable key catalog is `message-keys.json`. Reference mock copy carries `data-message-key` attributes so T06 can reuse the same keys from the first implementation. Visible host fixture content, such as board names and school names, is deliberately not a message key.
+The machine-readable key catalog is `message-keys.json`, including all `diagnostic.<CODE>` keys. KPI and metric copy uses `editor.library.metric*` and diagnostic keys; no separate `metric.*` or `kpi.*` namespace exists. The runtime dictionaries are JSON assets in `packages/core/src/locales/`, exported as frozen `BUILT_IN_DICTIONARIES`. `scripts/check-locales.mjs` verifies exact key and placeholder parity; `npm run test:i18n` runs the checker and the localization unit and contract suites, while browser flows run under `test:e2e` and `test:a11y`. Translation provenance, tool, method and per-file hashes are recorded in `localization-provenance.json`. Reference mock copy carries `data-message-key` attributes so T06 can reuse the same keys from the first implementation. Visible host fixture content, such as board names and school names, is deliberately not a message key.
 
 ## 2. Key rules
 
-- Keys are stable, lowercase namespaces with dot-separated segments, for example `viewer.filters.origin.group` and `a11y.removeFilter`. Diagnostic keys use `diagnostic.<CODE>` with the stable uppercase diagnostic code.
+- Keys are stable, lowercase namespaces with dot-separated segments, for example `viewer.filters.origin.group` and `a11y.removeFilter`. Diagnostic keys use `diagnostic.<CODE>` with the stable uppercase diagnostic code. Framework reasons classified as user-visible use `diagnostic.detail.<detail>` with named parameters and are localized and shown. The v0.1 user-visible set covers editor filter actions, comparison builder and chart comparison actions, renderer/binding validation and unit conflicts. All other framework diagnostics are API/developer detail: they keep English text for host developers and are not displayed as UI detail in a complete locale. The classification is machine-visible: a framework reason is user-visible only when its diagnostic carries a `detailKey` present in the catalog; otherwise it is developer detail. A host-supplied diagnostic message is shown as host content when the diagnostic declares `source: "host"`; default English framework messages are not shown in a complete locale.
 - A key is never renamed without a compatibility path for host overrides. A renamed key keeps the old key as an alias or the release records a breaking change.
 - Interpolation placeholders are named and typed. Values are escaped as text, never evaluated as code or HTML.
-- Plurals use `Intl.PluralRules` and `.one` / `.other` fallback keys. Translated sentences are not assembled by concatenating fragments.
-- Missing selected-locale keys fall back to English. A missing English key shows a documented neutral message and raises a development diagnostic; raw internal identifiers are not normal UI copy.
-- Unknown host keys are reported as diagnostics and are not accepted as a different message.
+- Plurals use `Intl.PluralRules` and the six CLDR cardinal categories `.zero`, `.one`, `.two`, `.few`, `.many` and `.other`. Every built-in dictionary carries all six forms for every plural base so key parity is exact; categories that a locale never selects keep that locale's natural plural form. Translated sentences are not assembled by concatenating fragments.
+- Missing selected-locale keys fall back to English. A key missing from both the selected dictionary and English returns the localized `common.unknown` neutral text, sets `usedFallback`, and raises `MESSAGE_MISSING_KEY`; raw internal identifiers are not used as UI copy.
+- Unknown host dictionary keys are accepted as custom copy and reported through the provider diagnostics as `MESSAGE_UNKNOWN_KEY` (non-fatal). Extension-namespaced `plugin.*` and `ext.*` keys are treated as declared extension copy.
+- Interpolation parameters must be plain objects; non-object parameters produce a deterministic `MESSAGE_INVALID_PARAM` plus the normal missing-parameter diagnostics instead of throwing.
+- The single `messages` override applies to the currently selected locale and is re-applied when the locale changes. `messageDictionaries` supplies per-locale overrides and has the same validation and precedence as runtime dictionaries.
 - ARIA names and descriptions use the same catalog and interpolation rules as visible copy.
 - Numbers, dates, times, durations and units use `Intl` formatting with an explicit display timezone independent of UI language.
 
@@ -101,7 +104,25 @@ The runtime rerenders framework-owned copy and re-formats values. Host dataset l
 - Date and time labels name the display timezone. A language change never changes the timezone or a date bucket boundary.
 - No sentence is built by concatenating translated fragments. Interpolated values are complete parameters with translator-visible context in the catalog.
 
-## 8. T17 verification plan
+## 8. T17 implementation record
+
+- Built-in locale assets: `packages/core/src/locales/<locale>.json`; English is the canonical key and placeholder source.
+- Dictionary keys, including all plural categories, are identical in every locale. English is the deterministic fallback only for keys absent from the selected built-in dictionary or host override.
+- Dictionary precedence is per key and per locale: host entry, then extension dictionary in registration order, then built-in selected locale, then English. A key missing from every layer returns the localized `common.unknown` neutral text with `MESSAGE_MISSING_KEY` and `usedFallback`. Unknown host keys are reported as `MESSAGE_UNKNOWN_KEY` through provider diagnostics, runtime logging, and the view handle; extension `plugin.*` and `ext.*` keys are declared copy and are exempt.
+- `Intl` formatting provides number, date, time, duration, relative time, list and unit formatting with an explicit display timezone independent from UI language.
+- Locale switching is space runtime state and preserves the committed document, draft, undo/redo, filters, cross-filters, comparisons, queries, realtime subscriptions and focus where the control still exists.
+- Arabic RTL is applied by `applyLocaleScope` only to the scoped Boardloom root. Host page direction, scrollbars and unrelated content are untouched.
+- Browser evidence covers English, Russian, Japanese, Arabic RTL, filters, comparison, realtime status, viewer and editor in the plain DOM runtime and the React, Angular and Svelte adapters.
+
+### 8.1 Translation provenance and limitations
+
+English is authored in the repository. The ten non-English dictionaries are machine-assisted translations produced on 2026-10-29 through the public Google Translate endpoint, with placeholders protected during translation and validated afterwards. Arabic and Russian plural representatives were regenerated by the same recorded method to correct category forms. Tool, method, certification limits and per-file SHA-256 values are public in `localization-provenance.json`; there is no unrecorded generator state. This follows the recorded decision that machine-assisted or contributor translations are allowed. No professional or native-speaker review was performed, and no such certification is claimed. Reviewers verify functional coverage, key parity, fallback, interpolation, CJK rendering and Arabic RTL; they do not certify linguistic quality. The locale assets are recorded localization assets, not English placeholders.
+
+### 8.2 Delivery and size
+
+All eleven dictionaries are statically imported by `@boardloom/core` so the plain viewer and every adapter share one deterministic dictionary map. Each locale asset is at most 13.6 KB gzip; the combined dictionary payload is about 127 KB gzip. This is recorded as the v0.1 delivery decision; lazy locale loading and a smaller per-locale entry split are deferred to T19 packaging work and are not claimed as implemented.
+
+## 9. T17 verification plan
 
 The later localization task must verify in a real browser:
 

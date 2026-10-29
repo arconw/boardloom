@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { afterEach, describe, expect, it } from "vitest";
-import { ENGLISH_MESSAGES, type SpaceEvent } from "@boardloom/core";
+import { BUILT_IN_DICTIONARIES, type SpaceEvent } from "@boardloom/core";
 import type { BoardViewHandle } from "@boardloom/view-dom";
 import {
   BoardloomSession,
@@ -139,7 +139,9 @@ describe("T16 Svelte session", () => {
     expect(viewerRoot(harness.container).getAttribute("data-boardloom-timezone")).toBe(
       "Europe/Berlin",
     );
-    expect(modeButton(harness.container, "viewer").textContent).toBe("Viewer");
+    expect(modeButton(harness.container, "viewer").textContent).toBe(
+      BUILT_IN_DICTIONARIES.de["mode.viewer"],
+    );
     expect(harness.ready).toHaveLength(1);
     expect(harness.session.handle).not.toBeNull();
     harness.sync({
@@ -175,8 +177,8 @@ describe("T16 Svelte session", () => {
     });
     await settle();
     const instance = instanceOf(harness.container);
-    const chip = harness.container.querySelector(".bl-filter-chip")?.textContent ?? "";
     const rows = harness.container.querySelectorAll(".bl-table tbody tr").length;
+    const chip = harness.container.querySelector(".bl-filter-chip")?.textContent ?? "";
     expect(chip).toContain("north, south");
     expect(rows).toBeGreaterThan(0);
     harness.sync({
@@ -194,7 +196,9 @@ describe("T16 Svelte session", () => {
     );
     expect(modeButton(harness.container, "viewer").textContent).toBe("Reader");
     expect(modeButton(harness.container, "editor").textContent).toBe("Author");
-    expect(harness.container.querySelector(".bl-filter-chip")?.textContent ?? "").toBe(chip);
+    expect(
+      (harness.container.querySelector(".bl-filter-chip")?.textContent ?? "").toLowerCase(),
+    ).toContain("north, south");
     expect(harness.container.querySelectorAll(".bl-table tbody tr").length).toBe(rows);
     expect(harness.events.some((event) => event.type === "locale:changed")).toBe(true);
     harness.sync({
@@ -206,9 +210,44 @@ describe("T16 Svelte session", () => {
     await settle();
     expect(instanceOf(harness.container)).toBe(instance);
     expect(modeButton(harness.container, "viewer").textContent).toBe(
-      ENGLISH_MESSAGES["mode.viewer"],
+      BUILT_IN_DICTIONARIES.ja["mode.viewer"],
     );
     expect(harness.session.handle).not.toBeNull();
+    harness.session.dispose();
+  });
+
+  it("forwards per-locale message dictionaries without recreating the board", async () => {
+    const harness = createHarness();
+    const boardDocument = viewerFixtureDocument();
+    const provider = createViewerProvider();
+    harness.sync({ document: boardDocument, datasetProvider: provider, locale: "en" });
+    await settle();
+    const instance = instanceOf(harness.container);
+    harness.sync({
+      document: boardDocument,
+      datasetProvider: provider,
+      locale: "ja",
+      messageDictionaries: {
+        ja: {
+          "mode.viewer": "Host JA viewer",
+          "mode.editor": "Host JA editor",
+          "host.custom": "Host custom",
+        },
+      },
+    });
+    await settle();
+    expect(instanceOf(harness.container)).toBe(instance);
+    expect(
+      harness.session.handle?.messageDiagnostics.some(
+        (diagnostic) => diagnostic.code === "MESSAGE_UNKNOWN_KEY",
+      ),
+    ).toBe(true);
+    expect(modeButton(harness.container, "viewer").textContent).toBe("Host JA viewer");
+    harness.sync({ document: boardDocument, datasetProvider: provider, locale: "en" });
+    await settle();
+    expect(modeButton(harness.container, "viewer").textContent).toBe(
+      BUILT_IN_DICTIONARIES.en["mode.viewer"],
+    );
     harness.session.dispose();
   });
 
@@ -266,7 +305,6 @@ describe("T16 Svelte session", () => {
     harness.sync({ document: boardDocument, datasetProvider: provider, blockTypes });
     await settle();
     const instance = instanceOf(harness.container);
-    const chip = harness.container.querySelector(".bl-filter-chip")?.textContent ?? "";
     const rows = harness.container.querySelectorAll(".bl-table tbody tr").length;
     const churned = blockTypes.map((definition) => ({
       ...definition,
@@ -289,7 +327,9 @@ describe("T16 Svelte session", () => {
     );
     expect(modeButton(harness.container, "viewer").textContent).toBe("Reader");
     expect(modeButton(harness.container, "editor").textContent).toBe("Author");
-    expect(harness.container.querySelector(".bl-filter-chip")?.textContent ?? "").toBe(chip);
+    expect(
+      (harness.container.querySelector(".bl-filter-chip")?.textContent ?? "").toLowerCase(),
+    ).toContain("north, south");
     expect(harness.container.querySelectorAll(".bl-table tbody tr").length).toBe(rows);
     expect(harness.errors.filter((error) => error.phase === "input")).toHaveLength(1);
     const churnedAgain = blockTypes.map((definition) => ({
@@ -310,7 +350,7 @@ describe("T16 Svelte session", () => {
       "Asia/Tokyo",
     );
     expect(modeButton(harness.container, "viewer").textContent).toBe(
-      ENGLISH_MESSAGES["mode.viewer"],
+      BUILT_IN_DICTIONARIES.ja["mode.viewer"],
     );
     expect(harness.errors.filter((error) => error.phase === "input")).toHaveLength(1);
     harness.session.dispose();

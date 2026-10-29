@@ -1,3 +1,5 @@
+import { BUILT_IN_DICTIONARIES } from "@boardloom/core";
+
 interface DriverResult {
   readonly checks: Record<string, unknown>;
   readonly errors: string[];
@@ -84,7 +86,7 @@ async function scenario(): Promise<DriverResult> {
   check("localeForwarded", query<HTMLElement>("#example-locale").textContent === "de");
   check("timezoneForwarded", query<HTMLElement>("#example-timezone").textContent === "Asia/Tokyo");
   check("sameInstance", root()?.getAttribute("data-boardloom-instance") === firstInstance);
-  check("filterPreserved", chip() === chipBefore, chip());
+  check("filterPreserved", chip().toLowerCase().includes("north, south"), chip());
   check(
     "rowsPreserved",
     document.querySelectorAll(".bl-table tbody tr").length === rowsBefore,
@@ -97,6 +99,50 @@ async function scenario(): Promise<DriverResult> {
   check(
     "eventForwarded",
     (document.getElementById("last-event")?.textContent ?? "").includes("locale:changed"),
+  );
+  const modeText = (): string => query<HTMLElement>('button[data-mode="viewer"]').textContent ?? "";
+  check("localizedDe", modeText() === BUILT_IN_DICTIONARIES.de["mode.viewer"], modeText());
+  const rowsBeforeLocales = document.querySelectorAll(".bl-table tbody tr").length;
+  const localeSamples: Record<string, { text: string; dir: string | null; lang: string | null }> =
+    {};
+  for (const locale of ["ja", "ar", "ru"] as const) {
+    setSelect("locale-select", locale);
+    await waitFor(
+      () =>
+        root()?.getAttribute("data-boardloom-locale") === locale &&
+        modeText() === BUILT_IN_DICTIONARIES[locale]["mode.viewer"],
+      `localized ${locale}`,
+      12000,
+    );
+    localeSamples[locale] = {
+      text: modeText(),
+      dir: root()?.getAttribute("dir") ?? null,
+      lang: root()?.getAttribute("lang") ?? null,
+    };
+    check(`localizedMode_${locale}`, modeText() === BUILT_IN_DICTIONARIES[locale]["mode.viewer"]);
+    check(`filterPreserved_${locale}`, chip().toLowerCase().includes("north, south"), chip());
+    check(
+      `rowsPreserved_${locale}`,
+      document.querySelectorAll(".bl-table tbody tr").length === rowsBeforeLocales,
+      document.querySelectorAll(".bl-table tbody tr").length,
+    );
+    check(`hostDirUntouched_${locale}`, document.documentElement.getAttribute("dir") === null);
+  }
+  check("localeJa", localeSamples.ja?.dir === "ltr" && localeSamples.ja?.lang === "ja");
+  check("localeArRtl", localeSamples.ar?.dir === "rtl" && localeSamples.ar?.lang === "ar");
+  check("localeRu", localeSamples.ru?.dir === "ltr" && localeSamples.ru?.lang === "ru");
+  setSelect("locale-select", "en");
+  await waitFor(
+    () =>
+      root()?.getAttribute("data-boardloom-locale") === "en" &&
+      modeText() === BUILT_IN_DICTIONARIES.en["mode.viewer"],
+    "english restore",
+  );
+  check("filterAfterLocales", chip().toLowerCase().includes("north, south"), chip());
+  check(
+    "rowsAfterLocales",
+    document.querySelectorAll(".bl-table tbody tr").length === rowsBeforeLocales,
+    document.querySelectorAll(".bl-table tbody tr").length,
   );
 
   query<HTMLInputElement>("#messages-toggle").click();

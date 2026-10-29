@@ -22,6 +22,11 @@ export interface FormatterProvider {
   readonly locale: BoardloomLocale;
   readonly timezone: string;
   formatNumber(value: number, options?: NumberFormatOptions): string;
+  formatUnit(
+    value: number,
+    unit: NonNullable<Intl.NumberFormatOptions["unit"]>,
+    options?: Omit<NumberFormatOptions, "style" | "unit">,
+  ): string;
   formatDate(value: Date | number | string, options?: Intl.DateTimeFormatOptions): string;
   formatDuration(milliseconds: number, options?: DurationFormatOptions): string;
   formatRelativeTime(
@@ -96,6 +101,13 @@ export function createIntlFormatterProvider(config: LocaleConfig): FormatterProv
         );
       }
     },
+    formatUnit(
+      value: number,
+      unit: NonNullable<Intl.NumberFormatOptions["unit"]>,
+      options: Omit<NumberFormatOptions, "style" | "unit"> = {},
+    ): string {
+      return provider.formatNumber(value, { ...options, style: "unit", unit });
+    },
     formatDate(value: Date | number | string, options: Intl.DateTimeFormatOptions = {}): string {
       const date = toDate(value);
       const timezone = options.timeZone ?? config.timezone;
@@ -119,8 +131,10 @@ export function createIntlFormatterProvider(config: LocaleConfig): FormatterProv
     formatDuration(milliseconds: number, options: DurationFormatOptions = {}): string {
       assertFinite(milliseconds, "value");
       const { unit: selectedUnit = "second", ...numberOptions } = options;
-      const divisor = DURATION_DIVISORS[selectedUnit];
-      if (divisor === undefined) {
+      const divisor = Object.hasOwn(DURATION_DIVISORS, selectedUnit)
+        ? DURATION_DIVISORS[selectedUnit]
+        : undefined;
+      if (typeof divisor !== "number" || !Number.isFinite(divisor)) {
         throw formatError(
           DIAGNOSTIC_CODES.FORMAT_INVALID_VALUE,
           "options/unit",

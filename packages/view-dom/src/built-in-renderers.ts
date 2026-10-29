@@ -5,6 +5,7 @@ import {
   buildKpiModel,
   buildTableModel,
   createDiagnostic,
+  formatEnglishMessage,
   type KpiModel,
   type KpiRendererSpec,
   type RendererDefinition,
@@ -18,11 +19,19 @@ import {
 
 let tableSequence = 0;
 
-function failed(message: string, id: string): RendererValidation {
+function failed(
+  detailKey: string,
+  id: string,
+  detailParams?: Readonly<Record<string, string | number>>,
+): RendererValidation {
   return Object.freeze({
     ok: false,
     diagnostics: Object.freeze([
-      createDiagnostic(DIAGNOSTIC_CODES.RENDERER_INCOMPATIBLE, `renderer/${id}`, { message }),
+      createDiagnostic(DIAGNOSTIC_CODES.RENDERER_INCOMPATIBLE, `renderer/${id}`, {
+        message: formatEnglishMessage(detailKey, detailParams),
+        detailKey,
+        ...(detailParams === undefined ? {} : { detailParams }),
+      }),
     ]),
   });
 }
@@ -97,13 +106,13 @@ function createKpiRenderer(): RendererDefinition<HTMLElement> {
     }),
     validate(spec: RendererSpec): RendererValidation {
       if (spec.kind !== "kpi") {
-        return failed(`Renderer ${id} only accepts KPI specs.`, id);
+        return failed("diagnostic.detail.renderer.kpi.kind", id, { renderer: id });
       }
       if (spec.y.type !== "number") {
-        return failed("A KPI requires a numeric measure.", id);
+        return failed("diagnostic.detail.renderer.kpi.numeric", id);
       }
       if (spec.aggregation === "none") {
-        return failed("A KPI requires a declared aggregation.", id);
+        return failed("diagnostic.detail.renderer.kpi.aggregation", id);
       }
       return Object.freeze({ ok: true, diagnostics: Object.freeze([]) });
     },
@@ -150,10 +159,10 @@ function createTableRenderer(): RendererDefinition<HTMLElement> {
     }),
     validate(spec: RendererSpec): RendererValidation {
       if (spec.kind !== "table") {
-        return failed(`Renderer ${id} only accepts table specs.`, id);
+        return failed("diagnostic.detail.renderer.table.kind", id, { renderer: id });
       }
       if (spec.columns.length === 0) {
-        return failed("A table renderer requires at least one column.", id);
+        return failed("diagnostic.detail.renderer.table.columns", id);
       }
       return Object.freeze({ ok: true, diagnostics: Object.freeze([]) });
     },

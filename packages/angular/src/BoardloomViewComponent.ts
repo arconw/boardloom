@@ -88,6 +88,7 @@ function updateStateOf(inputs: BoardloomAngularInputs): AppliedUpdateState {
     timezone: inputs.timezone,
     theme: inputs.theme,
     messages: inputs.messages,
+    messageDictionaries: inputs.messageDictionaries,
     realtime: inputs.realtime,
     provenance: inputs.provenance,
     mode: inputs.mode,
@@ -101,6 +102,7 @@ function sameUpdateState(left: AppliedUpdateState, right: AppliedUpdateState): b
     left.timezone === right.timezone &&
     left.theme === right.theme &&
     left.messages === right.messages &&
+    left.messageDictionaries === right.messageDictionaries &&
     left.realtime === right.realtime &&
     left.provenance === right.provenance &&
     left.mode === right.mode &&
@@ -298,6 +300,7 @@ function buildUpdateOptions(
     timezone?: string;
     theme?: NonNullable<BoardloomAngularInputs["theme"]>;
     messages?: NonNullable<BoardloomAngularInputs["messages"]>;
+    messageDictionaries?: NonNullable<BoardloomAngularInputs["messageDictionaries"]>;
     realtime?: NonNullable<BoardloomAngularInputs["realtime"]>;
     provenance?: string;
     mode?: ViewMode;
@@ -318,6 +321,10 @@ function buildUpdateOptions(
   }
   if (inputs.messages !== applied.messages) {
     options.messages = inputs.messages ?? {};
+    changed = true;
+  }
+  if (inputs.messageDictionaries !== applied.messageDictionaries) {
+    options.messageDictionaries = inputs.messageDictionaries ?? {};
     changed = true;
   }
   if (inputs.realtime !== undefined && inputs.realtime !== applied.realtime) {
@@ -372,6 +379,7 @@ export class BoardloomViewComponent
   @Input() timezone?: string;
   @Input() theme?: BoardloomAngularInputs["theme"];
   @Input() messages?: BoardloomAngularInputs["messages"];
+  @Input() messageDictionaries?: BoardloomAngularInputs["messageDictionaries"];
   @Input() realtime?: BoardloomAngularInputs["realtime"];
   @Input() provenance?: string;
   @Input() blockTypes?: BoardloomAngularInputs["blockTypes"];
@@ -597,6 +605,7 @@ export class BoardloomViewComponent
       timezone: this.timezone,
       theme: this.theme,
       messages: this.messages,
+      messageDictionaries: this.messageDictionaries,
       realtime: this.realtime,
       provenance: this.provenance,
       blockTypes: this.blockTypes,
@@ -725,6 +734,9 @@ export class BoardloomViewComponent
       ...(inputs.timezone === undefined ? {} : { timezone: inputs.timezone }),
       ...(inputs.theme === undefined ? {} : { theme: inputs.theme }),
       ...(inputs.messages === undefined ? {} : { messages: inputs.messages }),
+      ...(inputs.messageDictionaries === undefined
+        ? {}
+        : { messageDictionaries: inputs.messageDictionaries }),
       ...(inputs.realtime === undefined ? {} : { realtime: inputs.realtime }),
       ...(inputs.provenance === undefined ? {} : { provenance: inputs.provenance }),
       ...(inputs.blockTypes === undefined ? {} : { blockTypes: inputs.blockTypes }),
