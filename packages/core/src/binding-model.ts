@@ -782,6 +782,7 @@ export function setBindingSlot(
 
 export interface FixedBindingPreservationOptions {
   readonly allowDifferentDocument?: boolean;
+  readonly allowRemovedBlockIds?: readonly string[];
 }
 
 export function assertFixedBindingsPreserved(
@@ -843,6 +844,9 @@ export function assertFixedBindingsPreserved(
         (entry) => isPlainObject(entry) && own(entry, "id") === bindingId,
       );
       if (nextBlockIndex < 0) {
+        if (options.allowRemovedBlockIds?.includes(blockId)) {
+          break;
+        }
         diagnostics.push(
           createDiagnostic(
             DIAGNOSTIC_CODES.FIXED_BINDING_CHANGED,

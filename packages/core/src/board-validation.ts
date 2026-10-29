@@ -3,8 +3,9 @@ import {
   FIELD_ROLES,
   FIELD_VALUE_TYPES,
   THEME_MODES,
+  isAllowedThemeTokenName,
   isNamespacedExtensionKey,
-  isThemeTokenName,
+  validateThemeTokenValue,
   type FieldRole,
 } from "./board-schema.js";
 import { DIAGNOSTIC_CODES, createDiagnostic, hasError, type Diagnostic } from "./diagnostics.js";
@@ -393,11 +394,11 @@ export function validateBoardDocument(
     if (tokens) {
       for (const key of Object.getOwnPropertyNames(tokens)) {
         const tokenPath = `/theme/tokens/${escapePointerSegment(key)}`;
-        if (!isThemeTokenName(key)) {
+        if (!isAllowedThemeTokenName(key)) {
           add(
             DIAGNOSTIC_CODES.INVALID_THEME_TOKEN,
             tokenPath,
-            "Theme token names must use lowercase segments separated by dots or hyphens.",
+            "Theme token names must be known framework tokens, explicit bl-/--bl- tokens or single-segment ext. extension tokens.",
           );
         }
         if (typeof tokens[key] !== "string") {
@@ -406,6 +407,11 @@ export function validateBoardDocument(
             tokenPath,
             "Theme token values must be strings.",
           );
+        } else {
+          const valueReason = validateThemeTokenValue(key, tokens[key]);
+          if (valueReason !== null) {
+            add(DIAGNOSTIC_CODES.INVALID_THEME_TOKEN, tokenPath, valueReason);
+          }
         }
       }
     }

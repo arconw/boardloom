@@ -80,12 +80,22 @@ import type {
 } from "./types.js";
 import { ViewImpl, createView, type BoardView, type ViewHost } from "./view.js";
 
+interface DraftHistoryEntry {
+  document: BoardDocument;
+  allowedRemovedBlockIds: Set<string>;
+}
+
 interface DraftState {
   document: BoardDocument;
   baseRevision: number;
   revision: number;
-  undo: BoardDocument[];
-  redo: BoardDocument[];
+  undo: DraftHistoryEntry[];
+  redo: DraftHistoryEntry[];
+  allowedRemovedBlockIds: Set<string>;
+}
+
+export interface DraftUpdateOptions {
+  readonly allowRemovedBlockIds?: readonly string[];
 }
 
 interface CommittedDraftState {
@@ -118,6 +128,11 @@ export interface SpaceImportMetadata {
   readonly schemaVersion: number;
   readonly migration: BoardMigrationReport | null;
   readonly warnings: readonly Diagnostic[];
+}
+
+export interface EventBatchHandle {
+  flush(): void;
+  discard(): void;
 }
 
 export interface BoardSpace {
@@ -180,7 +195,11 @@ export interface BoardSpace {
     lease: EditorLease,
     options?: ReleaseEditorLeaseOptions,
   ): Result<SpaceSnapshot>;
-  updateDraft(lease: EditorLease, document: unknown): Result<DraftSnapshot>;
+  updateDraft(
+    lease: EditorLease,
+    document: unknown,
+    options?: DraftUpdateOptions,
+  ): Result<DraftSnapshot>;
   updateBinding(lease: EditorLease, change: BindingSlotChange): Result<DraftSnapshot>;
   undoDraft(lease: EditorLease): Result<DraftSnapshot>;
   redoDraft(lease: EditorLease): Result<DraftSnapshot>;
@@ -188,6 +207,7 @@ export interface BoardSpace {
   cancelDraft(lease: EditorLease): Result<SpaceSnapshot>;
   schedule(callback: () => void, delayMs: number): Result<Unsubscribe>;
   subscribe(listener: (event: SpaceEvent) => void): Unsubscribe;
+  beginEventBatch(): EventBatchHandle;
   dispose(): Result<void>;
 }
 
@@ -281,6 +301,8 @@ class SpaceImpl implements BoardSpace {
       getState: () => this.getViewState(),
       getLease: (leaseId) => this.getActiveLease(leaseId),
       updateDraft: (lease, document) => this.updateDraft(lease, document),
+      updateDraftWithOptions: (lease, document, options) =>
+        this.updateDraft(lease, document, options),
       updateBinding: (lease, change) => this.updateBinding(lease, change),
       undoDraft: (lease) => this.undoDraft(lease),
       redoDraft: (lease) => this.redoDraft(lease),
@@ -1159,7 +1181,11 @@ class SpaceImpl implements BoardSpace {
     return ok(this.getSnapshot());
   }
 
-  updateDraft(lease: EditorLease, document: unknown): Result<DraftSnapshot> {
+  updateDraft(
+    lease: EditorLease,
+    document: unknown,
+    options: DraftUpdateOptions = {},
+  ): Result<DraftSnapshot> {
     const blocked = this.assertActive();
     if (blocked) {
       return blocked;
@@ -1183,9 +1209,18 @@ class SpaceImpl implements BoardSpace {
         "draft",
       );
     }
+    const allowedRemovedBlockIds = new Set(draft.allowedRemovedBlockIds);
+    if (options.allowRemovedBlockIds !== undefined) {
+      for (const blockId of options.allowRemovedBlockIds) {
+        if (typeof blockId === "string" && blockId.trim() !== "") {
+          allowedRemovedBlockIds.add(blockId);
+        }
+      }
+    }
     const fixedChanges = assertFixedBindingsPreserved(
       this.committedDocument,
       document as BoardDocument,
+      { allowRemovedBlockIds: [...allowedRemovedBlockIds] },
     );
     if (fixedChanges.length > 0) {
       return this.failDocument(
@@ -1206,6 +1241,14 @@ class SpaceImpl implements BoardSpace {
     }
     const warnings = validationWarnings(validation);
     const next = snapshotDocument(document as BoardDocument);
+    const nextBlockIds = new Set(
+      ((next as unknown as BoardDocumentV1).blocks ?? []).map((block) => block.id),
+    );
+    for (const blockId of allowedRemovedBlockIds) {
+      if (nextBlockIds.has(blockId)) {
+        allowedRemovedBlockIds.delete(blockId);
+      }
+    }
     if (jsonEqual(next, draft.document)) {
       const previousDiagnostics = this.combinedDiagnostics();
       this.setDiagnosticsState(warnings);
@@ -1214,7 +1257,10 @@ class SpaceImpl implements BoardSpace {
     }
 
     if (this.deps.historyLimit > 0) {
-      draft.undo.push(draft.document);
+      draft.undo.push({
+        document: draft.document,
+        allowedRemovedBlockIds: new Set(draft.allowedRemovedBlockIds),
+      });
       if (draft.undo.length > this.deps.historyLimit) {
         draft.undo.shift();
       }
@@ -1222,6 +1268,7 @@ class SpaceImpl implements BoardSpace {
     draft.redo = [];
     const previousDocument = draft.document;
     draft.document = next;
+    draft.allowedRemovedBlockIds = allowedRemovedBlockIds;
     draft.revision += 1;
     this.updatedAt = this.deps.clock.now();
     const changed = this.draftEventData(draft);
@@ -1291,12 +1338,16 @@ class SpaceImpl implements BoardSpace {
       return this.failWith([createDiagnostic(DIAGNOSTIC_CODES.DRAFT_HISTORY_EMPTY, "draft")]);
     }
     const previousDocument = draft.document;
-    const nextDocument = previous;
-    draft.redo.push(draft.document);
+    const nextDocument = previous.document;
+    draft.redo.push({
+      document: draft.document,
+      allowedRemovedBlockIds: new Set(draft.allowedRemovedBlockIds),
+    });
     if (draft.redo.length > this.deps.historyLimit) {
       draft.redo.shift();
     }
-    draft.document = previous;
+    draft.document = nextDocument;
+    draft.allowedRemovedBlockIds = new Set(previous.allowedRemovedBlockIds);
     draft.revision += 1;
     this.updatedAt = this.deps.clock.now();
     const changed = this.draftEventData(draft);
@@ -1340,12 +1391,16 @@ class SpaceImpl implements BoardSpace {
       return this.failWith([createDiagnostic(DIAGNOSTIC_CODES.DRAFT_HISTORY_EMPTY, "draft")]);
     }
     const previousDocument = draft.document;
-    const nextDocument = next;
-    draft.undo.push(draft.document);
+    const nextDocument = next.document;
+    draft.undo.push({
+      document: draft.document,
+      allowedRemovedBlockIds: new Set(draft.allowedRemovedBlockIds),
+    });
     if (draft.undo.length > this.deps.historyLimit) {
       draft.undo.shift();
     }
-    draft.document = next;
+    draft.document = nextDocument;
+    draft.allowedRemovedBlockIds = new Set(next.allowedRemovedBlockIds);
     draft.revision += 1;
     this.updatedAt = this.deps.clock.now();
     const changed = this.draftEventData(draft);
@@ -1463,6 +1518,34 @@ class SpaceImpl implements BoardSpace {
     return this.events.subscribe(listener);
   }
 
+  beginEventBatch(): EventBatchHandle {
+    if (this.disposedFlag || this.disposing) {
+      return Object.freeze({
+        flush: () => undefined,
+        discard: () => undefined,
+      });
+    }
+    this.events.suspend();
+    let finished = false;
+    return Object.freeze({
+      flush: () => {
+        if (finished) {
+          return;
+        }
+        finished = true;
+        this.events.resume(true);
+      },
+      discard: () => {
+        if (finished) {
+          return;
+        }
+        finished = true;
+        this.events.removeQueued(() => true);
+        this.events.resume(true);
+      },
+    });
+  }
+
   dispose(): Result<void> {
     if (this.disposedFlag || this.disposing) {
       return ok(undefined);
@@ -1519,6 +1602,7 @@ class SpaceImpl implements BoardSpace {
       revision: 0,
       undo: [],
       redo: [],
+      allowedRemovedBlockIds: new Set<string>(),
     };
   }
 
@@ -1666,7 +1750,9 @@ class SpaceImpl implements BoardSpace {
         "apply",
       );
     }
-    const fixedChanges = assertFixedBindingsPreserved(this.committedDocument, draft.document);
+    const fixedChanges = assertFixedBindingsPreserved(this.committedDocument, draft.document, {
+      allowRemovedBlockIds: [...draft.allowedRemovedBlockIds],
+    });
     if (fixedChanges.length > 0) {
       return this.failDocument(
         [createDiagnostic(DIAGNOSTIC_CODES.DRAFT_INVALID, "draft"), ...fixedChanges],
