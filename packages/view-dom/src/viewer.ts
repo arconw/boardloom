@@ -1,4 +1,5 @@
 import {
+  BOARD_BLOCK_TYPES,
   BoardloomError,
   COMPARISON_DELTA_MODES,
   COMPARISON_DISPLAY_MODES,
@@ -21,9 +22,11 @@ import {
   type BindingSlot,
   type BindingSlotChange,
   type BindingSlotDescriptor,
+  type BoardBreakpoint,
   type BoardDocument,
   type BoardDocumentV1,
   type BlockDefinition,
+  type BoardSerialization,
   type BoardSpace,
   type BoardView,
   type BoardloomRuntime,
@@ -42,6 +45,7 @@ import {
   type FilterRuntimeState,
   type FilterTarget,
   type FormatterProvider,
+  type JsonObject,
   type JsonValue,
   type MessageDictionary,
   type MessageProvider,
@@ -166,6 +170,116 @@ interface ViewerConfig {
   realtime?: import("./realtime.js").BoardloomRealtimeStatus;
   provenance?: string;
   onEvent?: (event: SpaceEvent) => void;
+  onImportDocument?: (input: string, fileName: string) => Result<{ readonly spaceId: string }>;
+  onExport?: (kind: "ui" | "host", serialization: BoardSerialization) => void;
+}
+
+type EditorConfirmation = "discard" | "release" | null;
+
+function setHidden(element: Element, hidden: boolean): void {
+  if (hidden) {
+    element.setAttribute("hidden", "");
+  } else {
+    element.removeAttribute("hidden");
+  }
+}
+
+function setDisabled(element: Element, disabled: boolean): void {
+  if (disabled) {
+    element.setAttribute("disabled", "");
+  } else {
+    element.removeAttribute("disabled");
+  }
+}
+
+function editorLibraryGroup(type: string): string {
+  if (type === "chart") {
+    return "chart";
+  }
+  if (type === "metric") {
+    return "metric";
+  }
+  if (type === "table") {
+    return "table";
+  }
+  if (type === "text") {
+    return "text";
+  }
+  if (type === "filter") {
+    return "filter";
+  }
+  return "extensions";
+}
+
+function editorLibraryLabel(messages: ViewMessages, type: string): string {
+  const key = `editor.library.${type}.name`;
+  if (messages.has(key)) {
+    return messages.text(key);
+  }
+  return type;
+}
+
+function editorLibraryIcon(type: string): string {
+  if (type === "chart") {
+    return "▥";
+  }
+  if (type === "metric") {
+    return "◎";
+  }
+  if (type === "table") {
+    return "▤";
+  }
+  if (type === "text") {
+    return "¶";
+  }
+  if (type === "filter") {
+    return "⏷";
+  }
+  return "◇";
+}
+
+function allDescendants(root: Element): HTMLElement[] {
+  const output: HTMLElement[] = [];
+  const visit = (element: Element): void => {
+    for (const child of element.children) {
+      output.push(child as HTMLElement);
+      visit(child);
+    }
+  };
+  visit(root);
+  return output;
+}
+
+interface InspectorFocusState {
+  readonly tagName: string;
+  readonly attributes: readonly (readonly [string, string])[];
+  readonly filterId: string | null;
+  readonly comparisonId: string | null;
+  readonly hasValue: boolean;
+  readonly value: string;
+  readonly selectionStart: number | null;
+  readonly selectionEnd: number | null;
+}
+
+function closestAttribute(start: EventTarget | null, attribute: string): HTMLElement | null {
+  let current = start as
+    | (EventTarget & {
+        getAttribute?: (name: string) => string | null;
+        parentNode?: unknown;
+        disabled?: boolean;
+      })
+    | null;
+  while (current !== null && typeof current.getAttribute === "function") {
+    if (current.getAttribute(attribute) !== null) {
+      return current as unknown as HTMLElement;
+    }
+    current = (current.parentNode ?? null) as typeof current;
+  }
+  return null;
+}
+
+function closestBlockId(start: EventTarget | null): string | null {
+  return closestAttribute(start, "data-block-id")?.getAttribute("data-block-id") ?? null;
 }
 
 export function failureFrom(error: unknown, path: string): readonly Diagnostic[] {
@@ -469,6 +583,55 @@ export class ViewerHost implements BoardViewHandle {
   private readonly body: HTMLElement;
   private readonly grid: HTMLElement;
   private readonly liveRegion: HTMLElement;
+  private readonly editorLayout: HTMLElement;
+  private readonly library: HTMLElement;
+  private readonly libraryHeading: HTMLElement;
+  private readonly librarySearch: HTMLInputElement;
+  private readonly libraryList: HTMLElement;
+  private readonly canvas: HTMLElement;
+  private readonly canvasHeading: HTMLElement;
+  private readonly canvasTools: HTMLElement;
+  private readonly importButton: HTMLButtonElement;
+  private readonly importInput: HTMLInputElement;
+  private readonly exportButton: HTMLButtonElement;
+  private readonly libraryToggle: HTMLButtonElement;
+  private readonly inspectorToggle: HTMLButtonElement;
+  private readonly drawerScrim: HTMLElement;
+  private readonly draftBar: HTMLElement;
+  private readonly draftStatus: HTMLElement;
+  private readonly draftDetail: HTMLElement;
+  private readonly undoButton: HTMLButtonElement;
+  private readonly redoButton: HTMLButtonElement;
+  private readonly applyButton: HTMLButtonElement;
+  private readonly discardButton: HTMLButtonElement;
+  private readonly previewButton: HTMLButtonElement;
+  private readonly releaseButton: HTMLButtonElement;
+  private readonly editorNotice: HTMLElement;
+  private readonly confirmation: HTMLElement;
+  private readonly confirmationText: HTMLElement;
+  private readonly confirmationCancel: HTMLButtonElement;
+  private readonly confirmationApply: HTMLButtonElement;
+  private selectedBlockId: string | null = null;
+  private selectedBreakpoint: BoardBreakpoint = "desktop";
+  private themeModeSelect: HTMLSelectElement | null = null;
+  private readonly themeTokenInputs = new Map<string, HTMLInputElement>();
+  private themeTokenNameInput: HTMLInputElement | null = null;
+  private themeTokenValueInput: HTMLInputElement | null = null;
+  private readonly pendingRemovedThemeTokens = new Set<string>();
+  private readonly inspectorDraftFooter: HTMLElement;
+  private readonly sheetDraftStatus: HTMLElement;
+  private readonly sheetApplyButton: HTMLButtonElement;
+  private readonly sheetDiscardButton: HTMLButtonElement;
+  private pendingConfirmation: EditorConfirmation = null;
+  private libraryOpen = false;
+  private inspectorOpen = false;
+  private drawerTrigger: HTMLElement | null = null;
+  private pendingActionFocus: {
+    readonly action: string;
+    readonly target: string;
+    readonly breakpoint: string;
+  } | null = null;
+  private exportNoticeKey: string | null = null;
   private readonly blockElements = new Map<string, MountedBlock>();
   private appliedThemeTokens = new Set<string>();
   private messagesValue: ViewMessages;
@@ -492,7 +655,84 @@ export class ViewerHost implements BoardViewHandle {
       return;
     }
     if (event.target === this.editorModeButton) {
-      this.setMode("editor");
+      this.requestEditorMode();
+      return;
+    }
+    const addType = closestAttribute(event.target, "data-editor-add")?.getAttribute(
+      "data-editor-add",
+    );
+    if (addType !== null && addType !== undefined) {
+      this.addEditorBlock(addType);
+      return;
+    }
+    const draftAction = closestAttribute(event.target, "data-draft-action")?.getAttribute(
+      "data-draft-action",
+    );
+    if (draftAction !== null && draftAction !== undefined) {
+      this.handleDraftAction(draftAction);
+      return;
+    }
+    const confirmAction = closestAttribute(event.target, "data-confirm-action")?.getAttribute(
+      "data-confirm-action",
+    );
+    if (confirmAction !== null && confirmAction !== undefined) {
+      this.handleConfirmation(confirmAction);
+      return;
+    }
+    const drawer = closestAttribute(event.target, "data-editor-drawer")?.getAttribute(
+      "data-editor-drawer",
+    );
+    if (drawer === "library" || drawer === "inspector") {
+      this.setDrawer(drawer, !(drawer === "library" ? this.libraryOpen : this.inspectorOpen));
+      return;
+    }
+    if (closestAttribute(event.target, "data-editor-scrim") !== null) {
+      this.setDrawer(null, false);
+      return;
+    }
+    if (closestAttribute(event.target, "data-editor-import") !== null) {
+      this.importInput.click();
+      return;
+    }
+    if (closestAttribute(event.target, "data-editor-export") !== null) {
+      this.exportEditorDocument();
+      return;
+    }
+    const removeToken = closestAttribute(event.target, "data-theme-remove-token")?.getAttribute(
+      "data-theme-remove-token",
+    );
+    if (removeToken !== null && removeToken !== undefined) {
+      this.pendingRemovedThemeTokens.add(removeToken);
+      this.applyThemeEditor();
+      return;
+    }
+    const themeAction = closestAttribute(event.target, "data-theme-action")?.getAttribute(
+      "data-theme-action",
+    );
+    if (themeAction !== null && themeAction !== undefined) {
+      this.applyThemeEditor();
+      return;
+    }
+    const blockActionElement = closestAttribute(event.target, "data-block-action");
+    const blockAction = blockActionElement?.getAttribute("data-block-action") ?? null;
+    if (blockAction !== null && blockActionElement !== null) {
+      const actionBlock =
+        blockActionElement.getAttribute("data-block-target") ?? closestBlockId(blockActionElement);
+      if (actionBlock !== null) {
+        this.applyBlockAction(actionBlock, blockAction, blockActionElement);
+      }
+      return;
+    }
+    if (closestAttribute(event.target, "data-editor-reset") !== null) {
+      const resetBlockId = this.selectedBlockId;
+      if (resetBlockId !== null) {
+        this.runViewCommand(() => this.viewValue.commands.resetBlock(resetBlockId));
+      }
+      return;
+    }
+    const selectedBlock = closestBlockId(event.target);
+    if (selectedBlock !== null && this.viewValue.mode === "editor") {
+      this.selectEditorBlock(selectedBlock);
       return;
     }
     const target = event.target as
@@ -591,6 +831,163 @@ export class ViewerHost implements BoardViewHandle {
     }
   };
 
+  private readonly onKeyDown = (event: Event): void => {
+    if (this.disposedFlag || !this.mountedFlag || this.viewValue.mode !== "editor") {
+      return;
+    }
+    const keyboard = event as Event & {
+      readonly key?: string;
+      readonly shiftKey?: boolean;
+      readonly ctrlKey?: boolean;
+      readonly metaKey?: boolean;
+      preventDefault?: () => void;
+    };
+    const target = event.target as
+      | (EventTarget & {
+          getAttribute?: (name: string) => string | null;
+          tagName?: string;
+        })
+      | null;
+    const tagName = (target?.tagName ?? "").toUpperCase();
+    const formControl =
+      tagName === "INPUT" ||
+      tagName === "SELECT" ||
+      tagName === "TEXTAREA" ||
+      tagName === "BUTTON" ||
+      tagName === "A";
+    if ((keyboard.ctrlKey === true || keyboard.metaKey === true) && keyboard.key === "z") {
+      this.handleDraftAction(keyboard.shiftKey === true ? "redo" : "undo");
+      keyboard.preventDefault?.();
+      return;
+    }
+    if ((keyboard.ctrlKey === true || keyboard.metaKey === true) && keyboard.key === "y") {
+      this.handleDraftAction("redo");
+      keyboard.preventDefault?.();
+      return;
+    }
+    if (keyboard.key === "Escape") {
+      if (this.libraryOpen || this.inspectorOpen || this.pendingConfirmation !== null) {
+        this.pendingConfirmation = null;
+        this.setDrawer(null, false);
+        this.scheduleRender();
+      } else {
+        this.selectEditorBlock(null);
+      }
+      return;
+    }
+    if (
+      keyboard.key === "Tab" &&
+      this.root.getAttribute("data-boardloom-breakpoint") === "narrow" &&
+      (this.libraryOpen || this.inspectorOpen)
+    ) {
+      const panel = this.inspectorOpen ? this.inspector : this.library;
+      const focusable = [
+        ...panel.querySelectorAll<HTMLElement>(
+          "button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), a[href], [tabindex]:not([tabindex='-1'])",
+        ),
+      ].filter((element) => {
+        if (
+          element.hasAttribute("hidden") ||
+          element.hasAttribute("disabled") ||
+          element.hasAttribute("inert")
+        ) {
+          return false;
+        }
+        if (element.closest("[hidden], [inert]") !== null) {
+          return false;
+        }
+        return element.getClientRects().length > 0;
+      });
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (first !== undefined && last !== undefined) {
+        const outside = target === null || !elementContains(panel, target as Node | null);
+        if (keyboard.shiftKey === true && (target === first || outside)) {
+          last.focus();
+          keyboard.preventDefault?.();
+          return;
+        }
+        if (keyboard.shiftKey !== true && (target === last || outside)) {
+          first.focus();
+          keyboard.preventDefault?.();
+          return;
+        }
+      }
+    }
+    if (formControl) {
+      return;
+    }
+    const blockId = this.selectedBlockId;
+    const focusedBlock = closestBlockId(target);
+    if (
+      focusedBlock !== null &&
+      focusedBlock !== blockId &&
+      (keyboard.key === "Enter" || keyboard.key === " " || keyboard.key === "Space")
+    ) {
+      this.selectEditorBlock(focusedBlock);
+      keyboard.preventDefault?.();
+      return;
+    }
+    if (blockId === null) {
+      return;
+    }
+    if (keyboard.key === "Enter") {
+      this.handleDraftAction("apply");
+      keyboard.preventDefault?.();
+      return;
+    }
+    if (keyboard.key === "Delete" || keyboard.key === "Backspace") {
+      this.runViewCommand(() => this.viewValue.commands.deleteBlock(blockId));
+      this.selectEditorBlock(null);
+      keyboard.preventDefault?.();
+      return;
+    }
+    const direction =
+      keyboard.key === "ArrowUp"
+        ? { dx: 0, dy: -1 }
+        : keyboard.key === "ArrowDown"
+          ? { dx: 0, dy: 1 }
+          : keyboard.key === "ArrowLeft"
+            ? { dx: -1, dy: 0 }
+            : keyboard.key === "ArrowRight"
+              ? { dx: 1, dy: 0 }
+              : null;
+    if (direction === null) {
+      return;
+    }
+    keyboard.preventDefault?.();
+    if (keyboard.shiftKey === true) {
+      this.runViewCommand(() =>
+        this.viewValue.commands.resizeBlock(blockId, {
+          breakpoint: this.selectedBreakpoint,
+          dw: direction.dx,
+          dh: direction.dy,
+        }),
+      );
+      return;
+    }
+    this.runViewCommand(() =>
+      this.viewValue.commands.moveBlock(blockId, {
+        breakpoint: this.selectedBreakpoint,
+        ...direction,
+      }),
+    );
+  };
+
+  private readonly onInput = (event: Event): void => {
+    if (this.disposedFlag || !this.mountedFlag) {
+      return;
+    }
+    const target = event.target as
+      (EventTarget & { getAttribute?: (name: string) => string | null }) | null;
+    if (target === null || typeof target.getAttribute !== "function") {
+      return;
+    }
+    if (target.getAttribute("data-editor-library-search") === "true") {
+      this.scheduleRender();
+    }
+  };
+
   private readonly onChange = (event: Event): void => {
     if (!this.publicOperationLive() || this.viewValue.mode !== "editor") {
       return;
@@ -602,6 +999,73 @@ export class ViewerHost implements BoardViewHandle {
         })
       | null;
     if (target === null || typeof target.getAttribute !== "function") {
+      return;
+    }
+    if (target.getAttribute("data-editor-import-input") === "true") {
+      void this.importSelectedFile();
+      return;
+    }
+    if (target.getAttribute("data-editor-title") === "true") {
+      const blockId = this.selectedBlockId;
+      const value = typeof target.value === "string" ? target.value : "";
+      if (blockId !== null) {
+        this.runViewCommand(() => this.viewValue.commands.updateBlock(blockId, { title: value }));
+      }
+      return;
+    }
+    if (target.getAttribute("data-editor-text") === "true") {
+      const blockId =
+        (target.getAttribute as (name: string) => string | null).call(
+          target,
+          "data-block-target",
+        ) ?? this.selectedBlockId;
+      const value = typeof target.value === "string" ? target.value : "";
+      if (blockId !== null) {
+        this.runViewCommand(() => this.viewValue.commands.updateBlock(blockId, { text: value }));
+      }
+      return;
+    }
+    if (target.getAttribute("data-editor-config") === "true") {
+      const blockId =
+        (target.getAttribute as (name: string) => string | null).call(
+          target,
+          "data-block-target",
+        ) ?? this.selectedBlockId;
+      const value = typeof target.value === "string" ? target.value : "";
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(value);
+      } catch {
+        this.actionDiagnostics = [
+          createDiagnostic(DIAGNOSTIC_CODES.INVALID_ARGUMENT, "config", {
+            message: this.messagesValue.text("editor.properties.config.invalidJson"),
+          }),
+        ];
+        this.announceDiagnostics(this.actionDiagnostics);
+        this.renderNow();
+        return;
+      }
+      if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+        this.actionDiagnostics = [
+          createDiagnostic(DIAGNOSTIC_CODES.INVALID_ARGUMENT, "config", {
+            message: this.messagesValue.text("editor.properties.config.invalidObject"),
+          }),
+        ];
+        this.announceDiagnostics(this.actionDiagnostics);
+        this.renderNow();
+        return;
+      }
+      if (blockId !== null) {
+        this.runViewCommand(() =>
+          this.viewValue.commands.updateBlock(blockId, {
+            config: parsed as JsonObject,
+          }),
+        );
+      }
+      return;
+    }
+    if (target.getAttribute("data-theme-control") !== null) {
+      this.applyThemeEditor();
       return;
     }
     const comparisonControl = target.getAttribute("data-comparison-control");
@@ -777,7 +1241,136 @@ export class ViewerHost implements BoardViewHandle {
     this.filterSection.append(this.filterHeading, this.filterChips);
     this.root.append(this.filterSection);
 
+    this.libraryToggle = createElement(this.doc, "button", "bl-drawer-toggle");
+    this.libraryToggle.setAttribute("type", "button");
+    this.libraryToggle.setAttribute("data-editor-drawer", "library");
+    this.libraryToggle.setAttribute("aria-controls", `${instanceId}-library`);
+    this.libraryToggle.setAttribute("aria-expanded", "false");
+    this.inspectorToggle = createElement(this.doc, "button", "bl-drawer-toggle");
+    this.inspectorToggle.setAttribute("type", "button");
+    this.inspectorToggle.setAttribute("data-editor-drawer", "inspector");
+    this.inspectorToggle.setAttribute("aria-controls", `${instanceId}-inspector`);
+    this.inspectorToggle.setAttribute("aria-expanded", "false");
+    this.modeNavigation.append(this.libraryToggle, this.inspectorToggle);
+    this.draftBar = createElement(this.doc, "div", "bl-draft-bar");
+    this.draftBar.setAttribute("role", "region");
+    this.draftBar.setAttribute("data-message-key", "draft.dirty");
+    this.draftStatus = createElement(this.doc, "span", "bl-draft-status");
+    this.draftDetail = createElement(this.doc, "span", "bl-draft-detail");
+    const draftActions = createElement(this.doc, "div", "bl-draft-actions");
+    this.undoButton = createElement(this.doc, "button", "bl-button bl-button--sm");
+    this.undoButton.setAttribute("type", "button");
+    this.undoButton.setAttribute("data-draft-action", "undo");
+    this.redoButton = createElement(this.doc, "button", "bl-button bl-button--sm");
+    this.redoButton.setAttribute("type", "button");
+    this.redoButton.setAttribute("data-draft-action", "redo");
+    this.applyButton = createElement(this.doc, "button", "bl-button bl-button--primary");
+    this.applyButton.setAttribute("type", "button");
+    this.applyButton.setAttribute("data-draft-action", "apply");
+    this.discardButton = createElement(this.doc, "button", "bl-button bl-button--ghost");
+    this.discardButton.setAttribute("type", "button");
+    this.discardButton.setAttribute("data-draft-action", "discard");
+    this.previewButton = createElement(this.doc, "button", "bl-button bl-button--sm");
+    this.previewButton.setAttribute("type", "button");
+    this.previewButton.setAttribute("data-draft-action", "preview");
+    this.releaseButton = createElement(this.doc, "button", "bl-button bl-button--sm");
+    this.releaseButton.setAttribute("type", "button");
+    this.releaseButton.setAttribute("data-draft-action", "release");
+    draftActions.append(
+      this.undoButton,
+      this.redoButton,
+      this.previewButton,
+      this.discardButton,
+      this.applyButton,
+      this.releaseButton,
+    );
+    this.editorNotice = createElement(this.doc, "p", "bl-editor-notice");
+    this.editorNotice.setAttribute("role", "status");
+    this.editorNotice.setAttribute("aria-live", "polite");
+    this.editorNotice.setAttribute("hidden", "");
+    this.confirmation = createElement(this.doc, "div", "bl-confirm");
+    this.confirmation.setAttribute("role", "alertdialog");
+    this.confirmation.setAttribute("aria-modal", "true");
+    this.confirmation.setAttribute("hidden", "");
+    this.confirmationText = createElement(this.doc, "p", "bl-confirm__text");
+    this.confirmationCancel = createElement(this.doc, "button", "bl-button bl-button--ghost");
+    this.confirmationCancel.setAttribute("type", "button");
+    this.confirmationCancel.setAttribute("data-confirm-action", "cancel");
+    this.confirmationApply = createElement(this.doc, "button", "bl-button bl-button--danger");
+    this.confirmationApply.setAttribute("type", "button");
+    this.confirmationApply.setAttribute("data-confirm-action", "confirm");
+    this.confirmation.append(
+      this.confirmationText,
+      this.confirmationCancel,
+      this.confirmationApply,
+    );
+    this.draftBar.append(
+      this.draftStatus,
+      this.draftDetail,
+      draftActions,
+      this.editorNotice,
+      this.confirmation,
+    );
+    this.root.insertBefore(this.draftBar, this.statusbar);
+
+    this.library = createElement(this.doc, "aside", "bl-library");
+    this.library.id = `${instanceId}-library`;
+    this.library.setAttribute("role", "region");
+    this.library.setAttribute("aria-labelledby", `${instanceId}-library-title`);
+    this.libraryHeading = createElement(this.doc, "h2", "bl-library__title");
+    this.libraryHeading.id = `${instanceId}-library-title`;
+    setKeyedText(this.libraryHeading, "editor.library", this.messagesValue.text("editor.library"));
+    const librarySearchField = createElement(this.doc, "div", "bl-library__search");
+    const searchLabel = createElement(this.doc, "label", "bl-visually-hidden");
+    searchLabel.setAttribute("for", `${instanceId}-library-search`);
+    setKeyedText(
+      searchLabel,
+      "editor.library.search",
+      this.messagesValue.text("editor.library.search"),
+    );
+    this.librarySearch = createElement(this.doc, "input", "bl-input");
+    this.librarySearch.type = "search";
+    this.librarySearch.id = `${instanceId}-library-search`;
+    this.librarySearch.setAttribute("data-editor-library-search", "true");
+    this.librarySearch.setAttribute(
+      "placeholder",
+      this.messagesValue.text("editor.library.search"),
+    );
+    this.librarySearch.setAttribute("aria-label", this.messagesValue.text("editor.library.search"));
+    this.librarySearch.setAttribute("data-message-key", "editor.library.search");
+    librarySearchField.append(searchLabel, this.librarySearch);
+    this.libraryList = createElement(this.doc, "div", "bl-library__list");
+    this.library.append(this.libraryHeading, librarySearchField, this.libraryList);
+
+    this.canvas = createElement(this.doc, "section", "bl-canvas");
+    this.canvas.setAttribute("aria-labelledby", `${instanceId}-canvas-title`);
+    const canvasHead = createElement(this.doc, "div", "bl-canvas__head");
+    const canvasIdentity = createElement(this.doc, "div", "bl-canvas__identity");
+    this.canvasHeading = createElement(this.doc, "h2", "bl-canvas__title");
+    this.canvasHeading.id = `${instanceId}-canvas-title`;
+    setKeyedText(this.canvasHeading, "editor.canvas", this.messagesValue.text("editor.canvas"));
+    canvasIdentity.append(this.canvasHeading);
+    this.canvasTools = createElement(this.doc, "div", "bl-canvas__tools");
+    this.canvasTools.setAttribute("role", "group");
+    setKeyedLabel(this.canvasTools, "editor.panels", this.messagesValue.text("editor.panels"));
+    this.importButton = createElement(this.doc, "button", "bl-button bl-button--sm");
+    this.importButton.setAttribute("type", "button");
+    this.importButton.setAttribute("data-editor-import", "true");
+    this.importButton.setAttribute("hidden", "");
+    this.importInput = createElement(this.doc, "input", "bl-visually-hidden");
+    this.importInput.type = "file";
+    this.importInput.accept = "application/json,.json";
+    this.importInput.setAttribute("data-editor-import-input", "true");
+    this.importInput.setAttribute("hidden", "");
+    this.exportButton = createElement(this.doc, "button", "bl-button bl-button--sm");
+    this.exportButton.setAttribute("type", "button");
+    this.exportButton.setAttribute("data-editor-export", "true");
+    this.canvasTools.append(this.importButton, this.importInput, this.exportButton);
+    canvasHead.append(canvasIdentity, this.canvasTools);
+    this.canvas.append(canvasHead);
+
     this.inspector = createElement(this.doc, "aside", "bl-inspector");
+    this.inspector.id = `${instanceId}-inspector`;
     this.inspector.setAttribute("role", "region");
     this.inspector.setAttribute("aria-labelledby", `${instanceId}-inspector-title`);
     this.inspector.setAttribute("data-message-key", "a11y.inspectorRegion");
@@ -789,8 +1382,19 @@ export class ViewerHost implements BoardViewHandle {
       this.messagesValue.text("editor.inspector"),
     );
     this.inspectorBody = createElement(this.doc, "div", "bl-inspector__body");
-    this.inspector.append(this.inspectorHeading, this.inspectorBody);
-    this.root.append(this.inspector);
+    this.inspectorDraftFooter = createElement(this.doc, "div", "bl-inspector__draft");
+    this.sheetDraftStatus = createElement(this.doc, "p", "bl-inspector__draft-status");
+    const sheetActions = createElement(this.doc, "div", "bl-inspector__draft-actions");
+    this.sheetDiscardButton = createElement(this.doc, "button", "bl-button bl-button--ghost");
+    this.sheetDiscardButton.setAttribute("type", "button");
+    this.sheetDiscardButton.setAttribute("data-draft-action", "discard");
+    this.sheetApplyButton = createElement(this.doc, "button", "bl-button bl-button--primary");
+    this.sheetApplyButton.setAttribute("type", "button");
+    this.sheetApplyButton.setAttribute("data-draft-action", "apply");
+    sheetActions.append(this.sheetDiscardButton, this.sheetApplyButton);
+    this.inspectorDraftFooter.append(this.sheetDraftStatus, sheetActions);
+    setHidden(this.inspectorDraftFooter, true);
+    this.inspector.append(this.inspectorHeading, this.inspectorBody, this.inspectorDraftFooter);
 
     this.body = createElement(this.doc, "div", "bl-body");
     this.body.id = bodyId;
@@ -800,7 +1404,14 @@ export class ViewerHost implements BoardViewHandle {
     this.body.setAttribute("data-message-key", "a11y.boardRegion");
     this.grid = createElement(this.doc, "div", "bl-board-grid");
     this.body.append(this.grid);
-    this.root.append(this.body);
+    this.canvas.append(this.body);
+
+    this.drawerScrim = createElement(this.doc, "div", "bl-drawer-scrim");
+    this.drawerScrim.setAttribute("hidden", "");
+    this.drawerScrim.setAttribute("data-editor-scrim", "true");
+    this.editorLayout = createElement(this.doc, "div", "bl-editor-layout");
+    this.editorLayout.append(this.library, this.canvas, this.inspector);
+    this.root.append(this.editorLayout, this.drawerScrim);
 
     this.liveRegion = createElement(this.doc, "div", "bl-live");
     this.liveRegion.setAttribute("role", "status");
@@ -812,6 +1423,8 @@ export class ViewerHost implements BoardViewHandle {
     try {
       this.root.addEventListener("click", this.onClick);
       this.root.addEventListener("change", this.onChange);
+      this.root.addEventListener("input", this.onInput);
+      this.root.addEventListener("keydown", this.onKeyDown);
       this.target.append(this.root);
       this.unsubscribeSpace = space.subscribe((event) => this.handleEvent(event));
       const viewWindow = this.doc.defaultView as
@@ -945,6 +1558,27 @@ export class ViewerHost implements BoardViewHandle {
     return ok(undefined);
   }
 
+  private requestEditorMode(): void {
+    if (!this.publicOperationLive()) {
+      return;
+    }
+    const current = this.viewValue.getSnapshot();
+    if (current.leaseId !== null) {
+      this.setMode("editor");
+      return;
+    }
+    const acquired = this.spaceValue.acquireEditorLease({
+      sessionId: this.viewValue.viewId,
+    });
+    if (!acquired.ok) {
+      this.actionDiagnostics = acquired.diagnostics;
+      this.announceDiagnostics(acquired.diagnostics);
+      this.renderNow();
+      return;
+    }
+    this.setMode("editor", { lease: acquired.value });
+  }
+
   setMode(mode: ViewMode, options: { readonly lease?: EditorLease } = {}): Result<ViewSnapshot> {
     if (!this.publicOperationLive()) {
       return fail([createDiagnostic(DIAGNOSTIC_CODES.VIEW_DISPOSED, "view")]);
@@ -1021,6 +1655,134 @@ export class ViewerHost implements BoardViewHandle {
     }
   }
 
+  private captureInspectorFocus(): InspectorFocusState | null {
+    const active = this.doc.activeElement as HTMLElement | null;
+    if (active === null || !elementContains(this.inspectorBody, active)) {
+      return null;
+    }
+    const attributeNames = [
+      "id",
+      "data-editor-title",
+      "data-editor-text",
+      "data-editor-config",
+      "data-theme-control",
+      "data-theme-token",
+      "data-filter-control",
+      "data-binding-block",
+      "data-binding-slot",
+      "data-binding-control",
+      "data-block-action",
+      "data-block-target",
+      "data-block-breakpoint",
+      "data-comparison-control",
+      "data-comparison-window-input",
+      "data-comparison-window-apply",
+      "data-comparison-window-clear",
+      "data-comparison-remove",
+      "data-filter-action",
+    ];
+    const attributes: Array<readonly [string, string]> = [];
+    for (const name of attributeNames) {
+      const value = active.getAttribute(name);
+      if (value !== null) {
+        attributes.push(Object.freeze([name, value] as const));
+      }
+    }
+    const tagName = active.tagName;
+    const valueControl = tagName === "INPUT" || tagName === "SELECT" || tagName === "TEXTAREA";
+    const value = valueControl ? String((active as HTMLInputElement).value ?? "") : "";
+    const selectionStart =
+      tagName === "INPUT" || tagName === "TEXTAREA"
+        ? typeof (active as HTMLInputElement).selectionStart === "number"
+          ? (active as HTMLInputElement).selectionStart
+          : null
+        : null;
+    const selectionEnd =
+      tagName === "INPUT" || tagName === "TEXTAREA"
+        ? typeof (active as HTMLInputElement).selectionEnd === "number"
+          ? (active as HTMLInputElement).selectionEnd
+          : null
+        : null;
+    return Object.freeze({
+      tagName,
+      attributes: Object.freeze(attributes),
+      filterId: closestAttribute(active, "data-filter-id")?.getAttribute("data-filter-id") ?? null,
+      comparisonId:
+        closestAttribute(active, "data-comparison-id")?.getAttribute("data-comparison-id") ?? null,
+      hasValue: valueControl,
+      value,
+      selectionStart,
+      selectionEnd,
+    });
+  }
+
+  private restoreInspectorFocus(state: InspectorFocusState | null): void {
+    if (state === null) {
+      return;
+    }
+    const match = allDescendants(this.inspectorBody).find((candidate) => {
+      if (candidate.tagName !== state.tagName) {
+        return false;
+      }
+      if (!state.attributes.every(([name, value]) => candidate.getAttribute(name) === value)) {
+        return false;
+      }
+      if (
+        state.filterId !== null &&
+        closestAttribute(candidate, "data-filter-id")?.getAttribute("data-filter-id") !==
+          state.filterId
+      ) {
+        return false;
+      }
+      if (
+        state.comparisonId !== null &&
+        closestAttribute(candidate, "data-comparison-id")?.getAttribute("data-comparison-id") !==
+          state.comparisonId
+      ) {
+        return false;
+      }
+      return true;
+    });
+    if (match === undefined) {
+      return;
+    }
+    if (state.hasValue) {
+      try {
+        (match as HTMLInputElement).value = state.value;
+      } catch {
+        void 0;
+      }
+    }
+    try {
+      match.focus();
+      if (state.selectionStart !== null && state.selectionEnd !== null) {
+        const control = match as HTMLInputElement & {
+          setSelectionRange?: (start: number, end: number) => void;
+        };
+        control.setSelectionRange?.(state.selectionStart, state.selectionEnd);
+      }
+    } catch {
+      void 0;
+    }
+  }
+
+  private setModalBackgroundInert(inert: boolean): void {
+    for (const element of [
+      this.header,
+      this.statusbar,
+      this.filterSection,
+      this.library,
+      this.canvas,
+      this.draftBar,
+    ]) {
+      if (inert) {
+        element.setAttribute("inert", "");
+      } else {
+        element.removeAttribute("inert");
+      }
+    }
+  }
+
   private renderInspector(document: BoardDocumentV1): void {
     const editorMode =
       this.viewValue.mode === "editor" && this.viewValue.getSnapshot().leaseId !== null;
@@ -1041,11 +1803,13 @@ export class ViewerHost implements BoardViewHandle {
       this.messagesValue.text("editor.inspector"),
     );
     clearElement(this.inspectorBody);
+    this.renderSelectedBlock(document, this.messagesValue);
+    this.inspectorBody.append(this.createThemeEditor(document, this.messagesValue));
     const catalog = this.spaceValue.getValidationCatalog();
     const configurable = document.blocks.filter(
       (block) => block.type === "chart" || block.type === "metric",
     );
-    let hasContent = false;
+    let hasContent = true;
     for (const block of configurable) {
       const described = describeBindingSlots(
         document,
@@ -2766,6 +3530,22 @@ export class ViewerHost implements BoardViewHandle {
     return row;
   }
 
+  exportDocument(): Result<BoardSerialization> {
+    if (!this.publicOperationLive()) {
+      return fail([createDiagnostic(DIAGNOSTIC_CODES.VIEW_DISPOSED, "view")]);
+    }
+    const exported = this.spaceValue.exportDocument();
+    if (!exported.ok) {
+      this.actionDiagnostics = exported.diagnostics;
+      this.announceDiagnostics(exported.diagnostics);
+      this.renderNow();
+      return exported;
+    }
+    this.actionDiagnostics = Object.freeze([]);
+    this.config.onExport?.("host", exported.value);
+    return exported;
+  }
+
   refresh(): void {
     if (!this.publicOperationLive()) {
       return;
@@ -3042,6 +3822,774 @@ export class ViewerHost implements BoardViewHandle {
     this.scheduleRender();
   }
 
+  private runViewCommand(operation: () => Result<unknown>): void {
+    if (!this.publicOperationLive()) {
+      return;
+    }
+    this.exportNoticeKey = null;
+    const result = operation();
+    if (!this.ensureLive()) {
+      return;
+    }
+    if (result.ok) {
+      this.actionDiagnostics = Object.freeze([]);
+      this.scheduleRender();
+      return;
+    }
+    this.actionDiagnostics = result.diagnostics;
+    this.announceDiagnostics(result.diagnostics);
+    this.renderNow();
+  }
+
+  private activeEditorLease(): EditorLease | null {
+    const view = this.viewValue.getSnapshot();
+    if (view.leaseId === null) {
+      return null;
+    }
+    const space = this.safeSnapshot();
+    const lease = space?.editorLease ?? null;
+    return lease !== null && lease.leaseId === view.leaseId ? lease : null;
+  }
+
+  private handleDraftAction(action: string): void {
+    this.exportNoticeKey = null;
+    if (action === "undo") {
+      this.runViewCommand(() => this.viewValue.commands.undo());
+      return;
+    }
+    if (action === "redo") {
+      this.runViewCommand(() => this.viewValue.commands.redo());
+      return;
+    }
+    if (action === "preview") {
+      this.setMode("viewer");
+      return;
+    }
+    if (action === "apply") {
+      const result = this.viewValue.commands.applyDraft();
+      if (result.ok) {
+        this.actionDiagnostics = Object.freeze([]);
+        this.announceKey("editor.draft.applied");
+        this.scheduleRender();
+        return;
+      }
+      this.actionDiagnostics = result.diagnostics;
+      this.announceDiagnostics(result.diagnostics);
+      this.renderNow();
+      return;
+    }
+    const snapshot = this.safeSnapshot();
+    const draft = snapshot?.draft ?? null;
+    if (action === "discard") {
+      if (draft !== null && draft.dirty) {
+        this.requestConfirmation("discard");
+      }
+      return;
+    }
+    if (action === "release") {
+      if (draft !== null && draft.dirty) {
+        this.requestConfirmation("release");
+        return;
+      }
+      this.releaseEditorLease("cancel");
+    }
+  }
+
+  private requestConfirmation(kind: EditorConfirmation): void {
+    this.pendingConfirmation = kind;
+    this.scheduleRender();
+  }
+
+  private handleConfirmation(action: string): void {
+    if (action === "cancel") {
+      this.pendingConfirmation = null;
+      this.scheduleRender();
+      return;
+    }
+    const pending = this.pendingConfirmation;
+    this.pendingConfirmation = null;
+    if (pending === "discard") {
+      this.runViewCommand(() => this.viewValue.commands.cancelDraft());
+      return;
+    }
+    if (pending === "release") {
+      this.releaseEditorLease("cancel");
+      return;
+    }
+    this.scheduleRender();
+  }
+
+  private releaseEditorLease(decision: "apply" | "cancel"): void {
+    const lease = this.activeEditorLease();
+    if (lease === null) {
+      this.setMode("viewer");
+      return;
+    }
+    const result = this.spaceValue.releaseEditorLease(lease, { decision });
+    if (result.ok) {
+      this.actionDiagnostics = Object.freeze([]);
+      this.viewValue.setMode("viewer");
+      this.selectedBlockId = null;
+      this.announceKey(decision === "apply" ? "editor.draft.applied" : "editor.draft.cancelled");
+      this.scheduleRender();
+      return;
+    }
+    this.actionDiagnostics = result.diagnostics;
+    this.announceDiagnostics(result.diagnostics);
+    this.renderNow();
+  }
+
+  private addEditorBlock(type: string): void {
+    const result = this.viewValue.commands.addBlock(type);
+    if (!result.ok) {
+      this.actionDiagnostics = result.diagnostics;
+      this.announceDiagnostics(result.diagnostics);
+      this.renderNow();
+      return;
+    }
+    this.actionDiagnostics = Object.freeze([]);
+    const blocks = result.value.document.blocks as unknown as
+      readonly { readonly id: string }[] | undefined;
+    const added = blocks?.at(-1);
+    this.selectedBlockId = added === undefined ? this.selectedBlockId : added.id;
+    this.scheduleRender();
+  }
+
+  private selectEditorBlock(blockId: string | null): void {
+    this.selectedBlockId = blockId;
+    if (
+      blockId !== null &&
+      this.root.getAttribute("data-boardloom-breakpoint") === "narrow" &&
+      this.viewValue.mode === "editor"
+    ) {
+      this.setDrawer("inspector", true);
+    }
+    this.scheduleRender();
+  }
+
+  private applyBlockAction(blockId: string, action: string, element: HTMLElement): void {
+    const breakpoint =
+      (element.getAttribute("data-block-breakpoint") as BoardBreakpoint | null) ??
+      this.selectedBreakpoint;
+    if (action === "select") {
+      this.selectEditorBlock(blockId);
+      return;
+    }
+    if (action === "duplicate") {
+      this.runViewCommand(() => this.viewValue.commands.duplicateBlock(blockId));
+      return;
+    }
+    if (action === "delete") {
+      this.runViewCommand(() => this.viewValue.commands.deleteBlock(blockId));
+      if (this.selectedBlockId === blockId) {
+        this.selectedBlockId = null;
+      }
+      return;
+    }
+    const rememberFocus = (): void => {
+      this.pendingActionFocus = Object.freeze({
+        action,
+        target: blockId,
+        breakpoint,
+      });
+    };
+    if (action === "earlier" || action === "later") {
+      rememberFocus();
+      this.runViewCommand(() => this.viewValue.commands.reorderBlock(blockId, action));
+      return;
+    }
+    if (action === "reset") {
+      rememberFocus();
+      this.runViewCommand(() => this.viewValue.commands.resetBlock(blockId));
+      return;
+    }
+    const moves: Record<string, { readonly dx?: number; readonly dy?: number }> = {
+      up: { dy: -1 },
+      down: { dy: 1 },
+      left: { dx: -1 },
+      right: { dx: 1 },
+    };
+    const move = Object.hasOwn(moves, action) ? moves[action] : undefined;
+    if (move !== undefined) {
+      rememberFocus();
+      this.runViewCommand(() =>
+        this.viewValue.commands.moveBlock(blockId, { breakpoint, ...move }),
+      );
+      return;
+    }
+    const resizes: Record<string, { readonly dw?: number; readonly dh?: number }> = {
+      wider: { dw: 1 },
+      narrower: { dw: -1 },
+      taller: { dh: 1 },
+      shorter: { dh: -1 },
+    };
+    const resize = Object.hasOwn(resizes, action) ? resizes[action] : undefined;
+    if (resize !== undefined) {
+      rememberFocus();
+      this.runViewCommand(() =>
+        this.viewValue.commands.resizeBlock(blockId, { breakpoint, ...resize }),
+      );
+    }
+  }
+
+  private setDrawer(which: "library" | "inspector" | null, open: boolean): void {
+    if (which === "library") {
+      this.libraryOpen = open;
+      if (open) {
+        this.inspectorOpen = false;
+        this.drawerTrigger = this.libraryToggle;
+      }
+    } else if (which === "inspector") {
+      this.inspectorOpen = open;
+      if (open) {
+        this.libraryOpen = false;
+        this.drawerTrigger = this.inspectorToggle;
+      }
+    } else {
+      this.libraryOpen = false;
+      this.inspectorOpen = false;
+    }
+    this.scheduleRender();
+    if (open) {
+      queueMicrotask(() => {
+        if (this.disposedFlag || !this.mountedFlag) {
+          return;
+        }
+        const panel = which === "inspector" ? this.inspector : this.library;
+        const focusable = panel.querySelector<HTMLElement>(
+          "button:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex='-1'])",
+        );
+        focusable?.focus();
+      });
+    } else if (which === null) {
+      this.restoreDrawerFocus();
+    }
+  }
+
+  private restoreDrawerFocus(): void {
+    const trigger = this.drawerTrigger;
+    this.drawerTrigger = null;
+    if (trigger !== null) {
+      trigger.focus();
+    }
+  }
+
+  private applyThemeEditor(): void {
+    const mode = this.themeModeSelect?.value;
+    if (mode !== "light" && mode !== "dark" && mode !== "system") {
+      return;
+    }
+    const tokens = Object.create(null) as Record<string, string>;
+    for (const [name, input] of this.themeTokenInputs) {
+      if (!this.pendingRemovedThemeTokens.has(name)) {
+        tokens[name] = input.value;
+      }
+    }
+    const customName = this.themeTokenNameInput?.value.trim() ?? "";
+    const customValue = this.themeTokenValueInput?.value ?? "";
+    if (customName !== "") {
+      tokens[customName] = customValue;
+    }
+    const result = this.viewValue.commands.setTheme({
+      mode,
+      tokens,
+      removeTokens: [...this.pendingRemovedThemeTokens],
+    });
+    if (result.ok) {
+      this.pendingRemovedThemeTokens.clear();
+      this.actionDiagnostics = Object.freeze([]);
+      this.scheduleRender();
+      return;
+    }
+    this.actionDiagnostics = result.diagnostics;
+    this.announceDiagnostics(result.diagnostics);
+    this.renderNow();
+  }
+
+  private exportEditorDocument(): void {
+    const dirty = this.safeSnapshot()?.draft?.dirty ?? false;
+    const exported = this.spaceValue.exportDocument();
+    if (!exported.ok) {
+      this.actionDiagnostics = exported.diagnostics;
+      this.announceDiagnostics(exported.diagnostics);
+      this.renderNow();
+      return;
+    }
+    this.actionDiagnostics = Object.freeze([]);
+    this.exportNoticeKey = dirty ? "editor.export.draftExcluded" : null;
+    this.announceKey(dirty ? "editor.export.draftExcluded" : "editor.export.done");
+    this.config.onExport?.("ui", exported.value);
+    const viewWindow = this.doc.defaultView as
+      | (Window & {
+          readonly URL?: {
+            createObjectURL?: (blob: Blob) => string;
+            revokeObjectURL?: (url: string) => void;
+          };
+        })
+      | null;
+    const urlApi = viewWindow?.URL;
+    if (
+      typeof urlApi?.createObjectURL === "function" &&
+      typeof urlApi.revokeObjectURL === "function" &&
+      typeof Blob === "function"
+    ) {
+      const blob = new Blob([exported.value.canonical], { type: "application/json" });
+      const url = urlApi.createObjectURL(blob);
+      const link = createElement(this.doc, "a", "bl-visually-hidden");
+      link.href = url;
+      link.download = `${String(exported.value.document.id)}.json`;
+      this.root.append(link);
+      link.click();
+      link.remove();
+      urlApi.revokeObjectURL(url);
+    }
+    this.scheduleRender();
+  }
+
+  private async importSelectedFile(): Promise<void> {
+    const importer = this.config.onImportDocument;
+    if (importer === undefined) {
+      return;
+    }
+    const files = this.importInput.files;
+    const file = files?.[0];
+    if (file === undefined) {
+      return;
+    }
+    let text: string;
+    try {
+      text = await file.text();
+    } catch (error) {
+      if (!this.publicOperationLive()) {
+        return;
+      }
+      this.actionDiagnostics = failureFrom(error, "import");
+      this.announceDiagnostics(this.actionDiagnostics);
+      this.renderNow();
+      return;
+    }
+    if (!this.publicOperationLive()) {
+      return;
+    }
+    const result = importer(text, file.name);
+    this.importInput.value = "";
+    if (!result.ok) {
+      this.actionDiagnostics = result.diagnostics;
+      this.announceDiagnostics(result.diagnostics);
+      this.renderNow();
+      return;
+    }
+    this.actionDiagnostics = Object.freeze([]);
+    this.scheduleRender();
+  }
+
+  private announceKey(key: string): void {
+    if (!this.messagesValue.has(key)) {
+      return;
+    }
+    this.liveRegion.textContent = this.messagesValue.text(key);
+    this.liveRegion.setAttribute("data-announcement-key", key);
+    this.liveRegion.removeAttribute("data-severity");
+  }
+
+  private renderEditorShell(snapshot: SpaceSnapshot, messages: ViewMessages): void {
+    const editorMode = this.viewValue.mode === "editor" && this.activeEditorLease() !== null;
+    setHidden(this.draftBar, !editorMode);
+    this.draftBar.setAttribute("data-editor-mode", String(editorMode));
+    setHidden(this.library, !editorMode);
+    setHidden(this.inspector, !editorMode);
+    setHidden(this.libraryToggle, !editorMode);
+    setHidden(this.inspectorToggle, !editorMode);
+    setHidden(this.exportButton, false);
+    setHidden(this.importButton, this.config.onImportDocument === undefined);
+    setKeyedText(this.importButton, "editor.import", messages.text("editor.import"));
+    setKeyedText(
+      this.exportButton,
+      "editor.exportCommitted",
+      messages.text("editor.exportCommitted"),
+    );
+    setKeyedText(this.libraryToggle, "editor.library", messages.text("editor.library"));
+    setKeyedText(this.inspectorToggle, "editor.inspector", messages.text("editor.inspector"));
+    setKeyedLabel(this.library, "a11y.libraryRegion", messages.text("a11y.libraryRegion"));
+    setKeyedLabel(this.inspector, "a11y.inspectorRegion", messages.text("a11y.inspectorRegion"));
+    setKeyedLabel(this.canvasTools, "editor.panels", messages.text("editor.panels"));
+    this.root.setAttribute("data-library-open", String(this.libraryOpen));
+    this.root.setAttribute("data-inspector-open", String(this.inspectorOpen));
+    this.libraryToggle.setAttribute("aria-expanded", String(this.libraryOpen));
+    this.inspectorToggle.setAttribute("aria-expanded", String(this.inspectorOpen));
+    this.library.setAttribute("data-open", String(this.libraryOpen));
+    this.inspector.setAttribute("data-open", String(this.inspectorOpen));
+    const narrow = this.root.getAttribute("data-boardloom-breakpoint") === "narrow";
+    const inspectorModal = narrow && editorMode && this.inspectorOpen;
+    if (inspectorModal) {
+      this.inspector.setAttribute("role", "dialog");
+      this.inspector.setAttribute("aria-modal", "true");
+    } else {
+      this.inspector.setAttribute("role", "region");
+      this.inspector.removeAttribute("aria-modal");
+    }
+    const scrimVisible = narrow && (this.libraryOpen || this.inspectorOpen);
+    setHidden(this.drawerScrim, !scrimVisible);
+    setHidden(this.inspectorDraftFooter, !inspectorModal);
+    setHidden(this.inspector, !editorMode);
+    this.setModalBackgroundInert(inspectorModal);
+    if (inspectorModal) {
+      this.inspectorDraftFooter.append(this.confirmation);
+    } else {
+      this.draftBar.append(this.confirmation);
+    }
+    if (!editorMode) {
+      this.libraryOpen = false;
+      this.inspectorOpen = false;
+    }
+    this.renderDraftBar(snapshot, messages);
+    this.renderLibrary(messages);
+  }
+
+  private renderDraftBar(snapshot: SpaceSnapshot, messages: ViewMessages): void {
+    const draft = snapshot.draft;
+    const dirty = draft?.dirty ?? false;
+    const lease = this.activeEditorLease();
+    const statusKey = dirty ? "draft.dirty" : "draft.clean";
+    setKeyedText(this.draftStatus, statusKey, messages.text(statusKey));
+    this.draftStatus.setAttribute("data-dirty", String(dirty));
+    this.draftBar.setAttribute("data-dirty", String(dirty));
+    const edits = draft?.revision ?? 0;
+    const detailText = messages.plural("editor.draft.edits", edits);
+    setKeyedText(this.draftDetail, pluralKey(messages, "editor.draft.edits", edits), detailText, [
+      "count",
+    ]);
+    this.draftDetail.setAttribute("data-revision", draft === null ? "0" : String(draft.revision));
+    setKeyedText(this.undoButton, "common.undo", messages.text("common.undo"));
+    setKeyedText(this.redoButton, "common.redo", messages.text("common.redo"));
+    setKeyedText(this.applyButton, "common.apply", messages.text("common.apply"));
+    setKeyedText(this.discardButton, "editor.draft.discard", messages.text("editor.draft.discard"));
+    setKeyedText(
+      this.previewButton,
+      "editor.previewAsViewer",
+      messages.text("editor.previewAsViewer"),
+    );
+    setKeyedText(this.releaseButton, "editor.lease.release", messages.text("editor.lease.release"));
+    setKeyedText(this.sheetApplyButton, "common.apply", messages.text("common.apply"));
+    setKeyedText(
+      this.sheetDiscardButton,
+      "editor.draft.discard",
+      messages.text("editor.draft.discard"),
+    );
+    setKeyedText(this.sheetDraftStatus, statusKey, messages.text(statusKey));
+    setDisabled(this.sheetApplyButton, draft === null);
+    setDisabled(this.sheetDiscardButton, !dirty);
+    this.sheetDraftStatus.setAttribute("data-dirty", String(dirty));
+    setDisabled(this.undoButton, !(draft?.canUndo ?? false));
+    setDisabled(this.redoButton, !(draft?.canRedo ?? false));
+    setDisabled(this.applyButton, draft === null);
+    setDisabled(this.discardButton, !dirty);
+    setDisabled(this.previewButton, lease === null);
+    setDisabled(this.releaseButton, lease === null);
+    this.draftBar.setAttribute("data-lease", lease === null ? "none" : "held");
+    setKeyedText(this.confirmationCancel, "common.cancel", messages.text("common.cancel"));
+    setKeyedText(
+      this.confirmationApply,
+      "editor.draft.confirmApply",
+      messages.text("editor.draft.confirmApply"),
+    );
+    const confirmationVisible = this.pendingConfirmation !== null;
+    setHidden(this.confirmation, !confirmationVisible);
+    if (confirmationVisible) {
+      const key =
+        this.pendingConfirmation === "release"
+          ? "editor.draft.confirmRelease"
+          : "editor.draft.confirmDiscard";
+      setKeyedText(this.confirmationText, key, messages.text(key));
+    }
+    const notice =
+      this.actionDiagnostics[0]?.message ??
+      (this.exportNoticeKey === null ? "" : messages.text(this.exportNoticeKey));
+    if (notice === "") {
+      setHidden(this.editorNotice, true);
+      this.editorNotice.textContent = "";
+      this.editorNotice.removeAttribute("data-message-key");
+    } else {
+      setHidden(this.editorNotice, false);
+      this.editorNotice.textContent = notice;
+      if (this.actionDiagnostics[0] === undefined && this.exportNoticeKey !== null) {
+        this.editorNotice.setAttribute("data-message-key", this.exportNoticeKey);
+      } else {
+        this.editorNotice.removeAttribute("data-message-key");
+      }
+    }
+  }
+
+  private renderLibrary(messages: ViewMessages): void {
+    const query = this.librarySearch.value.trim().toLowerCase();
+    clearElement(this.libraryList);
+    const definitions = this.registry.list();
+    const groups = new Map<string, BlockTypeDefinition[]>();
+    for (const definition of definitions) {
+      const group = editorLibraryGroup(definition.type);
+      const entries = groups.get(group) ?? [];
+      entries.push(definition);
+      groups.set(group, entries);
+    }
+    let shown = 0;
+    for (const [group, entries] of groups) {
+      const groupEntries = entries.filter((definition) => {
+        const label = editorLibraryLabel(messages, definition.type);
+        return query === "" || label.toLowerCase().includes(query);
+      });
+      if (groupEntries.length === 0) {
+        continue;
+      }
+      const section = createElement(this.doc, "section", "bl-library__group");
+      const heading = createElement(this.doc, "h3", "bl-library__group-title");
+      const groupKey = `editor.library.${group}`;
+      setKeyedText(heading, groupKey, messages.has(groupKey) ? messages.text(groupKey) : group);
+      section.append(heading);
+      for (const definition of groupEntries) {
+        const label = editorLibraryLabel(messages, definition.type);
+        const button = createElement(this.doc, "button", "bl-library__item");
+        button.setAttribute("type", "button");
+        button.setAttribute("data-editor-add", definition.type);
+        const labelKey = `editor.library.${definition.type}.name`;
+        if (messages.has(labelKey)) {
+          setKeyedText(button, labelKey, label);
+        } else {
+          setHostText(button, label);
+          button.setAttribute("data-message-key", "editor.library.add");
+        }
+        const icon = createElement(this.doc, "span", "bl-library__icon");
+        icon.setAttribute("aria-hidden", "true");
+        icon.textContent = editorLibraryIcon(definition.type);
+        const text = createElement(this.doc, "span", "bl-library__label");
+        text.textContent = label;
+        button.append(icon, text);
+        section.append(button);
+        shown += 1;
+      }
+      this.libraryList.append(section);
+    }
+    if (shown === 0) {
+      const none = createElement(this.doc, "p", "bl-library__empty");
+      setKeyedText(none, "editor.library.noResults", messages.text("editor.library.noResults"));
+      this.libraryList.append(none);
+    }
+  }
+
+  private renderSelectedBlock(document: BoardDocumentV1, messages: ViewMessages): void {
+    const block = document.blocks.find((entry) => entry.id === this.selectedBlockId);
+    if (block === undefined) {
+      const empty = createElement(this.doc, "p", "bl-inspector__empty");
+      setKeyedText(empty, "editor.inspector.empty", messages.text("editor.inspector.empty"));
+      this.inspectorBody.append(empty);
+      return;
+    }
+    const section = createElement(this.doc, "section", "bl-inspector-section");
+    const heading = createElement(this.doc, "h3", "bl-inspector-section__title");
+    setHostText(heading, block.title ?? block.id);
+    const titleField = createElement(this.doc, "div", "bl-field");
+    const titleLabel = createElement(this.doc, "label", "bl-label");
+    const inputId = `${this.root.id}-block-title`;
+    titleLabel.setAttribute("for", inputId);
+    setKeyedText(titleLabel, "editor.properties.title", messages.text("editor.properties.title"));
+    const titleInput = createElement(this.doc, "input", "bl-input");
+    titleInput.id = inputId;
+    titleInput.value = block.title ?? "";
+    titleInput.setAttribute("data-editor-title", "true");
+    titleInput.setAttribute("data-block-target", block.id);
+    titleField.append(titleLabel, titleInput);
+    const meta = createElement(this.doc, "p", "bl-inspector__meta");
+    setHostText(meta, `${block.type} · ${block.id}`);
+    const contentFields: HTMLElement[] = [];
+    if (block.type === "text") {
+      const textField = createElement(this.doc, "div", "bl-field");
+      const textLabel = createElement(this.doc, "label", "bl-label");
+      const textId = `${this.root.id}-block-text`;
+      textLabel.setAttribute("for", textId);
+      setKeyedText(textLabel, "editor.properties.text", messages.text("editor.properties.text"));
+      const textArea = createElement(this.doc, "textarea", "bl-textarea");
+      textArea.id = textId;
+      textArea.value = typeof block.config.text === "string" ? block.config.text : "";
+      textArea.setAttribute("data-editor-text", "true");
+      textArea.setAttribute("data-block-target", block.id);
+      textField.append(textLabel, textArea);
+      contentFields.push(textField);
+    }
+    const builtIn = (BOARD_BLOCK_TYPES as readonly string[]).includes(block.type);
+    if (!builtIn) {
+      const configField = createElement(this.doc, "div", "bl-field");
+      const configLabel = createElement(this.doc, "label", "bl-label");
+      const configId = `${this.root.id}-block-config`;
+      configLabel.setAttribute("for", configId);
+      setKeyedText(
+        configLabel,
+        "editor.properties.config",
+        messages.text("editor.properties.config"),
+      );
+      const configArea = createElement(this.doc, "textarea", "bl-textarea");
+      configArea.id = configId;
+      configArea.value = JSON.stringify(block.config, null, 2);
+      configArea.setAttribute("data-editor-config", "true");
+      configArea.setAttribute("data-block-target", block.id);
+      configField.append(configLabel, configArea);
+      contentFields.push(configField);
+    }
+    const actions = createElement(this.doc, "div", "bl-inspector__actions");
+    for (const [action, key] of [
+      ["duplicate", "editor.block.duplicate"],
+      ["earlier", "editor.block.moveEarlier"],
+      ["later", "editor.block.moveLater"],
+      ["delete", "editor.block.delete"],
+    ] as const) {
+      const button = createElement(this.doc, "button", "bl-button bl-button--sm");
+      button.setAttribute("type", "button");
+      button.setAttribute("data-block-action", action);
+      button.setAttribute("data-block-target", block.id);
+      setKeyedText(button, key, messages.text(key));
+      actions.append(button);
+    }
+    const reset = createElement(this.doc, "button", "bl-button bl-button--danger bl-button--sm");
+    reset.setAttribute("type", "button");
+    reset.setAttribute("data-editor-reset", "true");
+    setKeyedText(reset, "editor.block.resetDefaults", messages.text("editor.block.resetDefaults"));
+    section.append(heading, titleField, ...contentFields, meta, actions, reset);
+    this.inspectorBody.append(section);
+    this.inspectorBody.append(this.createLayoutSection(block, document, messages));
+  }
+
+  private createLayoutSection(
+    block: BlockDefinition,
+    document: BoardDocumentV1,
+    messages: ViewMessages,
+  ): HTMLElement {
+    const section = createElement(this.doc, "section", "bl-inspector-section");
+    const heading = createElement(this.doc, "h3", "bl-inspector-section__title");
+    setKeyedText(heading, "editor.inspector.layout", messages.text("editor.inspector.layout"));
+    const placement = document.layout[this.selectedBreakpoint]?.placements.find(
+      (entry) => entry.blockId === block.id,
+    );
+    const summary = createElement(this.doc, "p", "bl-inspector__meta");
+    summary.textContent =
+      placement === undefined
+        ? messages.text("editor.block.keyboardHintShort")
+        : `x ${placement.x} · y ${placement.y} · ${placement.width} × ${placement.height}`;
+    const pad = createElement(this.doc, "div", "bl-keyboard-pad");
+    pad.setAttribute("role", "group");
+    setKeyedLabel(pad, "editor.block.move", messages.text("editor.block.move"));
+    const moveSymbols: Record<string, string> = { up: "↑", left: "←", down: "↓", right: "→" };
+    for (const [action, key] of [
+      ["up", "editor.block.moveUp"],
+      ["left", "editor.block.moveLeft"],
+      ["down", "editor.block.moveDown"],
+      ["right", "editor.block.moveRight"],
+    ] as const) {
+      const button = createElement(this.doc, "button", "bl-keyboard-pad__button");
+      button.setAttribute("type", "button");
+      button.setAttribute("data-block-action", action);
+      button.setAttribute("data-block-target", block.id);
+      button.setAttribute("data-block-breakpoint", this.selectedBreakpoint);
+      setKeyedLabel(button, key, messages.text(key));
+      button.textContent = moveSymbols[action] ?? action;
+      pad.append(button);
+    }
+    const resize = createElement(this.doc, "div", "bl-resize-actions");
+    for (const [action, key] of [
+      ["narrower", "editor.block.narrower"],
+      ["wider", "editor.block.wider"],
+      ["shorter", "editor.block.shorter"],
+      ["taller", "editor.block.taller"],
+    ] as const) {
+      const button = createElement(this.doc, "button", "bl-button bl-button--sm");
+      button.setAttribute("type", "button");
+      button.setAttribute("data-block-action", action);
+      button.setAttribute("data-block-target", block.id);
+      button.setAttribute("data-block-breakpoint", this.selectedBreakpoint);
+      setKeyedText(button, key, messages.text(key));
+      resize.append(button);
+    }
+    const hint = createElement(this.doc, "p", "bl-keyboard-hint");
+    setKeyedText(
+      hint,
+      "editor.block.keyboardHintShort",
+      messages.text("editor.block.keyboardHintShort"),
+    );
+    section.append(heading, summary, pad, resize, hint);
+    return section;
+  }
+
+  private createThemeEditor(document: BoardDocumentV1, messages: ViewMessages): HTMLElement {
+    const section = createElement(this.doc, "section", "bl-inspector-section bl-theme-editor");
+    const heading = createElement(this.doc, "h3", "bl-inspector-section__title");
+    setKeyedText(heading, "editor.theme", messages.text("editor.theme"));
+    const modeField = createElement(this.doc, "div", "bl-field");
+    const modeLabel = createElement(this.doc, "label", "bl-label");
+    modeLabel.setAttribute("for", `${this.root.id}-theme-mode`);
+    setKeyedText(modeLabel, "editor.theme.mode", messages.text("editor.theme.mode"));
+    const modeSelect = createElement(this.doc, "select", "bl-select");
+    modeSelect.id = `${this.root.id}-theme-mode`;
+    modeSelect.setAttribute("data-theme-control", "mode");
+    for (const mode of THEME_MODES) {
+      const option = createElement(this.doc, "option");
+      option.value = mode;
+      setKeyedText(option, `theme.${mode}`, messages.text(`theme.${mode}`));
+      modeSelect.append(option);
+    }
+    modeSelect.value = document.theme.mode;
+    this.themeModeSelect = modeSelect;
+    modeField.append(modeLabel, modeSelect);
+    this.themeTokenInputs.clear();
+    const tokenControls: HTMLElement[] = [];
+    const tokens = document.theme.tokens ?? {};
+    for (const name of Object.getOwnPropertyNames(tokens).sort()) {
+      const row = createElement(this.doc, "div", "bl-theme-token");
+      const id = `${this.root.id}-theme-${name}`.replace(/[^A-Za-z0-9_-]/g, "-");
+      const label = createElement(this.doc, "label", "bl-label");
+      label.setAttribute("for", id);
+      setHostText(label, name);
+      const input = createElement(this.doc, "input", "bl-input");
+      input.id = id;
+      input.value = tokens[name] ?? "";
+      input.setAttribute("data-theme-control", "token");
+      input.setAttribute("data-theme-token", name);
+      this.themeTokenInputs.set(name, input);
+      const remove = createElement(this.doc, "button", "bl-icon-button");
+      remove.setAttribute("type", "button");
+      remove.setAttribute("data-theme-remove-token", name);
+      setKeyedLabel(
+        remove,
+        "editor.theme.removeToken",
+        messages.text("editor.theme.removeToken", { token: name }),
+      );
+      remove.textContent = "×";
+      row.append(label, input, remove);
+      tokenControls.push(row);
+    }
+    if (tokenControls.length === 0) {
+      const empty = createElement(this.doc, "p", "bl-inspector__meta");
+      setKeyedText(empty, "editor.theme.noTokens", messages.text("editor.theme.noTokens"));
+      tokenControls.push(empty);
+    }
+    const customField = createElement(this.doc, "div", "bl-field bl-field--inline");
+    const customName = createElement(this.doc, "input", "bl-input");
+    customName.setAttribute("data-theme-control", "token-name");
+    customName.setAttribute("placeholder", messages.text("editor.theme.tokenName"));
+    customName.setAttribute("aria-label", messages.text("editor.theme.tokenName"));
+    setKeyedText(customName, "editor.theme.tokenName", messages.text("editor.theme.tokenName"));
+    const customValue = createElement(this.doc, "input", "bl-input");
+    customValue.setAttribute("data-theme-control", "token-value");
+    customValue.setAttribute("placeholder", messages.text("editor.theme.tokenValue"));
+    customValue.setAttribute("aria-label", messages.text("editor.theme.tokenValue"));
+    setKeyedText(customValue, "editor.theme.tokenValue", messages.text("editor.theme.tokenValue"));
+    this.themeTokenNameInput = customName;
+    this.themeTokenValueInput = customValue;
+    customField.append(customName, customValue);
+    const apply = createElement(this.doc, "button", "bl-button bl-button--sm");
+    apply.setAttribute("type", "button");
+    apply.setAttribute("data-theme-action", "apply");
+    setKeyedText(apply, "editor.theme.apply", messages.text("editor.theme.apply"));
+    section.append(heading, modeField, ...tokenControls, customField, apply);
+    return section;
+  }
+
   private renderNow(): void {
     this.renderScheduled = false;
     if (!this.ensureLive()) {
@@ -3057,10 +4605,13 @@ export class ViewerHost implements BoardViewHandle {
       return;
     }
     const messages = this.messagesValue;
+    const width = this.target.clientWidth > 0 ? this.target.clientWidth : 1280;
+    this.selectedBreakpoint = breakpointFor(width);
     const committedDocument = snapshot.committedDocument as unknown as BoardDocumentV1;
     const draftDocument = snapshot.draft?.document as unknown as BoardDocumentV1 | undefined;
     const document =
       this.viewValue.mode === "editor" ? (draftDocument ?? committedDocument) : committedDocument;
+    const inspectorFocus = this.captureInspectorFocus();
     const bindingFocus = this.captureBindingFocus();
     const formatters = this.spaceValue.getFormatters();
     if (!this.ensureLive()) {
@@ -3214,7 +4765,25 @@ export class ViewerHost implements BoardViewHandle {
 
     this.renderInspector(document);
     this.renderBlocks(document, snapshot, formatters);
+    this.renderEditorShell(snapshot, messages);
     this.restoreBindingFocus(bindingFocus);
+    this.restoreInspectorFocus(inspectorFocus);
+    this.restoreActionFocus();
+  }
+
+  private restoreActionFocus(): void {
+    const pending = this.pendingActionFocus;
+    if (pending === null) {
+      return;
+    }
+    this.pendingActionFocus = null;
+    const match = allDescendants(this.inspectorBody).find(
+      (element) =>
+        element.getAttribute("data-block-action") === pending.action &&
+        element.getAttribute("data-block-target") === pending.target &&
+        element.getAttribute("data-block-breakpoint") === pending.breakpoint,
+    );
+    match?.focus();
   }
 
   private applyDocumentThemeTokens(document: BoardDocumentV1): void {
@@ -3255,6 +4824,12 @@ export class ViewerHost implements BoardViewHandle {
     this.root.setAttribute("data-boardloom-breakpoint", breakpoint);
     this.grid.style.setProperty("--bl-grid-columns", String(columns));
     this.grid.style.setProperty("--bl-grid-row-unit", `${rowHeight}px`);
+    if (
+      this.selectedBlockId !== null &&
+      !document.blocks.some((block) => block.id === this.selectedBlockId)
+    ) {
+      this.selectedBlockId = null;
+    }
     const placements = new Map(
       layout.placements.map((placement) => [placement.blockId, placement] as const),
     );
@@ -3296,6 +4871,27 @@ export class ViewerHost implements BoardViewHandle {
         mounted.header.removeAttribute("hidden");
         mounted.element.setAttribute("aria-labelledby", mounted.heading.id);
         setHostText(mounted.heading, titleText);
+      }
+      const editable = this.viewValue.mode === "editor" && this.activeEditorLease() !== null;
+      const selected = editable && this.selectedBlockId === block.id;
+      mounted.element.setAttribute("data-editor-selected", String(selected));
+      mounted.element.setAttribute("aria-selected", String(selected));
+      mounted.element.setAttribute("tabindex", editable ? "0" : "-1");
+      if (editable && selected) {
+        setKeyedLabel(
+          mounted.element,
+          "editor.block.selected",
+          `${this.messagesValue.text("editor.block.selected")}: ${block.title ?? block.id}`,
+        );
+      } else if (editable) {
+        setKeyedLabel(
+          mounted.element,
+          "editor.block.selectable",
+          this.messagesValue.text("editor.block.selectable"),
+        );
+      } else {
+        mounted.element.removeAttribute("aria-label");
+        mounted.element.removeAttribute("data-message-key");
       }
       this.updateMountedBlock(mounted, block, document, snapshot, formatters);
       if (!this.ensureLive()) {
@@ -3373,6 +4969,50 @@ export class ViewerHost implements BoardViewHandle {
     mounted.element.setAttribute("data-cross-filter-reason", status.reason ?? "incompatible");
   }
 
+  private createBlockToolbar(blockId: string): HTMLElement {
+    const messages = this.messagesValue;
+    const toolbar = createElement(this.doc, "div", "bl-block-actions");
+    toolbar.setAttribute("role", "toolbar");
+    setKeyedLabel(toolbar, "editor.block.settings", messages.text("editor.block.settings"));
+    const icons: Record<string, string> = {
+      duplicate: "⧉",
+      up: "↑",
+      down: "↓",
+      left: "←",
+      right: "→",
+      wider: "⇔",
+      narrower: "↔",
+      taller: "⇕",
+      shorter: "↕",
+      earlier: "⇤",
+      later: "⇥",
+      delete: "⌫",
+    };
+    for (const [action, key] of [
+      ["duplicate", "editor.block.duplicate"],
+      ["up", "editor.block.moveUp"],
+      ["down", "editor.block.moveDown"],
+      ["left", "editor.block.moveLeft"],
+      ["right", "editor.block.moveRight"],
+      ["wider", "editor.block.wider"],
+      ["narrower", "editor.block.narrower"],
+      ["taller", "editor.block.taller"],
+      ["shorter", "editor.block.shorter"],
+      ["earlier", "editor.block.moveEarlier"],
+      ["later", "editor.block.moveLater"],
+      ["delete", "editor.block.delete"],
+    ] as const) {
+      const button = createElement(this.doc, "button", "bl-icon-button");
+      button.setAttribute("type", "button");
+      button.setAttribute("data-block-action", action);
+      button.setAttribute("data-block-target", blockId);
+      setKeyedLabel(button, key, messages.text(key));
+      button.textContent = Object.hasOwn(icons, action) ? (icons[action] ?? action) : action;
+      toolbar.append(button);
+    }
+    return toolbar;
+  }
+
   private createMountedBlock(
     block: BlockDefinition,
     document: BoardDocumentV1,
@@ -3388,7 +5028,8 @@ export class ViewerHost implements BoardViewHandle {
     header.append(heading);
     const body = createElement(this.doc, "div", "bl-block__body");
     body.setAttribute("tabindex", "-1");
-    element.append(header, body);
+    const actions = this.createBlockToolbar(block.id);
+    element.append(actions, header, body);
     const definition: BlockTypeDefinition | undefined = this.registry.get(block.type);
     const environment = this.createEnvironment(
       block,
@@ -3949,7 +5590,12 @@ export class ViewerHost implements BoardViewHandle {
       try {
         this.config.onEvent(event);
       } catch {
-        void 0;
+        this.actionDiagnostics = Object.freeze([
+          createDiagnostic(DIAGNOSTIC_CODES.INVALID_ARGUMENT, "onEvent", {
+            message: this.messagesValue.text("viewer.hostCallbackError"),
+          }),
+        ]);
+        this.announceDiagnostics(this.actionDiagnostics);
       }
     }
     if (!this.ensureLive()) {
@@ -4020,6 +5666,8 @@ export class ViewerHost implements BoardViewHandle {
     }
     this.root.removeEventListener("click", this.onClick);
     this.root.removeEventListener("change", this.onChange);
+    this.root.removeEventListener("input", this.onInput);
+    this.root.removeEventListener("keydown", this.onKeyDown);
     for (const mounted of this.blockElements.values()) {
       this.removeBlockQuery(mounted);
       this.removeComparisonQueries(mounted);

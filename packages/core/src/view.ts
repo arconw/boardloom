@@ -1,4 +1,23 @@
 import type { BindingSlotChange } from "./binding-model.js";
+import type { BoardDocumentV1 } from "./board-schema.js";
+import {
+  editorAddBlock,
+  editorDeleteBlock,
+  editorDuplicateBlock,
+  editorMoveBlock,
+  editorReorderBlock,
+  editorResetBlock,
+  editorResizeBlock,
+  editorSetTheme,
+  editorUpdateBlock,
+  type EditorAddBlockOptions,
+  type EditorBlockPatch,
+  type EditorMoveBlockChange,
+  type EditorOperationContext,
+  type EditorReorderDirection,
+  type EditorResizeBlockChange,
+  type EditorThemeInput,
+} from "./editor-model.js";
 import { DIAGNOSTIC_CODES, createDiagnostic, fail, ok, type Result } from "./diagnostics.js";
 import type {
   CreateViewOptions,
@@ -16,6 +35,15 @@ import type {
 export interface ViewCommands {
   updateDraft(document: unknown): Result<DraftSnapshot>;
   updateBinding(change: BindingSlotChange): Result<DraftSnapshot>;
+  addBlock(type: string, options?: EditorAddBlockOptions): Result<DraftSnapshot>;
+  deleteBlock(blockId: string): Result<DraftSnapshot>;
+  duplicateBlock(blockId: string): Result<DraftSnapshot>;
+  moveBlock(blockId: string, change: EditorMoveBlockChange): Result<DraftSnapshot>;
+  resizeBlock(blockId: string, change: EditorResizeBlockChange): Result<DraftSnapshot>;
+  reorderBlock(blockId: string, direction: EditorReorderDirection): Result<DraftSnapshot>;
+  updateBlock(blockId: string, patch: EditorBlockPatch): Result<DraftSnapshot>;
+  resetBlock(blockId: string): Result<DraftSnapshot>;
+  setTheme(theme: EditorThemeInput): Result<DraftSnapshot>;
   undo(): Result<DraftSnapshot>;
   redo(): Result<DraftSnapshot>;
   applyDraft(): Result<SpaceSnapshot>;
@@ -39,6 +67,11 @@ export interface ViewHost {
   getState(): ViewState;
   getLease(leaseId: string): EditorLease | null;
   updateDraft(lease: EditorLease, document: unknown): Result<DraftSnapshot>;
+  updateDraftWithOptions(
+    lease: EditorLease,
+    document: unknown,
+    options: { readonly allowRemovedBlockIds?: readonly string[] },
+  ): Result<DraftSnapshot>;
   updateBinding(lease: EditorLease, change: BindingSlotChange): Result<DraftSnapshot>;
   undoDraft(lease: EditorLease): Result<DraftSnapshot>;
   redoDraft(lease: EditorLease): Result<DraftSnapshot>;
@@ -90,6 +123,36 @@ export class ViewImpl implements BoardView {
         const context = this.authoringContext();
         return context.ok ? this.host.updateBinding(context.value, change) : context;
       },
+      addBlock: (type: string, options: EditorAddBlockOptions = {}): Result<DraftSnapshot> =>
+        this.applyDocumentOperation((document, operation) =>
+          editorAddBlock(document, type, options, operation),
+        ),
+      deleteBlock: (blockId: string): Result<DraftSnapshot> =>
+        this.applyDocumentOperation(
+          (document) => editorDeleteBlock(document, blockId),
+          (lease, next) =>
+            this.host.updateDraftWithOptions(lease, next, {
+              allowRemovedBlockIds: [blockId],
+            }),
+        ),
+      duplicateBlock: (blockId: string): Result<DraftSnapshot> =>
+        this.applyDocumentOperation((document, operation) =>
+          editorDuplicateBlock(document, blockId, operation),
+        ),
+      moveBlock: (blockId: string, change: EditorMoveBlockChange): Result<DraftSnapshot> =>
+        this.applyDocumentOperation((document) => editorMoveBlock(document, blockId, change)),
+      resizeBlock: (blockId: string, change: EditorResizeBlockChange): Result<DraftSnapshot> =>
+        this.applyDocumentOperation((document) => editorResizeBlock(document, blockId, change)),
+      reorderBlock: (blockId: string, direction: EditorReorderDirection): Result<DraftSnapshot> =>
+        this.applyDocumentOperation((document) => editorReorderBlock(document, blockId, direction)),
+      updateBlock: (blockId: string, patch: EditorBlockPatch): Result<DraftSnapshot> =>
+        this.applyDocumentOperation((document) => editorUpdateBlock(document, blockId, patch)),
+      resetBlock: (blockId: string): Result<DraftSnapshot> =>
+        this.applyDocumentOperation((document, operation) =>
+          editorResetBlock(document, blockId, operation),
+        ),
+      setTheme: (theme: EditorThemeInput): Result<DraftSnapshot> =>
+        this.applyDocumentOperation((document) => editorSetTheme(document, theme)),
       undo: (): Result<DraftSnapshot> => {
         const context = this.authoringContext();
         return context.ok ? this.host.undoDraft(context.value) : context;
@@ -250,6 +313,32 @@ export class ViewImpl implements BoardView {
     if (this.lease?.leaseId === leaseId) {
       this.lease = null;
     }
+  }
+
+  private applyDocumentOperation(
+    operation: (
+      document: BoardDocumentV1,
+      context: EditorOperationContext,
+    ) => Result<BoardDocumentV1>,
+    commit?: (lease: EditorLease, document: BoardDocumentV1) => Result<DraftSnapshot>,
+  ): Result<DraftSnapshot> {
+    const context = this.authoringContext();
+    if (!context.ok) {
+      return context;
+    }
+    const draft = this.host.getState().draft;
+    if (!draft) {
+      return fail([createDiagnostic(DIAGNOSTIC_CODES.EDITOR_LEASE_REQUIRED, "draft")]);
+    }
+    const next = operation(draft.document as unknown as BoardDocumentV1, {
+      idFactory: { createId: (namespace) => this.host.createId(namespace) },
+    });
+    if (!next.ok) {
+      return next;
+    }
+    return commit === undefined
+      ? this.host.updateDraft(context.value, next.value)
+      : commit(context.value, next.value);
   }
 
   private authoringContext(): Result<EditorLease> {

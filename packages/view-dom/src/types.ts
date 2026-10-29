@@ -4,6 +4,7 @@ import type {
   BoardloomRuntime,
   DatasetProvider,
   EditorLease,
+  BoardSerialization,
   MessageDictionary,
   RendererDefinition,
   Result,
@@ -34,6 +35,11 @@ export interface MountBoardViewOptions {
   readonly blockTypes?: readonly BlockTypeDefinition[];
   readonly renderers?: readonly RendererDefinition<HTMLElement>[];
   readonly onEvent?: (event: SpaceEvent) => void;
+  readonly onImportDocument?: (
+    input: string,
+    fileName: string,
+  ) => Result<{ readonly spaceId: string }>;
+  readonly onExport?: (kind: "ui" | "host", serialization: BoardSerialization) => void;
 }
 
 export interface UpdateBoardViewOptions {
@@ -59,6 +65,7 @@ export interface BoardViewHandle {
   update(options?: UpdateBoardViewOptions): Result<void>;
   setMode(mode: ViewMode, options?: { readonly lease?: EditorLease }): Result<ViewSnapshot>;
   refresh(): void;
+  exportDocument(): Result<BoardSerialization>;
   focus(target?: FocusTarget): Result<void>;
   unmount(options?: { readonly draftDecision?: "apply" | "cancel" | "keep" }): Result<void>;
   dispose(options?: { readonly draftDecision?: "apply" | "cancel" | "keep" }): Result<void>;

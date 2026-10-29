@@ -335,6 +335,48 @@ describe("event ordering under reentrant listeners", () => {
     expect(runtime.disposed).toBe(false);
   });
 
+  it("suspends event delivery for a batch and flushes in reentrancy-safe order", () => {
+    const { runtime } = createHarness();
+    const space = unwrap(
+      runtime.createSpace({ id: "event-batch", document: makeDocument("Initial") }),
+    );
+    const events: SpaceEvent[] = [];
+    space.subscribe((event) => {
+      events.push(event);
+      if (event.type === "document:changed" && event.document.title === "First") {
+        unwrap(space.loadDocument(makeDocument("Second"), { source: "batch-reentry" }));
+      }
+    });
+    const batch = space.beginEventBatch();
+    unwrap(space.loadDocument(makeDocument("First"), { source: "host" }));
+    expect(events).toEqual([]);
+    batch.flush();
+    expect(events.map((event) => event.type)).toEqual([
+      "document:changed",
+      "space:loaded",
+      "document:changed",
+      "space:loaded",
+    ]);
+    expectMonotonic(events);
+    expect(space.getSnapshot().committedDocument.title).toBe("Second");
+  });
+
+  it("cancels queued normal notifications when a batched space is disposed", () => {
+    const { runtime } = createHarness();
+    const space = unwrap(
+      runtime.createSpace({ id: "event-batch-dispose", document: makeDocument("Initial") }),
+    );
+    const events: SpaceEvent[] = [];
+    space.subscribe((event) => events.push(event));
+    const batch = space.beginEventBatch();
+    unwrap(space.loadDocument(makeDocument("Pending"), { source: "host" }));
+    expect(events).toEqual([]);
+    unwrap(space.dispose());
+    expect(events).toEqual([]);
+    batch.flush();
+    expect(events.map((event) => event.type)).toEqual(["space:disposed"]);
+  });
+
   it("forwards only terminal space events while the runtime is shutting down", () => {
     const { runtime } = createHarness();
     const a = unwrap(runtime.createSpace({ id: "shutdown-a", document: makeDocument("A") }));

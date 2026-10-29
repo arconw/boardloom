@@ -405,3 +405,120 @@ export function isNamespacedExtensionKey(key: string): boolean {
 export function isThemeTokenName(key: string): boolean {
   return /^(--)?[a-z][a-z0-9-]*(\.[a-z][a-z0-9-]*)*$/.test(key);
 }
+
+export const THEME_COLOR_TOKEN_NAMES = Object.freeze([
+  "canvas",
+  "canvas-deep",
+  "surface",
+  "surface-raised",
+  "surface-sunken",
+  "surface-overlay",
+  "field",
+  "field-disabled",
+  "text",
+  "text-muted",
+  "text-faint",
+  "text-inverse",
+  "text-on-accent",
+  "border-subtle",
+  "border",
+  "border-strong",
+  "accent",
+  "accent-hover",
+  "accent-active",
+  "accent-soft",
+  "accent-soft-text",
+  "focus",
+  "selection",
+  "selection-text",
+  "backdrop",
+  "success",
+  "success-surface",
+  "warning",
+  "warning-surface",
+  "danger",
+  "danger-surface",
+  "info",
+  "info-surface",
+  "skeleton",
+  "skeleton-highlight",
+] as const);
+
+const THEME_COLOR_TOKEN_SET = new Set<string>(THEME_COLOR_TOKEN_NAMES);
+const THEME_TOKEN_PREFIXES = Object.freeze([
+  "color-",
+  "font-",
+  "space-",
+  "radius-",
+  "shadow-",
+  "elevation-",
+  "duration-",
+  "ease-",
+  "chart-",
+  "layout-",
+  "target-",
+  "control-",
+  "letter-spacing-",
+  "line-height-",
+  "font-size-",
+  "font-weight-",
+] as const);
+
+export function isExtensionThemeTokenName(name: string): boolean {
+  return /^ext\.[a-z][a-z0-9-]*$/.test(name);
+}
+
+export function isAllowedThemeTokenName(name: string): boolean {
+  if (!isThemeTokenName(name) || name === "__proto__") {
+    return false;
+  }
+  if (name.startsWith("--bl-") || name.startsWith("bl-") || isExtensionThemeTokenName(name)) {
+    return true;
+  }
+  if (THEME_COLOR_TOKEN_SET.has(name)) {
+    return true;
+  }
+  return THEME_TOKEN_PREFIXES.some((prefix) => name.startsWith(prefix));
+}
+
+function isColorThemeToken(name: string): boolean {
+  const stripped = name.startsWith("--") ? name.slice(2) : name;
+  const unprefixed = stripped.startsWith("bl-") ? stripped.slice(3) : stripped;
+  return (
+    THEME_COLOR_TOKEN_SET.has(unprefixed) ||
+    unprefixed.startsWith("color-") ||
+    unprefixed.startsWith("chart-")
+  );
+}
+
+export function validateThemeTokenValue(name: string, value: string): string | null {
+  if (value.trim() === "") {
+    return "A theme token value must be a non-empty string.";
+  }
+  if (value.length > 200) {
+    return "A theme token value is too long.";
+  }
+  for (let index = 0; index < value.length; index += 1) {
+    const code = value.charCodeAt(index);
+    if (code <= 0x1f || code === 0x7f) {
+      return "A theme token value contains unsupported characters.";
+    }
+  }
+  if (/(?:url\s*\(|expression\s*\(|javascript\s*:|@import|[;{}<>`\\])/i.test(value)) {
+    return "A theme token value contains a disallowed CSS construct.";
+  }
+  if (
+    isColorThemeToken(name) &&
+    !(
+      /^#[0-9a-f]{3,8}$/i.test(value) ||
+      /^(?:rgb|rgba|hsl|hsla|oklch|oklab|lab|lch|color)\([0-9a-z .,%/+_-]+\)$/i.test(value) ||
+      /^[a-z]+$/i.test(value)
+    )
+  ) {
+    return "A color token must use a color keyword, hex value or supported color function.";
+  }
+  if (!isColorThemeToken(name) && !/^[A-Za-z0-9 .,%#()/+'"_-]+$/.test(value)) {
+    return "A theme token value contains unsupported characters.";
+  }
+  return null;
+}

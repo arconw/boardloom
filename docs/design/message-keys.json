@@ -873,7 +873,7 @@
     },
     {
       "key": "editor.block.keyboardHint",
-      "english": "Use arrow keys to move, Enter to apply, Escape to cancel",
+      "english": "Use arrow keys to move, Shift+Arrow to resize, Enter to apply, Escape to deselect, and Delete to remove the selected block (undoable)",
       "context": "Keyboard layout hint",
       "source": "proposed"
     },
@@ -1798,7 +1798,7 @@
     },
     {
       "key": "editor.block.keyboardHintShort",
-      "english": "Arrow keys move · Enter applies · Escape cancels",
+      "english": "Arrows move · Shift+Arrows resize · Enter applies · Escape deselects · Delete removes (undoable)",
       "context": "Short keyboard layout instruction",
       "source": "proposed"
     },
@@ -2576,6 +2576,217 @@
       "key": "a11y.realtimeResync",
       "english": "Resynchronize realtime data",
       "context": "Accessible name for the realtime resync action",
+      "source": "core"
+    },
+    {
+      "key": "editor.import",
+      "english": "Import board file",
+      "context": "Editor action that opens a board document as a new space",
+      "source": "core"
+    },
+    {
+      "key": "editor.export",
+      "english": "Export JSON",
+      "context": "Editor action that downloads the current committed board document",
+      "source": "core"
+    },
+    {
+      "key": "editor.export.done",
+      "english": "Board exported",
+      "context": "Status confirmation after a board export",
+      "source": "core"
+    },
+    {
+      "key": "editor.lease.release",
+      "english": "End editing",
+      "context": "Editor action that releases the editor lease",
+      "source": "core"
+    },
+    {
+      "key": "editor.theme",
+      "english": "Theme",
+      "context": "Inspector section heading for theme editing",
+      "source": "core"
+    },
+    {
+      "key": "editor.theme.mode",
+      "english": "Theme mode",
+      "context": "Label for the theme mode selector",
+      "source": "core"
+    },
+    {
+      "key": "editor.theme.accent",
+      "english": "Accent color",
+      "context": "Label for the accent color token input",
+      "source": "core"
+    },
+    {
+      "key": "editor.theme.surface",
+      "english": "Surface color",
+      "context": "Label for the surface color token input",
+      "source": "core"
+    },
+    {
+      "key": "editor.theme.tokenName",
+      "english": "Token name",
+      "context": "Label for an additional validated theme token name",
+      "source": "core"
+    },
+    {
+      "key": "editor.theme.tokenValue",
+      "english": "Token value",
+      "context": "Label for an additional validated theme token value",
+      "source": "core"
+    },
+    {
+      "key": "editor.theme.apply",
+      "english": "Apply theme to draft",
+      "context": "Action that validates and applies theme edits to the draft",
+      "source": "core"
+    },
+    {
+      "key": "theme.light",
+      "english": "Light",
+      "context": "Light theme option",
+      "source": "core"
+    },
+    {
+      "key": "theme.dark",
+      "english": "Dark",
+      "context": "Dark theme option",
+      "source": "core"
+    },
+    {
+      "key": "theme.system",
+      "english": "System",
+      "context": "System theme option",
+      "source": "core"
+    },
+    {
+      "key": "editor.draft.confirmRelease",
+      "english": "Discard the unsaved draft and end the editor session?",
+      "context": "Confirmation shown before releasing a dirty editor lease with discard",
+      "source": "core"
+    },
+    {
+      "key": "editor.draft.confirmApply",
+      "english": "Discard changes",
+      "context": "Confirmation action for a destructive draft decision",
+      "source": "core"
+    },
+    {
+      "key": "a11y.libraryRegion",
+      "english": "Block library",
+      "context": "Accessible name for the editor block library region",
+      "source": "core"
+    },
+    {
+      "key": "editor.library.extensions",
+      "english": "Extensions",
+      "context": "Block library group heading for registered extension blocks",
+      "source": "core"
+    },
+    {
+      "key": "editor.library.chart.name",
+      "english": "Chart",
+      "context": "Block library entry for adding a chart block",
+      "source": "core"
+    },
+    {
+      "key": "editor.library.text.name",
+      "english": "Text",
+      "context": "Block library entry for adding a text block",
+      "source": "core"
+    },
+    {
+      "key": "editor.library.filter.name",
+      "english": "Filter",
+      "context": "Block library entry for adding a filter block",
+      "source": "core"
+    },
+    {
+      "key": "editor.import.opened",
+      "english": "Opened the board as a new space; the source board and its draft remain available",
+      "context": "Status announcement after import creates and activates a new space",
+      "source": "core"
+    },
+    {
+      "key": "workspace.boards",
+      "english": "Boards",
+      "context": "Accessible name for the multi-space board tab list",
+      "source": "core"
+    },
+    {
+      "key": "editor.properties.text",
+      "english": "Text",
+      "context": "Label for editing a text block content field",
+      "source": "core"
+    },
+    {
+      "key": "editor.properties.config",
+      "english": "Configuration (JSON)",
+      "context": "Label for editing registered block configuration as JSON",
+      "source": "core"
+    },
+    {
+      "key": "editor.theme.removeToken",
+      "english": "Remove theme token {token}",
+      "context": "Accessible action name for removing one theme token override",
+      "source": "core",
+      "placeholders": ["token"]
+    },
+    {
+      "key": "editor.theme.noTokens",
+      "english": "No theme token overrides",
+      "context": "Empty state in the theme editor when no token overrides exist",
+      "source": "core"
+    },
+    {
+      "key": "workspace.imported",
+      "english": "Imported",
+      "context": "Visible and accessible marker on a board tab created by import",
+      "source": "core"
+    },
+    {
+      "key": "editor.exportCommitted",
+      "english": "Export committed board",
+      "context": "Editor action label clarifying that only the committed board is exported",
+      "source": "core"
+    },
+    {
+      "key": "editor.export.draftExcluded",
+      "english": "Committed board exported; unapplied draft changes were not included",
+      "context": "Notice shown when exporting while a dirty draft is not included",
+      "source": "core"
+    },
+    {
+      "key": "workspace.hostError",
+      "english": "A host event callback failed",
+      "context": "Status announcement when a host event callback throws",
+      "source": "core"
+    },
+    {
+      "key": "workspace.activateFailed",
+      "english": "The board could not be activated",
+      "context": "Workspace notice when a board tab cannot be activated",
+      "source": "core"
+    },
+    {
+      "key": "editor.properties.config.invalidJson",
+      "english": "Block configuration must be valid JSON.",
+      "context": "Diagnostic when registered block configuration text is not valid JSON",
+      "source": "core"
+    },
+    {
+      "key": "editor.properties.config.invalidObject",
+      "english": "Block configuration must be a JSON object.",
+      "context": "Diagnostic when registered block configuration JSON is not an object",
+      "source": "core"
+    },
+    {
+      "key": "viewer.hostCallbackError",
+      "english": "A host event callback failed.",
+      "context": "Diagnostic when a viewer host event callback throws",
       "source": "core"
     }
   ]
