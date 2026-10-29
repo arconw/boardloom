@@ -25,6 +25,6 @@
   },
   "devDependencies": {
     "@angular/build": "21.2.25",
-    "@angular/cli": "21.2.25"
+    "@angular/cli": "21.2.29"
   }
 }
