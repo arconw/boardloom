@@ -4,6 +4,7 @@ coverage/
 .vite/
 .vitest/
 .eslintcache
+.angular/
 *.tsbuildinfo
 *.log
 npm-debug.log*

@@ -11,6 +11,7 @@ import {
   DIAGNOSTIC_CODES,
   createDiagnostic,
   fail,
+  ok,
   type BoardloomRuntime,
   type BoardSerialization,
   type BoardSpace,
@@ -395,18 +396,38 @@ function hasDirtyDraft(handle: BoardViewHandle): boolean {
 function useStableCallbacks(
   latest: { readonly current: BoardloomViewProps },
   handle: { readonly current: BoardViewHandle | null },
+  finish: {
+    readonly current: ((handle: BoardViewHandle, info: BoardloomViewReadyInfo) => void) | null;
+  },
+  explicitDisposalInFlight: { readonly current: boolean },
 ): StableCallbacks {
   return useMemo<StableCallbacks>(() => {
     const onEvent = (event: SpaceEvent): void => {
-      latest.current.onEvent?.(event);
-      if (event.type === "mode:changed") {
-        const current = handle.current;
-        if (current !== null && current.view.viewId === event.viewId) {
-          latest.current.onModeChange?.(
-            event.to,
-            event as Extract<SpaceEvent, { type: "mode:changed" }>,
-          );
+      const current = handle.current;
+      if (current === null || event.spaceId !== current.space.id) {
+        return;
+      }
+      const matchesView = !("viewId" in event) || event.viewId === current.view.viewId;
+      if (matchesView) {
+        latest.current.onEvent?.(event);
+      }
+      if (event.type === "view:disposed" && event.viewId === current.view.viewId) {
+        if (!explicitDisposalInFlight.current) {
+          finish.current?.(current, readyInfo(current));
         }
+        return;
+      }
+      if (event.type === "space:disposed") {
+        if (!explicitDisposalInFlight.current) {
+          finish.current?.(current, readyInfo(current));
+        }
+        return;
+      }
+      if (event.type === "mode:changed" && matchesView) {
+        latest.current.onModeChange?.(
+          event.to,
+          event as Extract<SpaceEvent, { type: "mode:changed" }>,
+        );
       }
     };
     const onExport = (kind: "ui" | "host", serialization: BoardSerialization): void => {
@@ -440,8 +461,18 @@ export const BoardloomView = forwardRef<BoardloomViewHandle, BoardloomViewProps>
     const failedMountRef = useRef<MountInputs | null>(null);
     const unstableInputsRef = useRef<MountInputs | null>(null);
     const ownedSpaceRef = useRef(false);
+    const sessionEndedRef = useRef(false);
     const latestRef = useRef<BoardloomViewProps>(props);
-    const callbacks = useStableCallbacks(latestRef, handleRef);
+    const finishRef = useRef<
+      ((handle: BoardViewHandle, info: BoardloomViewReadyInfo) => void) | null
+    >(null);
+    const explicitDisposalInFlightRef = useRef(false);
+    const callbacks = useStableCallbacks(
+      latestRef,
+      handleRef,
+      finishRef,
+      explicitDisposalInFlightRef,
+    );
 
     const reportError = (
       phase: BoardloomAdapterPhase,
@@ -516,6 +547,9 @@ export const BoardloomView = forwardRef<BoardloomViewHandle, BoardloomViewProps>
     });
 
     useEffect(() => {
+      if (sessionEndedRef.current) {
+        return;
+      }
       const target = containerRef.current;
       if (target === null) {
         return;
@@ -562,6 +596,7 @@ export const BoardloomView = forwardRef<BoardloomViewHandle, BoardloomViewProps>
       mountedInputsRef.current = inputs;
       failedMountRef.current = null;
       ownedSpaceRef.current = latestRef.current.space === undefined;
+      sessionEndedRef.current = false;
       latestRef.current.onReady?.(readyInfo(handle));
     });
 
@@ -594,6 +629,25 @@ export const BoardloomView = forwardRef<BoardloomViewHandle, BoardloomViewProps>
       failedAttemptRef.current = current;
       reportError("update", updated.diagnostics);
     });
+
+    const finishImperativeDisposal = (
+      handle: BoardViewHandle,
+      info: BoardloomViewReadyInfo,
+    ): void => {
+      if (handleRef.current !== handle) {
+        return;
+      }
+      handleRef.current = null;
+      appliedRef.current = null;
+      failedAttemptRef.current = null;
+      mountedInputsRef.current = null;
+      failedMountRef.current = null;
+      unstableInputsRef.current = null;
+      ownedSpaceRef.current = false;
+      sessionEndedRef.current = true;
+      latestRef.current.onDispose?.(info);
+    };
+    finishRef.current = finishImperativeDisposal;
 
     const api = useMemo<BoardloomViewHandle>(() => {
       const current = (): BoardViewHandle => requireHandle(handleRef.current);
@@ -632,10 +686,40 @@ export const BoardloomView = forwardRef<BoardloomViewHandle, BoardloomViewProps>
           return handleRef.current?.focus(target) ?? unavailable();
         },
         unmount(options: { readonly draftDecision?: BoardloomDraftDecision } = {}): Result<void> {
-          return handleRef.current?.unmount(options) ?? unavailable();
+          const handle = handleRef.current;
+          if (handle === null) {
+            return sessionEndedRef.current ? ok(undefined) : unavailable();
+          }
+          const info = readyInfo(handle);
+          explicitDisposalInFlightRef.current = true;
+          let result: Result<void>;
+          try {
+            result = handle.unmount(options);
+          } finally {
+            explicitDisposalInFlightRef.current = false;
+          }
+          if (result.ok) {
+            finishImperativeDisposal(handle, info);
+          }
+          return result;
         },
         dispose(options: { readonly draftDecision?: BoardloomDraftDecision } = {}): Result<void> {
-          return handleRef.current?.dispose(options) ?? unavailable();
+          const handle = handleRef.current;
+          if (handle === null) {
+            return sessionEndedRef.current ? ok(undefined) : unavailable();
+          }
+          const info = readyInfo(handle);
+          explicitDisposalInFlightRef.current = true;
+          let result: Result<void>;
+          try {
+            result = handle.dispose(options);
+          } finally {
+            explicitDisposalInFlightRef.current = false;
+          }
+          if (result.ok) {
+            finishImperativeDisposal(handle, info);
+          }
+          return result;
         },
       };
     }, []);

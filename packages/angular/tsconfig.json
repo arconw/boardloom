@@ -3,8 +3,18 @@
   "compilerOptions": {
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "outDir": "dist",
-    "rootDir": "src",
-    "types": []
+    "rootDir": "..",
+    "types": [],
+    "experimentalDecorators": true,
+    "baseUrl": ".",
+    "paths": {
+      "@boardloom/core": ["../core/src/index.ts"],
+      "@boardloom/view-dom": ["../view-dom/src/index.ts"]
+    }
+  },
+  "angularCompilerOptions": {
+    "compilationMode": "full",
+    "strictTemplates": true
   },
   "include": ["src/**/*.ts"]
 }

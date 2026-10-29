@@ -1,0 +1,19 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "noEmit": true,
+    "types": [],
+    "experimentalDecorators": true,
+    "baseUrl": ".",
+    "paths": {
+      "@boardloom/core": ["../../packages/core/src/index.ts"],
+      "@boardloom/angular": ["../../packages/angular/src/index.ts"],
+      "@boardloom/view-dom": ["../../packages/view-dom/src/index.ts"]
+    }
+  },
+  "angularCompilerOptions": {
+    "strictTemplates": true
+  },
+  "include": ["src/**/*.ts"]
+}

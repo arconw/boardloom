@@ -1,0 +1,182 @@
+:root {
+  color-scheme: light dark;
+  font-family: system-ui, sans-serif;
+}
+
+body {
+  margin: 0;
+  background: #f4f6fb;
+  color: #15213b;
+}
+
+.example {
+  margin: 0 auto;
+  max-width: 1280px;
+  padding: 24px;
+}
+
+.example__header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+  justify-content: space-between;
+}
+
+.example__header h1 {
+  margin: 0 0 8px;
+  font-size: 1.6rem;
+}
+
+.example__header p {
+  margin: 0;
+  max-width: 48ch;
+}
+
+.example__note {
+  margin: 8px 0 0;
+  max-width: 60ch;
+  font-size: 0.9rem;
+  color: #51617f;
+}
+
+.example__facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 8px 16px;
+  margin: 0;
+}
+
+.example__facts div {
+  border: 1px solid #c9d3e7;
+  border-radius: 8px;
+  padding: 8px;
+  background: #ffffff;
+}
+
+.example__facts dt {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #51617f;
+}
+
+.example__facts dd {
+  margin: 4px 0 0;
+  font-weight: 600;
+}
+
+.example__controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: end;
+  margin: 20px 0 12px;
+  padding: 16px;
+  border: 1px solid #c9d3e7;
+  border-radius: 12px;
+  background: #ffffff;
+}
+
+.example__controls label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.example__controls select,
+.example__controls button {
+  min-height: 36px;
+  border: 1px solid #8fa1c4;
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 0 10px;
+  font: inherit;
+}
+
+.example__controls button {
+  cursor: pointer;
+  background: #eef2fb;
+}
+
+.example__toggle {
+  flex-direction: row !important;
+  align-items: center;
+  gap: 8px !important;
+  min-height: 36px;
+}
+
+.example__status {
+  min-height: 1.4em;
+  margin: 0 0 12px;
+  font-weight: 600;
+}
+
+.example__log {
+  margin-bottom: 16px;
+  font-size: 0.85rem;
+}
+
+.example__log ol {
+  margin: 6px 0 0;
+  padding-left: 20px;
+  columns: 2;
+}
+
+.example__export {
+  max-height: 180px;
+  overflow: auto;
+  padding: 12px;
+  border: 1px solid #c9d3e7;
+  border-radius: 8px;
+  background: #ffffff;
+  font-size: 0.75rem;
+}
+
+.example__board {
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.example__retained {
+  margin: 0 0 16px;
+  padding: 12px 16px;
+  border: 1px solid #d29b52;
+  border-radius: 12px;
+  background: #fff8ea;
+}
+
+.example__retained h2 {
+  margin: 0 0 6px;
+  font-size: 1rem;
+}
+
+.example__retained p {
+  margin: 0 0 10px;
+}
+
+.example__retained ul {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.example__retained li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.example__retained button {
+  min-height: 34px;
+  border: 1px solid #8fa1c4;
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 0 10px;
+  font: inherit;
+  cursor: pointer;
+}

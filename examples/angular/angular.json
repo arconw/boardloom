@@ -1,0 +1,51 @@
+{
+  "$schema": "../../node_modules/@angular/cli/lib/config/schema.json",
+  "version": 1,
+  "newProjectRoot": "projects",
+  "cli": {
+    "analytics": false,
+    "cache": {
+      "enabled": true,
+      "path": "../../.tmp/T15/angular-cache"
+    }
+  },
+  "projects": {
+    "boardloom-angular-example": {
+      "projectType": "application",
+      "root": "",
+      "sourceRoot": "src",
+      "prefix": "boardloom",
+      "architect": {
+        "build": {
+          "builder": "@angular/build:application",
+          "options": {
+            "browser": "src/main.ts",
+            "index": "src/index.html",
+            "tsConfig": "tsconfig.app.json",
+            "styles": ["src/styles.css", "../../.tmp/build/packages/view-dom/styles.css"],
+            "assets": [],
+            "outputPath": "../../.tmp/examples/angular"
+          },
+          "configurations": {
+            "production": {
+              "optimization": true,
+              "outputHashing": "none",
+              "sourceMap": false
+            },
+            "development": {
+              "optimization": false,
+              "sourceMap": true
+            }
+          },
+          "defaultConfiguration": "production"
+        },
+        "serve": {
+          "builder": "@angular/build:dev-server",
+          "options": {
+            "buildTarget": "boardloom-angular-example:build:development"
+          }
+        }
+      }
+    }
+  }
+}
