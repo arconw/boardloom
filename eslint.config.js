@@ -10,6 +10,7 @@ export default defineConfig([
     "dist/",
     "coverage/",
     ".vite/",
+    ".svelte-kit/",
     ".vitest/",
     ".tmp/",
     ".evidence/",

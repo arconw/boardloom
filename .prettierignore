@@ -1,6 +1,7 @@
 node_modules/
 dist/
 coverage/
+.svelte-kit/
 .vite/
 .vitest/
 .tmp/

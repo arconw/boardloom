@@ -1,0 +1,15 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "noEmit": true,
+    "types": ["vite/client"],
+    "baseUrl": ".",
+    "paths": {
+      "@boardloom/core": ["../../packages/core/src/index.ts"],
+      "@boardloom/svelte": ["../../packages/svelte/src/index.ts"],
+      "@boardloom/view-dom": ["../../packages/view-dom/src/index.ts"]
+    }
+  },
+  "include": ["src/**/*.ts", "src/**/*.svelte", "vite.config.ts"]
+}

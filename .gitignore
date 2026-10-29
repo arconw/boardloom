@@ -5,6 +5,7 @@ coverage/
 .vitest/
 .eslintcache
 .angular/
+.svelte-kit/
 *.tsbuildinfo
 *.log
 npm-debug.log*

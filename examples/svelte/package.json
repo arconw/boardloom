@@ -1,0 +1,25 @@
+{
+  "name": "@boardloom/example-svelte",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Runnable Boardloom Svelte example",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "typecheck": "svelte-check --tsconfig ./tsconfig.json",
+    "typecheck:built": "svelte-check --tsconfig ./tsconfig.build.json"
+  },
+  "dependencies": {
+    "@boardloom/core": "0.0.0",
+    "@boardloom/svelte": "0.0.0",
+    "@boardloom/view-dom": "0.0.0",
+    "svelte": "5.57.3"
+  },
+  "devDependencies": {
+    "@sveltejs/vite-plugin-svelte": "6.2.4",
+    "vite": "7.3.7"
+  }
+}

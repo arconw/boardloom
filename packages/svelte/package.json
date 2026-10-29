@@ -23,7 +23,14 @@
   ],
   "scripts": {
     "build": "node ../../scripts/build-package.mjs svelte",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "typecheck": "svelte-check --tsconfig ./tsconfig.json"
+  },
+  "dependencies": {
+    "@boardloom/core": "0.0.0",
+    "@boardloom/view-dom": "0.0.0"
+  },
+  "peerDependencies": {
+    "svelte": "^5.57.3"
   },
   "engines": {
     "node": ">=24.21.0 <25"

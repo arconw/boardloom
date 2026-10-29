@@ -1,0 +1,11 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@boardloom/core": ["../../.tmp/build/packages/core"],
+      "@boardloom/svelte": ["../../.tmp/build/packages/svelte"],
+      "@boardloom/view-dom": ["../../.tmp/build/packages/view-dom"]
+    }
+  }
+}
