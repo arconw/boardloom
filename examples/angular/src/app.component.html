@@ -1,0 +1,155 @@
+<main class="example">
+  <header class="example__header">
+    <div>
+      <h1>Boardloom Angular example</h1>
+      <p>
+        Synthetic revenue data. The board is rendered by @boardloom/angular from the built package
+        in an Angular standalone component.
+      </p>
+      <p class="example__note" id="locale-note">
+        Locale selection changes number, date and timezone presentation. UI labels remain English
+        until T17.
+      </p>
+    </div>
+    <dl class="example__facts" id="example-lifecycle">
+      <div>
+        <dt>Locale</dt>
+        <dd id="example-locale">{{ locale() }}</dd>
+      </div>
+      <div>
+        <dt>Timezone</dt>
+        <dd id="example-timezone">{{ timezone() }}</dd>
+      </div>
+      <div>
+        <dt>Adapter ready</dt>
+        <dd id="example-ready">{{ readyCount() }}</dd>
+      </div>
+      <div>
+        <dt>Adapter disposed</dt>
+        <dd id="example-disposed">{{ disposedCount() }}</dd>
+      </div>
+      <div>
+        <dt>Retained</dt>
+        <dd id="example-retained">{{ retainedSessions().length }}</dd>
+      </div>
+      <div>
+        <dt>Active instance</dt>
+        <dd id="example-active">{{ activeCount() }}</dd>
+      </div>
+      <div>
+        <dt>View</dt>
+        <dd id="example-view">{{ instance()?.viewId ?? "none" }}</dd>
+      </div>
+    </dl>
+  </header>
+
+  <section class="example__controls" aria-label="Example controls">
+    <label>
+      Locale
+      <select id="locale-select" [value]="locale()" (change)="setLocale($event)">
+        @for (value of locales; track value) {
+          <option [value]="value">{{ value }}</option>
+        }
+      </select>
+    </label>
+    <label>
+      Timezone
+      <select id="timezone-select" [value]="timezone()" (change)="setTimezone($event)">
+        @for (value of timezones; track value) {
+          <option [value]="value">{{ value }}</option>
+        }
+      </select>
+    </label>
+    <label class="example__toggle">
+      <input
+        id="messages-toggle"
+        type="checkbox"
+        [checked]="overrideMessages()"
+        (change)="setOverrideMessages($event)"
+      />
+      Host message override
+    </label>
+    <label class="example__toggle">
+      <input
+        id="variant-toggle"
+        type="checkbox"
+        [checked]="variant()"
+        (change)="setVariant($event)"
+      />
+      Load variant document
+    </label>
+    <button id="host-editor" type="button" (click)="switchToEditor()">Host editor</button>
+    <button id="host-viewer" type="button" (click)="switchToViewer()">Host viewer</button>
+    <button id="focus-content" type="button" (click)="focusContent()">Focus content</button>
+    <button id="export-document" type="button" (click)="exportDocument()">Export document</button>
+    <button id="toggle-mount" type="button" (click)="toggleMount()">
+      {{ mounted() ? "Unmount board" : "Mount board" }}
+    </button>
+  </section>
+
+  <p class="example__status" id="example-action" role="status">{{ action() }}</p>
+  <div class="example__log">
+    <span>Last event: </span>
+    <code id="last-event">{{ lastEvent() }}</code>
+    <ol id="event-log">
+      @for (event of events(); track $index) {
+        <li>{{ event }}</li>
+      }
+    </ol>
+  </div>
+  @if (exported() === "") {
+  } @else {
+    <pre id="export-preview" class="example__export">{{ exported() }}</pre>
+  }
+
+  @if (retainedSessions().length === 0) {
+  } @else {
+    <section class="example__retained" id="retained-sessions" aria-label="Retained dirty sessions">
+      <h2>Retained dirty sessions</h2>
+      <p>These sessions keep their draft and listeners until you apply or discard them.</p>
+      <ul>
+        @for (session of retainedSessions(); track session.viewId) {
+          <li [attr.data-retained-view]="session.viewId">
+            <code>{{ session.viewId }}</code>
+            <button
+              type="button"
+              data-retained-action="apply"
+              (click)="resolveRetained(session, 'apply')"
+            >
+              Apply draft
+            </button>
+            <button
+              type="button"
+              data-retained-action="cancel"
+              (click)="resolveRetained(session, 'cancel')"
+            >
+              Discard draft
+            </button>
+          </li>
+        }
+      </ul>
+    </section>
+  }
+
+  <section class="example__board" id="example-board" aria-label="Boardloom board host">
+    @if (mounted()) {
+      <boardloom-view
+        #board
+        [document]="boardDocument()"
+        [datasetProvider]="provider"
+        [locale]="locale()"
+        [timezone]="timezone()"
+        [messages]="messages()"
+        [mode]="viewMode()"
+        [lease]="lease()"
+        provenance="Angular example"
+        (event)="recordEvent($event)"
+        (modeChange)="onModeChange($event)"
+        (ready)="onReady($event)"
+        (disposed)="onDisposed()"
+        (adapterError)="onAdapterError($event)"
+        (documentExport)="onDocumentExport($event)"
+      ></boardloom-view>
+    }
+  </section>
+</main>

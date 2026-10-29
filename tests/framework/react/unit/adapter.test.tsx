@@ -392,6 +392,88 @@ describe("T14 React adapter", () => {
     rendered.unmount();
   });
 
+  it("ends the imperative session and keeps repeated cleanup idempotent", () => {
+    const document = reactExampleDocument();
+    const provider = reactExampleProvider();
+    let disposed = 0;
+    const rendered = renderBoard({
+      document,
+      datasetProvider: provider,
+      onDispose: () => {
+        disposed += 1;
+      },
+    });
+    const handle = rendered.ref.current;
+    expect(handle).not.toBeNull();
+    if (handle === null) {
+      return;
+    }
+    act(() => {
+      expect(handle.unmount({ draftDecision: "cancel" }).ok).toBe(true);
+    });
+    expect(handle.disposed).toBe(true);
+    expect(handle.mounted).toBe(false);
+    expect(() => handle.space).toThrow();
+    expect(disposed).toBe(1);
+    expect(rendered.container.querySelectorAll(".boardloom")).toHaveLength(0);
+    act(() => {
+      expect(handle.unmount().ok).toBe(true);
+    });
+    expect(disposed).toBe(1);
+    rendered.rerender({
+      document,
+      datasetProvider: provider,
+      locale: "fr",
+      onDispose: () => {
+        disposed += 1;
+      },
+    });
+    expect(rendered.container.querySelectorAll(".boardloom")).toHaveLength(0);
+    expect(handle.mounted).toBe(false);
+    expect(disposed).toBe(1);
+    rendered.unmount();
+    expect(disposed).toBe(1);
+  });
+
+  it("keeps imperative dispose terminal and idempotent", () => {
+    const document = reactExampleDocument();
+    const provider = reactExampleProvider();
+    let disposed = 0;
+    const rendered = renderBoard({
+      document,
+      datasetProvider: provider,
+      onDispose: () => {
+        disposed += 1;
+      },
+    });
+    const handle = rendered.ref.current;
+    if (handle === null) {
+      throw new Error("the board is not mounted");
+    }
+    act(() => {
+      expect(handle.dispose({ draftDecision: "cancel" }).ok).toBe(true);
+    });
+    expect(handle.disposed).toBe(true);
+    expect(disposed).toBe(1);
+    act(() => {
+      expect(handle.dispose().ok).toBe(true);
+      expect(handle.unmount().ok).toBe(true);
+    });
+    expect(disposed).toBe(1);
+    rendered.rerender({
+      document,
+      datasetProvider: provider,
+      locale: "de",
+      onDispose: () => {
+        disposed += 1;
+      },
+    });
+    expect(rendered.container.querySelectorAll(".boardloom")).toHaveLength(0);
+    expect(disposed).toBe(1);
+    rendered.unmount();
+    expect(disposed).toBe(1);
+  });
+
   it("disposes only owned spaces and leaves host spaces alive", () => {
     const document = reactExampleDocument();
     const { runtime } = createViewerRuntime();
@@ -406,6 +488,47 @@ describe("T14 React adapter", () => {
     expect(created.value.disposed).toBe(false);
     expect(runtime.disposed).toBe(false);
     created.value.dispose();
+    runtime.dispose();
+  });
+
+  it("ends the session when a host-owned space is disposed", () => {
+    const document = reactExampleDocument();
+    const { runtime } = createViewerRuntime();
+    const created = runtime.createSpace({ document });
+    expect(created.ok).toBe(true);
+    if (!created.ok) {
+      return;
+    }
+    const space = created.value;
+    let disposed = 0;
+    const rendered = renderBoard({
+      space,
+      onDispose: () => {
+        disposed += 1;
+      },
+    });
+    const handle = rendered.ref.current;
+    if (handle === null) {
+      throw new Error("the board is not mounted");
+    }
+    act(() => {
+      space.dispose();
+    });
+    expect(disposed).toBe(1);
+    expect(handle.disposed).toBe(true);
+    expect(handle.mounted).toBe(false);
+    expect(rendered.container.querySelectorAll(".boardloom")).toHaveLength(0);
+    rendered.rerender({
+      space,
+      locale: "de",
+      onDispose: () => {
+        disposed += 1;
+      },
+    });
+    expect(rendered.container.querySelectorAll(".boardloom")).toHaveLength(0);
+    expect(disposed).toBe(1);
+    rendered.unmount();
+    expect(disposed).toBe(1);
     runtime.dispose();
   });
 
@@ -724,6 +847,99 @@ describe("T14 React adapter", () => {
     expect(space.disposed).toBe(true);
     rendered.unmount();
   });
+  it("ignores events and disposal from a retained session's space", () => {
+    const firstDocument = reactExampleDocument();
+    const provider = reactExampleProvider();
+    const errors: BoardloomAdapterError[] = [];
+    const events: SpaceEvent[] = [];
+    let disposed = 0;
+    const rendered = renderBoard({
+      document: firstDocument,
+      datasetProvider: provider,
+      onEvent: (event) => events.push(event),
+      onDispose: () => {
+        disposed += 1;
+      },
+      onError: (error) => errors.push(error),
+    });
+    const handle = rendered.ref.current;
+    if (handle === null) {
+      throw new Error("the board is not mounted");
+    }
+    const firstSpace = handle.space;
+    makeDirtyDraft(handle);
+    const secondDocument = {
+      ...reactExampleDocument(),
+      id: "react-adapter-board-variant",
+      title: "Assessment overview variant",
+    };
+    rendered.rerender({
+      document: secondDocument,
+      datasetProvider: provider,
+      onEvent: (event) => events.push(event),
+      onDispose: () => {
+        disposed += 1;
+      },
+      onError: (error) => errors.push(error),
+    });
+    const retained = errors[0]?.retained;
+    expect(retained).toBeDefined();
+    const liveHandle = rendered.ref.current;
+    expect(liveHandle?.mounted).toBe(true);
+    const liveInstance = viewerRoot(rendered.container).getAttribute("data-boardloom-instance");
+    const retainedSpaceId = firstSpace.id;
+    const retainedEvents = events.filter((event) => event.spaceId === retainedSpaceId).length;
+    firstSpace.setLocale({ locale: "de" });
+    expect(events.filter((event) => event.spaceId === retainedSpaceId)).toHaveLength(
+      retainedEvents,
+    );
+    firstSpace.dispose();
+    expect(disposed).toBe(0);
+    expect(rendered.ref.current?.mounted).toBe(true);
+    expect(rendered.container.querySelectorAll(".boardloom")).toHaveLength(1);
+    expect(viewerRoot(rendered.container).getAttribute("data-boardloom-instance")).toBe(
+      liveInstance,
+    );
+    rendered.rerender({
+      document: secondDocument,
+      datasetProvider: provider,
+      locale: "fr",
+      onEvent: (event) => events.push(event),
+      onDispose: () => {
+        disposed += 1;
+      },
+      onError: (error) => errors.push(error),
+    });
+    expect(viewerRoot(rendered.container).getAttribute("data-boardloom-locale")).toBe("fr");
+    expect(viewerRoot(rendered.container).getAttribute("data-boardloom-instance")).toBe(
+      liveInstance,
+    );
+    expect(disposed).toBe(0);
+    rendered.unmount();
+    expect(disposed).toBe(1);
+  });
+
+  it("emits onDispose after adapter-initiated teardown completes", () => {
+    const observed = { roots: -1, container: null as HTMLElement | null };
+    const rendered = renderBoard({
+      document: reactExampleDocument(),
+      datasetProvider: reactExampleProvider(),
+      onDispose: () => {
+        observed.roots = observed.container?.querySelectorAll(".boardloom").length ?? -1;
+      },
+    });
+    observed.container = rendered.container;
+    const handle = rendered.ref.current;
+    if (handle === null) {
+      throw new Error("the board is not mounted");
+    }
+    act(() => {
+      expect(handle.unmount({ draftDecision: "cancel" }).ok).toBe(true);
+    });
+    expect(observed.roots).toBe(0);
+    rendered.unmount();
+  });
+
   it("keeps one session when function-bearing definitions are recreated inline", () => {
     const document = reactExampleDocument();
     const provider = reactExampleProvider();
@@ -745,10 +961,18 @@ describe("T14 React adapter", () => {
     rendered.rerender({
       document,
       datasetProvider: provider,
+      locale: "de",
+      timezone: "Europe/Berlin",
+      messages: { "mode.viewer": "Reader", "mode.editor": "Author" },
       ...second,
       onError: (error) => errors.push(error),
     });
     expect(viewerRoot(rendered.container).getAttribute("data-boardloom-instance")).toBe(instance);
+    expect(viewerRoot(rendered.container).getAttribute("data-boardloom-locale")).toBe("de");
+    expect(viewerRoot(rendered.container).getAttribute("data-boardloom-timezone")).toBe(
+      "Europe/Berlin",
+    );
+    expect(modeButton(rendered.container, "viewer").textContent).toBe("Reader");
     expect(rendered.container.querySelectorAll(".boardloom")).toHaveLength(1);
     expect(errors).toHaveLength(1);
     expect(errors[0]?.phase).toBe("input");
@@ -761,6 +985,9 @@ describe("T14 React adapter", () => {
     rendered.rerender({
       document,
       datasetProvider: provider,
+      locale: "de",
+      timezone: "Europe/Berlin",
+      messages: { "mode.viewer": "Reader", "mode.editor": "Author" },
       ...third,
       onError: (error) => errors.push(error),
     });

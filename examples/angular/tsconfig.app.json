@@ -1,0 +1,14 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "baseUrl": ".",
+    "paths": {
+      "@boardloom/core": ["../../.tmp/build/packages/core"],
+      "@boardloom/angular": ["../../.tmp/build/packages/angular"],
+      "@boardloom/view-dom": ["../../.tmp/build/packages/view-dom"]
+    }
+  },
+  "files": ["src/main.ts"],
+  "include": ["src/**/*.d.ts"]
+}

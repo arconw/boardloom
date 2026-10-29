@@ -41,9 +41,21 @@ const stagingDirectory = path.join(
 rmSync(stagingDirectory, { recursive: true, force: true });
 mkdirSync(path.join(stagingDirectory, "dist"), { recursive: true });
 
-const tscPath = path.join(repoRoot, "node_modules", "typescript", "bin", "tsc");
+const usesAngularCompiler = packageInfo.manifest.peerDependencies?.["@angular/core"] !== undefined;
+const compilerPath = usesAngularCompiler
+  ? path.join(
+      repoRoot,
+      "node_modules",
+      "@angular",
+      "compiler-cli",
+      "bundles",
+      "src",
+      "bin",
+      "ngc.js",
+    )
+  : path.join(repoRoot, "node_modules", "typescript", "bin", "tsc");
 run(process.execPath, [
-  tscPath,
+  compilerPath,
   "-p",
   path.join(packageDirectory, "tsconfig.json"),
   "--outDir",

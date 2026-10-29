@@ -1,0 +1,30 @@
+{
+  "name": "@boardloom/example-angular",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Runnable Boardloom Angular example",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "dev": "ng serve --port 4200",
+    "build": "ng build",
+    "preview": "ng serve --port 4200",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "typecheck:built": "tsc -p tsconfig.app.json --noEmit"
+  },
+  "dependencies": {
+    "@angular/common": "21.2.25",
+    "@angular/compiler": "21.2.25",
+    "@angular/core": "21.2.25",
+    "@angular/platform-browser": "21.2.25",
+    "@boardloom/angular": "0.0.0",
+    "@boardloom/core": "0.0.0",
+    "@boardloom/view-dom": "0.0.0",
+    "rxjs": "7.8.2",
+    "tslib": "2.8.1"
+  },
+  "devDependencies": {
+    "@angular/build": "21.2.25",
+    "@angular/cli": "21.2.25"
+  }
+}
