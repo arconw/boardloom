@@ -9,14 +9,12 @@ import {
   type BoardSpace,
   type BoardView,
   type BoardloomRuntime,
-  type Diagnostic,
   type EditorLease,
   type Result,
   type ViewMode,
 } from "@boardloom/core";
-import { BUILT_IN_BLOCK_TYPES } from "./built-in-blocks.js";
-import { BUILT_IN_RENDERERS } from "./built-in-renderers.js";
-import { createBlockRegistry } from "./block-registry.js";
+import { createBlockRegistry, type BlockTypeDefinition } from "./block-registry.js";
+import { createBoardloomExtensions, type BoardloomExtensions } from "./extensions.js";
 import { createViewMessages, type ViewMessages } from "./messages.js";
 import { claimMountedView, isMountedView, releaseMountedView } from "./mount-registry.js";
 import type { MountBoardViewOptions, BoardViewHandle } from "./types.js";
@@ -27,6 +25,34 @@ interface ResolvedSpace {
   readonly runtime: BoardloomRuntime | null;
   readonly ownsRuntime: boolean;
   readonly ownsSpace: boolean;
+}
+
+function sameBlockDefinition(left: BlockTypeDefinition, right: BlockTypeDefinition): boolean {
+  return (
+    left.type === right.type &&
+    left.version === right.version &&
+    left.apiVersion === right.apiVersion &&
+    left.styles === right.styles &&
+    left.createSurface === right.createSurface
+  );
+}
+
+function sameRendererDefinition(
+  left: import("@boardloom/core").RendererDefinition<HTMLElement>,
+  right: import("@boardloom/core").RendererDefinition<HTMLElement>,
+): boolean {
+  return (
+    left.id === right.id &&
+    left.version === right.version &&
+    left.apiVersion === right.apiVersion &&
+    left.kind === right.kind &&
+    left.styles === right.styles &&
+    left.explicitOnly === right.explicitOnly &&
+    left.mount === right.mount &&
+    left.validate === right.validate &&
+    JSON.stringify(left.visualizations) === JSON.stringify(right.visualizations) &&
+    JSON.stringify(left.capabilities) === JSON.stringify(right.capabilities)
+  );
 }
 
 function cleanup(
@@ -50,7 +76,10 @@ function cleanup(
   }
 }
 
-function resolveSpace(options: MountBoardViewOptions): Result<ResolvedSpace> {
+function resolveSpace(
+  options: MountBoardViewOptions,
+  extensions: BoardloomExtensions | null,
+): Result<ResolvedSpace> {
   if (options.space !== undefined) {
     if (options.space.disposed) {
       return fail([createDiagnostic(DIAGNOSTIC_CODES.SPACE_DISPOSED, "space")]);
@@ -75,7 +104,19 @@ function resolveSpace(options: MountBoardViewOptions): Result<ResolvedSpace> {
   }
   let runtime: BoardloomRuntime;
   try {
-    runtime = options.runtime ?? createRuntime(options.runtimeOptions);
+    const runtimeOptions = options.runtimeOptions;
+    runtime =
+      options.runtime ??
+      createRuntime({
+        ...runtimeOptions,
+        ...(runtimeOptions?.extensions === undefined && extensions !== null
+          ? { extensions: extensions.core }
+          : {}),
+        blockTypes: [
+          ...(runtimeOptions?.blockTypes ?? []),
+          ...(options.blockTypes ?? []).map((definition) => definition.type),
+        ],
+      });
   } catch (error) {
     return fail(failureFrom(error, "runtime"));
   }
@@ -95,6 +136,13 @@ function resolveSpace(options: MountBoardViewOptions): Result<ResolvedSpace> {
     ...(options.locale === undefined ? {} : { locale: options.locale }),
     ...(options.timezone === undefined ? {} : { timezone: options.timezone }),
     ...(options.datasetProvider === undefined ? {} : { datasetProvider: options.datasetProvider }),
+    ...(options.extensionSelection === undefined
+      ? {}
+      : { extensionSelection: options.extensionSelection }),
+    blockTypes: [
+      ...(options.blockTypes ?? []).map((definition) => definition.type),
+      ...(extensions?.blocks.list().map((definition) => definition.type) ?? []),
+    ],
   });
   if (!created.ok) {
     if (ownsRuntime) {
@@ -161,10 +209,6 @@ function buildMessages(
   } catch (error) {
     return fail(failureFrom(error, "messages"));
   }
-}
-
-function registryFailure(diagnostics: readonly Diagnostic[]): Result<never> {
-  return fail(diagnostics);
 }
 
 interface ExternalViewSession {
@@ -244,6 +288,134 @@ export function mountBoardView(
       }),
     ]);
   }
+  let extensions: BoardloomExtensions;
+  let ownsExtensions = false;
+  if (options.extensions !== undefined) {
+    if (options.extensions.disposed) {
+      return fail([
+        createDiagnostic(DIAGNOSTIC_CODES.EXTENSION_INVALID, "extensions", {
+          message: "The supplied extension registry has already been disposed.",
+        }),
+      ]);
+    }
+    extensions = options.extensions;
+    const pendingBlocks = new Map<string, BlockTypeDefinition>();
+    for (const definition of options.blockTypes ?? []) {
+      const existing = extensions.blocks.get(definition.type);
+      if (existing !== undefined && !sameBlockDefinition(existing, definition)) {
+        return fail([
+          createDiagnostic(
+            DIAGNOSTIC_CODES.EXTENSION_DUPLICATE,
+            `extensions/block/${definition.type}`,
+            {
+              message: `The block type ${definition.type} is already registered with a different definition.`,
+              relatedIds: [definition.type],
+            },
+          ),
+        ]);
+      }
+      const pending = pendingBlocks.get(definition.type);
+      if (pending !== undefined && !sameBlockDefinition(pending, definition)) {
+        return fail([
+          createDiagnostic(
+            DIAGNOSTIC_CODES.EXTENSION_DUPLICATE,
+            `extensions/block/${definition.type}`,
+            {
+              message: `The block type ${definition.type} is supplied with conflicting definitions.`,
+              relatedIds: [definition.type],
+            },
+          ),
+        ]);
+      }
+      pendingBlocks.set(definition.type, definition);
+    }
+    const newBlocks = [...pendingBlocks.values()].filter(
+      (definition) => !extensions.blocks.has(definition.type),
+    );
+    const blockProbe = createBlockRegistry([...extensions.blocks.list(), ...newBlocks]);
+    if (!blockProbe.ok) {
+      return blockProbe;
+    }
+
+    const pendingRenderers = new Map<
+      string,
+      import("@boardloom/core").RendererDefinition<HTMLElement>
+    >();
+    for (const definition of options.renderers ?? []) {
+      const existing = extensions.renderers.get(definition.id);
+      if (existing !== undefined && !sameRendererDefinition(existing, definition)) {
+        return fail([
+          createDiagnostic(
+            DIAGNOSTIC_CODES.EXTENSION_DUPLICATE,
+            `extensions/renderer/${definition.id}`,
+            {
+              message: `The renderer ${definition.id} is already registered with a different definition.`,
+              relatedIds: [definition.id],
+            },
+          ),
+        ]);
+      }
+      const pending = pendingRenderers.get(definition.id);
+      if (pending !== undefined && !sameRendererDefinition(pending, definition)) {
+        return fail([
+          createDiagnostic(
+            DIAGNOSTIC_CODES.EXTENSION_DUPLICATE,
+            `extensions/renderer/${definition.id}`,
+            {
+              message: `The renderer ${definition.id} is supplied with conflicting definitions.`,
+              relatedIds: [definition.id],
+            },
+          ),
+        ]);
+      }
+      pendingRenderers.set(definition.id, definition);
+    }
+    const newRenderers = [...pendingRenderers.values()].filter(
+      (definition) => !extensions.renderers.has(definition.id),
+    );
+    const rendererProbe = createRendererRegistry([...extensions.renderers.list(), ...newRenderers]);
+    if (!rendererProbe.ok) {
+      return rendererProbe;
+    }
+    for (const definition of newBlocks) {
+      const registered = extensions.blocks.register(definition);
+      if (!registered.ok) {
+        return registered;
+      }
+    }
+    for (const definition of newRenderers) {
+      const registered = extensions.renderers.register(definition);
+      if (!registered.ok) {
+        return registered;
+      }
+    }
+  } else {
+    const created = createBoardloomExtensions({
+      ...(options.blockTypes === undefined ? {} : { blockTypes: options.blockTypes }),
+      ...(options.renderers === undefined ? {} : { renderers: options.renderers }),
+    });
+    if (!created.ok) {
+      return created;
+    }
+    extensions = created.value;
+    ownsExtensions = true;
+  }
+  const cleanupAndDispose = (
+    spaceToClean: BoardSpace | null,
+    viewToClean: BoardView | null,
+    runtimeToClean: BoardloomRuntime | null,
+    ownershipToClean: {
+      readonly ownsSpace: boolean;
+      readonly ownsView: boolean;
+      readonly ownsRuntime: boolean;
+    },
+  ): void => {
+    cleanup(spaceToClean, viewToClean, runtimeToClean, ownershipToClean);
+    if (ownsExtensions) {
+      extensions.dispose();
+    }
+  };
+
   let externalLocaleBefore: ReturnType<BoardSpace["getSnapshot"]> | null = null;
   if (
     options.space !== undefined &&
@@ -264,14 +436,14 @@ export function mountBoardView(
       timezone: externalLocaleBefore.timezone,
     });
   };
-  const resolved = resolveSpace(options);
+  const resolved = resolveSpace(options, extensions);
   if (!resolved.ok) {
     return resolved;
   }
   const space = resolved.value.space;
   const viewResult = resolveView(options, space);
   if (!viewResult.ok) {
-    cleanup(space, null, resolved.value.runtime, {
+    cleanupAndDispose(space, null, resolved.value.runtime, {
       ownsSpace: resolved.value.ownsSpace,
       ownsView: false,
       ownsRuntime: resolved.value.ownsRuntime,
@@ -294,7 +466,7 @@ export function mountBoardView(
     try {
       expectedExternalSession = captureExternalViewSession(options.view, space);
     } catch (error) {
-      cleanup(space, view, resolved.value.runtime, ownership);
+      cleanupAndDispose(space, view, resolved.value.runtime, ownership);
       rollbackExternalLocale();
       return fail([
         createDiagnostic(DIAGNOSTIC_CODES.VIEW_SESSION_RESTORE_FAILED, "view", {
@@ -309,7 +481,7 @@ export function mountBoardView(
       expectedExternalSession.lease,
     );
     if (!supported.ok) {
-      cleanup(space, view, resolved.value.runtime, ownership);
+      cleanupAndDispose(space, view, resolved.value.runtime, ownership);
       rollbackExternalLocale();
       return fail([
         createDiagnostic(DIAGNOSTIC_CODES.VIEW_SESSION_RESTORE_FAILED, "view", {
@@ -322,25 +494,12 @@ export function mountBoardView(
   }
   const messages = buildMessages(space, options.messages);
   if (!messages.ok) {
-    cleanup(space, view, resolved.value.runtime, ownership);
+    cleanupAndDispose(space, view, resolved.value.runtime, ownership);
     rollbackExternalLocale();
     return messages;
   }
-  const registryDefinitions = [...BUILT_IN_BLOCK_TYPES, ...(options.blockTypes ?? [])];
-  const registry = createBlockRegistry(registryDefinitions);
-  if (!registry.ok) {
-    cleanup(space, view, resolved.value.runtime, ownership);
-    rollbackExternalLocale();
-    return registryFailure(registry.diagnostics);
-  }
-  const renderers = createRendererRegistry([...BUILT_IN_RENDERERS, ...(options.renderers ?? [])]);
-  if (!renderers.ok) {
-    cleanup(space, view, resolved.value.runtime, ownership);
-    rollbackExternalLocale();
-    return registryFailure(renderers.diagnostics);
-  }
   if (!claimMountedView(view)) {
-    cleanup(space, view, resolved.value.runtime, ownership);
+    cleanupAndDispose(space, view, resolved.value.runtime, ownership);
     rollbackExternalLocale();
     return fail([
       createDiagnostic(DIAGNOSTIC_CODES.INVALID_ARGUMENT, "view", {
@@ -350,7 +509,7 @@ export function mountBoardView(
   }
   if (view.disposed || space.disposed) {
     releaseMountedView(view);
-    cleanup(space, view, resolved.value.runtime, ownership);
+    cleanupAndDispose(space, view, resolved.value.runtime, ownership);
     rollbackExternalLocale();
     return fail([
       createDiagnostic(
@@ -369,6 +528,7 @@ export function mountBoardView(
       ? {}
       : { onImportDocument: options.onImportDocument }),
     ...(options.onExport === undefined ? {} : { onExport: options.onExport }),
+    ...(ownsExtensions ? { ownedExtensions: extensions } : {}),
   };
   let host: ViewerHost;
   try {
@@ -378,14 +538,14 @@ export function mountBoardView(
       view,
       resolved.value.runtime,
       ownership,
-      registry.value,
-      renderers.value,
+      extensions.blocks,
+      extensions.renderers,
       messages.value,
       config,
     );
   } catch (error) {
     releaseMountedView(view);
-    cleanup(space, view, resolved.value.runtime, ownership);
+    cleanupAndDispose(space, view, resolved.value.runtime, ownership);
     rollbackExternalLocale();
     return fail(failureFrom(error, "viewer"));
   }
@@ -423,7 +583,7 @@ export function mountBoardView(
         expectedExternalSession === null
           ? ok(undefined)
           : restoreExternalView(view, expectedExternalSession);
-      cleanup(space, view, resolved.value.runtime, ownership);
+      cleanupAndDispose(space, view, resolved.value.runtime, ownership);
       rollbackExternalLocale();
       if (!restoration.ok && !deferredFailure.ok) {
         return fail([...deferredFailure.diagnostics, ...restoration.diagnostics]);

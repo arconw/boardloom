@@ -96,6 +96,8 @@ import { createViewMessages, pluralKey, type ViewMessages } from "./messages.js"
 import { realtimeText, type BoardloomRealtimeStatus } from "./realtime.js";
 import { renderDiagnosticList, renderErrorState } from "./states.js";
 import { themeTokenProperty } from "./theme-tokens.js";
+import { installScopedStyles, type ScopedStylesHandle } from "./plugin-styles.js";
+import type { BoardloomExtensions } from "./extensions.js";
 import type { BoardViewHandle, FocusTarget, UpdateBoardViewOptions } from "./types.js";
 
 let instanceSequence = 0;
@@ -172,6 +174,7 @@ interface ViewerConfig {
   onEvent?: (event: SpaceEvent) => void;
   onImportDocument?: (input: string, fileName: string) => Result<{ readonly spaceId: string }>;
   onExport?: (kind: "ui" | "host", serialization: BoardSerialization) => void;
+  ownedExtensions?: BoardloomExtensions;
 }
 
 type EditorConfirmation = "discard" | "release" | null;
@@ -540,6 +543,19 @@ function createSurfaceFailureSurface(
   };
 }
 
+function isUsableSurface(value: unknown): value is BlockSurface {
+  if (typeof value !== "object" || value === null) {
+    return false;
+  }
+  const element = (value as { readonly element?: unknown }).element;
+  return (
+    typeof element === "object" &&
+    element !== null &&
+    (element as { readonly nodeType?: unknown }).nodeType === 1 &&
+    typeof (element as { readonly append?: unknown }).append === "function"
+  );
+}
+
 export class ViewerHost implements BoardViewHandle {
   private readonly target: HTMLElement;
   private readonly doc: Document;
@@ -615,6 +631,7 @@ export class ViewerHost implements BoardViewHandle {
   private selectedBreakpoint: BoardBreakpoint = "desktop";
   private themeModeSelect: HTMLSelectElement | null = null;
   private readonly themeTokenInputs = new Map<string, HTMLInputElement>();
+  private pluginStyles: ScopedStylesHandle | null = null;
   private themeTokenNameInput: HTMLInputElement | null = null;
   private themeTokenValueInput: HTMLInputElement | null = null;
   private readonly pendingRemovedThemeTokens = new Set<string>();
@@ -1162,6 +1179,7 @@ export class ViewerHost implements BoardViewHandle {
     this.root = createElement(this.doc, "div", "boardloom bl-viewer");
     this.root.id = instanceId;
     this.root.setAttribute("data-boardloom-instance", instanceId);
+    this.root.setAttribute("data-boardloom-scope", instanceId);
     this.skipLink = createElement(this.doc, "a", "bl-skip-link");
     this.skipLink.setAttribute("href", `#${bodyId}`);
     this.header = createElement(this.doc, "header", "bl-header");
@@ -1426,6 +1444,26 @@ export class ViewerHost implements BoardViewHandle {
       this.root.addEventListener("input", this.onInput);
       this.root.addEventListener("keydown", this.onKeyDown);
       this.target.append(this.root);
+      const styleEntries = [
+        ...this.registry.list().map((definition) => ({
+          id: `block/${definition.type}`,
+          css: definition.styles ?? "",
+        })),
+        ...this.rendererRegistry.list().map((definition) => ({
+          id: `renderer/${definition.id}`,
+          css: definition.styles ?? "",
+        })),
+      ].filter((entry) => entry.css.trim() !== "");
+      if (styleEntries.length > 0) {
+        const styles = installScopedStyles(this.doc, instanceId, styleEntries);
+        if (!styles.ok) {
+          throw new BoardloomError(
+            styles.diagnostics[0] ??
+              createDiagnostic(DIAGNOSTIC_CODES.EXTENSION_STYLE_INVALID, "extensions/styles"),
+          );
+        }
+        this.pluginStyles = styles.value;
+      }
       this.unsubscribeSpace = space.subscribe((event) => this.handleEvent(event));
       const viewWindow = this.doc.defaultView as
         (Window & { readonly ResizeObserver?: typeof ResizeObserver }) | null;
@@ -4786,8 +4824,15 @@ export class ViewerHost implements BoardViewHandle {
     match?.focus();
   }
 
+  private themeTokensFor(document: BoardDocumentV1): Readonly<Record<string, string>> {
+    return Object.freeze({
+      ...this.spaceValue.getExtensionThemeTokens(),
+      ...(document.theme?.tokens ?? {}),
+    });
+  }
+
   private applyDocumentThemeTokens(document: BoardDocumentV1): void {
-    const tokens = document.theme?.tokens;
+    const tokens = this.themeTokensFor(document);
     const next = new Set<string>();
     if (tokens !== undefined) {
       for (const name of Object.getOwnPropertyNames(tokens)) {
@@ -5042,13 +5087,19 @@ export class ViewerHost implements BoardViewHandle {
     );
     let surface: BlockSurface;
     try {
-      surface =
+      const created =
         definition === undefined
           ? createUnknownSurface(
               this.doc,
               `The block type ${String(block.type)} is not registered in this viewer.`,
             )
           : definition.createSurface(environment);
+      surface = isUsableSurface(created)
+        ? created
+        : createSurfaceFailureSurface(
+            this.doc,
+            "The block surface factory did not return a usable element.",
+          );
     } catch (error) {
       surface = createSurfaceFailureSurface(
         this.doc,
@@ -5456,7 +5507,7 @@ export class ViewerHost implements BoardViewHandle {
           ? "dark"
           : "light";
     }
-    const tokens = document.theme?.tokens ?? {};
+    const tokens = this.themeTokensFor(document);
     return Object.freeze({
       mode,
       colors: resolveRendererColors(mode, tokens),
@@ -5680,6 +5731,9 @@ export class ViewerHost implements BoardViewHandle {
       }
     }
     this.blockElements.clear();
+    this.pluginStyles?.dispose();
+    this.pluginStyles = null;
+    this.config.ownedExtensions?.dispose();
     releaseMountedView(this.viewValue);
     this.root.remove();
     if (disposeSpace && this.ownsSpace && !this.spaceValue.disposed) {

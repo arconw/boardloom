@@ -7,6 +7,7 @@ import type {
   BoardSerialization,
   MessageDictionary,
   RendererDefinition,
+  ExtensionSelection,
   Result,
   RuntimeOptions,
   SpaceEvent,
@@ -14,6 +15,7 @@ import type {
   ViewMode,
   ViewSnapshot,
 } from "@boardloom/core";
+import type { BoardloomExtensions } from "./extensions.js";
 import type { BlockTypeDefinition } from "./block-registry.js";
 import type { BoardloomRealtimeStatus } from "./realtime.js";
 
@@ -34,6 +36,8 @@ export interface MountBoardViewOptions {
   readonly provenance?: string;
   readonly blockTypes?: readonly BlockTypeDefinition[];
   readonly renderers?: readonly RendererDefinition<HTMLElement>[];
+  readonly extensions?: BoardloomExtensions;
+  readonly extensionSelection?: ExtensionSelection;
   readonly onEvent?: (event: SpaceEvent) => void;
   readonly onImportDocument?: (
     input: string,

@@ -13,6 +13,7 @@ import {
   type Diagnostic,
   type EditorLease,
   type EventBatchHandle,
+  type ExtensionSelection,
   type ImportDocumentOptions,
   type MessageDictionary,
   type RendererDefinition,
@@ -22,6 +23,7 @@ import {
   type ThemeMode,
 } from "@boardloom/core";
 import { createViewMessages } from "./messages.js";
+import type { BoardloomExtensions } from "./extensions.js";
 import { mountBoardView } from "./mount.js";
 import type { BlockTypeDefinition } from "./block-registry.js";
 import type { BoardViewHandle } from "./types.js";
@@ -39,6 +41,8 @@ export interface MountBoardWorkspaceOptions {
   readonly provenance?: string;
   readonly blockTypes?: readonly BlockTypeDefinition[];
   readonly renderers?: readonly RendererDefinition<HTMLElement>[];
+  readonly extensions?: BoardloomExtensions;
+  readonly extensionSelection?: ExtensionSelection;
   readonly onEvent?: (event: SpaceEvent) => void;
 }
 
@@ -254,6 +258,10 @@ function mountEntry(
     ...(state.options.provenance === undefined ? {} : { provenance: state.options.provenance }),
     ...(state.options.blockTypes === undefined ? {} : { blockTypes: state.options.blockTypes }),
     ...(state.options.renderers === undefined ? {} : { renderers: state.options.renderers }),
+    ...(state.options.extensions === undefined ? {} : { extensions: state.options.extensions }),
+    ...(state.options.extensionSelection === undefined
+      ? {}
+      : { extensionSelection: state.options.extensionSelection }),
     onEvent: (event: SpaceEvent) => {
       deliverHostEvent(state, event);
       syncWorkspaceTabs(state);
@@ -428,7 +436,17 @@ export function mountBoardWorkspace(
     runtime = options.runtime;
   } else {
     try {
-      runtime = createRuntime(options.runtimeOptions);
+      const runtimeOptions = options.runtimeOptions;
+      runtime = createRuntime({
+        ...runtimeOptions,
+        ...(runtimeOptions?.extensions === undefined && options.extensions !== undefined
+          ? { extensions: options.extensions.core }
+          : {}),
+        blockTypes: [
+          ...(runtimeOptions?.blockTypes ?? []),
+          ...(options.blockTypes ?? []).map((definition) => definition.type),
+        ],
+      });
       ownsRuntime = true;
     } catch (error) {
       return fail(diagnosticList(error, "runtime"));
@@ -454,6 +472,13 @@ export function mountBoardWorkspace(
       ...(options.datasetProvider === undefined
         ? {}
         : { datasetProvider: options.datasetProvider }),
+      ...(options.extensionSelection === undefined
+        ? {}
+        : { extensionSelection: options.extensionSelection }),
+      blockTypes: [
+        ...(options.blockTypes ?? []).map((definition) => definition.type),
+        ...(options.extensions?.blocks.list().map((definition) => definition.type) ?? []),
+      ],
     });
     if (!created.ok) {
       if (ownsRuntime) {
