@@ -10,5 +10,6 @@ describe("T06 document theme token mapping", () => {
     expect(themeTokenProperty("chart-series-1")).toBe("--bl-chart-series-1");
     expect(themeTokenProperty("bl-color-focus")).toBe("--bl-color-focus");
     expect(themeTokenProperty("--bl-color-focus")).toBe("--bl-color-focus");
+    expect(themeTokenProperty("ext.brand-color")).toBe("--bl-ext-brand-color");
   });
 });

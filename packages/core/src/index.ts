@@ -583,9 +583,31 @@ export type {
   ViewSummary,
 } from "./types.js";
 
+export {
+  editorAddBlock,
+  editorBlockConsumesData,
+  editorDefaultBlock,
+  editorDeleteBlock,
+  editorDuplicateBlock,
+  editorMoveBlock,
+  editorReorderBlock,
+  editorResetBlock,
+  editorResizeBlock,
+  editorSetTheme,
+  editorUpdateBlock,
+} from "./editor-model.js";
+export type {
+  EditorAddBlockOptions,
+  EditorBlockPatch,
+  EditorMoveBlockChange,
+  EditorOperationContext,
+  EditorReorderDirection,
+  EditorResizeBlockChange,
+  EditorThemeInput,
+} from "./editor-model.js";
 export { restoreViewSession } from "./view.js";
 export type { BoardView, ViewCommands } from "./view.js";
-export type { BoardSpace } from "./space.js";
+export type { BoardSpace, EventBatchHandle } from "./space.js";
 
 export { createRuntime } from "./runtime.js";
 export type {

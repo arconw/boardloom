@@ -365,6 +365,10 @@ export function mountBoardView(
     ...(options.realtime === undefined ? {} : { realtime: options.realtime }),
     ...(options.provenance === undefined ? {} : { provenance: options.provenance }),
     ...(options.onEvent === undefined ? {} : { onEvent: options.onEvent }),
+    ...(options.onImportDocument === undefined
+      ? {}
+      : { onImportDocument: options.onImportDocument }),
+    ...(options.onExport === undefined ? {} : { onExport: options.onExport }),
   };
   let host: ViewerHost;
   try {

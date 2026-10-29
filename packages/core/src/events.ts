@@ -416,6 +416,7 @@ export class EventBus<T> {
   private hasActive = false;
   private activeValue: T | undefined;
   private activeTerminal = false;
+  private suspended = false;
 
   constructor(private readonly onListenerError: (error: unknown) => void) {}
 
@@ -466,7 +467,21 @@ export class EventBus<T> {
   }
 
   flush(): void {
+    if (this.suspended) {
+      return;
+    }
     this.drain();
+  }
+
+  suspend(): void {
+    this.suspended = true;
+  }
+
+  resume(deliverQueued: boolean): void {
+    this.suspended = false;
+    if (deliverQueued) {
+      this.drain();
+    }
   }
 
   emitTerminal(value: T, afterDelivered?: () => void): void {
@@ -482,7 +497,9 @@ export class EventBus<T> {
         ...(afterDelivered === undefined ? {} : { afterDelivered }),
       }),
     );
-    this.drain();
+    if (!this.suspended) {
+      this.drain();
+    }
   }
 
   emitFinal(value: T, afterDelivered?: () => void): void {
@@ -497,7 +514,9 @@ export class EventBus<T> {
         ...(afterDelivered === undefined ? {} : { afterDelivered }),
       }),
     );
-    this.drain();
+    if (!this.suspended) {
+      this.drain();
+    }
   }
 
   beginShutdown(): void {
@@ -518,7 +537,7 @@ export class EventBus<T> {
   }
 
   finishShutdown(): void {
-    if (this.dispatching) {
+    if (this.dispatching || this.suspended || this.queue.length > 0) {
       this.clearFinalPending = true;
       return;
     }

@@ -12,6 +12,7 @@ export const DIAGNOSTIC_CODES = Object.freeze({
   EDITOR_LEASE_CONFLICT: "EDITOR_LEASE_CONFLICT",
   EDITOR_LEASE_INVALID: "EDITOR_LEASE_INVALID",
   DRAFT_REQUIRES_DECISION: "DRAFT_REQUIRES_DECISION",
+  DISPOSAL_PARTIAL: "DISPOSAL_PARTIAL",
   DRAFT_HISTORY_EMPTY: "DRAFT_HISTORY_EMPTY",
   DRAFT_INVALID: "DRAFT_INVALID",
   REVISION_CONFLICT: "REVISION_CONFLICT",
@@ -164,6 +165,7 @@ export const DIAGNOSTIC_MESSAGES: Readonly<Record<string, string>> = Object.free
   EDITOR_LEASE_INVALID: "The editor lease does not belong to this space or is no longer active.",
   DRAFT_REQUIRES_DECISION:
     "The draft has unsaved changes and requires an explicit apply or cancel decision.",
+  DISPOSAL_PARTIAL: "Disposal stopped after some spaces were already resolved or closed.",
   DRAFT_HISTORY_EMPTY: "There is no draft change available in that direction.",
   DRAFT_INVALID: "The draft failed document validation and was not applied.",
   REVISION_CONFLICT:

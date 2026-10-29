@@ -37,6 +37,9 @@ const COLOR_TOKENS = new Set([
 ]);
 
 export function themeTokenProperty(name: string): string {
+  if (name.startsWith("ext.")) {
+    return `--bl-ext-${name.slice(4).replace(/[^a-z0-9-]/g, "-")}`;
+  }
   if (name.startsWith("--")) {
     return name;
   }

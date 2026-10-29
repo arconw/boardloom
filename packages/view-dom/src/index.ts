@@ -1,4 +1,10 @@
 export { mountBoardView } from "./mount.js";
+export { mountBoardWorkspace } from "./workspace.js";
+export type {
+  BoardWorkspaceHandle,
+  MountBoardWorkspaceOptions,
+  WorkspaceEntry,
+} from "./workspace.js";
 export {
   createBlockRegistry,
   type BlockRegistry,
