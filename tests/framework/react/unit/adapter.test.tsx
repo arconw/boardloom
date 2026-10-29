@@ -2,7 +2,7 @@
 import { StrictMode, act, createRef } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeAll, describe, expect, it } from "vitest";
-import { ENGLISH_MESSAGES, type BoardDocumentV1, type SpaceEvent } from "@boardloom/core";
+import { BUILT_IN_DICTIONARIES, type BoardDocumentV1, type SpaceEvent } from "@boardloom/core";
 import {
   BoardloomView,
   type BoardloomAdapterError,
@@ -210,7 +210,9 @@ describe("T14 React adapter", () => {
     expect(root.getAttribute("data-boardloom-timezone")).toBe("Europe/Berlin");
     expect(root.getAttribute("data-boardloom-locale")).toBe("de");
     expect(rendered.container.querySelectorAll(".boardloom")).toHaveLength(1);
-    expect(modeButton(rendered.container, "viewer").textContent).toBe("Viewer");
+    expect(modeButton(rendered.container, "viewer").textContent).toBe(
+      BUILT_IN_DICTIONARIES.de["mode.viewer"],
+    );
     const handle = rendered.ref.current;
     expect(handle?.mounted).toBe(true);
     expect(handle?.view.spaceId).toBe(handle?.space.id);
@@ -303,7 +305,53 @@ describe("T14 React adapter", () => {
     });
     expect(root.getAttribute("data-boardloom-instance")).toBe(instance);
     expect(modeButton(rendered.container, "viewer").textContent).toBe(
-      ENGLISH_MESSAGES["mode.viewer"],
+      BUILT_IN_DICTIONARIES.ja["mode.viewer"],
+    );
+    rendered.unmount();
+  });
+
+  it("forwards per-locale message dictionaries without recreating the board", () => {
+    const document = reactExampleDocument();
+    const provider = reactExampleProvider();
+    const rendered = renderBoard({
+      document,
+      datasetProvider: provider,
+      locale: "en",
+      timezone: "UTC",
+    });
+    const instance = viewerRoot(rendered.container).getAttribute("data-boardloom-instance");
+    rendered.rerender({
+      document,
+      datasetProvider: provider,
+      locale: "ja",
+      timezone: "Asia/Tokyo",
+      messageDictionaries: {
+        ja: {
+          "mode.viewer": "Host JA viewer",
+          "mode.editor": "Host JA editor",
+          "host.custom": "Host custom",
+        },
+      },
+    });
+    expect(viewerRoot(rendered.container).getAttribute("data-boardloom-instance")).toBe(instance);
+    expect(
+      rendered.ref.current?.messageDiagnostics.some(
+        (diagnostic) => diagnostic.code === "MESSAGE_UNKNOWN_KEY",
+      ),
+    ).toBe(true);
+    expect(modeButton(rendered.container, "viewer").textContent).toBe("Host JA viewer");
+    expect(modeButton(rendered.container, "editor").textContent).toBe("Host JA editor");
+    rendered.rerender({
+      document,
+      datasetProvider: provider,
+      locale: "en",
+      timezone: "UTC",
+      messageDictionaries: {
+        ja: { "mode.viewer": "Host JA viewer", "mode.editor": "Host JA editor" },
+      },
+    });
+    expect(modeButton(rendered.container, "viewer").textContent).toBe(
+      BUILT_IN_DICTIONARIES.en["mode.viewer"],
     );
     rendered.unmount();
   });
@@ -705,9 +753,10 @@ describe("T14 React adapter", () => {
     });
     await flush();
     expect(viewerRoot(rendered.container).getAttribute("data-boardloom-instance")).toBe(instance);
-    expect(rendered.container.querySelector(".bl-comparison-table")?.textContent ?? "").toBe(
-      tableText,
-    );
+    const localizedTableText =
+      rendered.container.querySelector(".bl-comparison-table")?.textContent ?? "";
+    expect(localizedTableText).not.toBe(tableText);
+    expect(localizedTableText).toContain(BUILT_IN_DICTIONARIES.ja["editor.comparison.primary"]);
     expect(
       rendered.container
         .querySelector("[data-comparison-rows]")

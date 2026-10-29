@@ -1,0 +1,67 @@
+{
+  "version": 1,
+  "sourceLanguage": "en",
+  "generatedOn": "2026-10-29",
+  "tool": "Google Translate public web endpoint (translate.googleapis.com/translate_a/t)",
+  "method": "Machine-assisted translation with brace placeholders tokenized before translation, restored afterwards, count placeholders substituted with locale plural-category representatives, and exact key/placeholder validation after generation. Arabic and Russian plural representatives were regenerated on 2026-10-29 by the same method to fix category forms.",
+  "certification": "No professional or native-speaker review; no certification claimed.",
+  "englishSource": "packages/core/src/ui-messages.ts and packages/core/src/diagnostics.ts via the built ENGLISH_MESSAGES export",
+  "pluralPolicy": "All six CLDR cardinal categories are present in every locale; unused categories keep the locale natural plural form.",
+  "files": {
+    "en": {
+      "path": "packages/core/src/locales/en.json",
+      "sha256": "8aafb35b69ba92cd3c168c69a2baf463dc0e922dbc2f4ca543e58efc7b192c75",
+      "keys": 668
+    },
+    "ru": {
+      "path": "packages/core/src/locales/ru.json",
+      "sha256": "c9abfcc120dd781d964f4fcbd08ecfb80a9766e940d0afce3bdd1bd4b1bad013",
+      "keys": 668
+    },
+    "es": {
+      "path": "packages/core/src/locales/es.json",
+      "sha256": "4b3103520b2b4fb8cb990156907b42dabebcb193083f5e0d8763fcf35715fda6",
+      "keys": 668
+    },
+    "fr": {
+      "path": "packages/core/src/locales/fr.json",
+      "sha256": "fa35f73cd272141fc171ee90476d9e13175bc06c9ea45e804b1ef1bec3c2ef14",
+      "keys": 668
+    },
+    "de": {
+      "path": "packages/core/src/locales/de.json",
+      "sha256": "7b140fecfc1a4ea14df74b296986a5347350f641c13548a8a82a0bfa9c484623",
+      "keys": 668
+    },
+    "pt-BR": {
+      "path": "packages/core/src/locales/pt-BR.json",
+      "sha256": "dd73660e2421649e22cd88f209a68aa062e9d91907775e0acad936f8b3f66a12",
+      "keys": 668
+    },
+    "zh-CN": {
+      "path": "packages/core/src/locales/zh-CN.json",
+      "sha256": "83f58b691b0f022ef01fde4746d6b78466e68af8c479e591847fe19251677041",
+      "keys": 668
+    },
+    "ja": {
+      "path": "packages/core/src/locales/ja.json",
+      "sha256": "5bee63d8d55306885c39b6ffeda47e018f1e4b815e13822c9cab2c24bf603454",
+      "keys": 668
+    },
+    "ko": {
+      "path": "packages/core/src/locales/ko.json",
+      "sha256": "bfdd46fd31ac166ba61e8344ef423c0a5cc85a89724138b2f48822c9d700e489",
+      "keys": 668
+    },
+    "ar": {
+      "path": "packages/core/src/locales/ar.json",
+      "sha256": "eb269c73e1d2dfa1268c13a8f8b86af22751c480a180611fd010b3fda7ab9613",
+      "keys": 668
+    },
+    "hi": {
+      "path": "packages/core/src/locales/hi.json",
+      "sha256": "f6d79fa06f6e8ccc0b9276d3ad0b8498af81bbacccbbde04839ee06f0e66dc9f",
+      "keys": 668
+    }
+  }
+}

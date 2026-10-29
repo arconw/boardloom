@@ -141,7 +141,17 @@ describe("T13 public extension registries", () => {
       "reference.formatter",
     ]);
     expect(extensions.value.core.list("messageDictionary").map((entry) => entry.id)).toEqual([
+      "reference.messages.ar",
+      "reference.messages.de",
       "reference.messages.en",
+      "reference.messages.es",
+      "reference.messages.fr",
+      "reference.messages.hi",
+      "reference.messages.ja",
+      "reference.messages.ko",
+      "reference.messages.pt-BR",
+      "reference.messages.ru",
+      "reference.messages.zh-CN",
     ]);
     expect(extensions.value.core.list("theme").map((entry) => entry.id)).toEqual([
       "reference.theme",
@@ -157,6 +167,9 @@ describe("T13 public extension registries", () => {
     expect(kinds).toContain("formatter");
     expect(kinds).toContain("messageDictionary");
     expect(kinds).toContain("theme");
+    const arabic = extensions.value.core.get("messageDictionary", "reference.messages.ar");
+    expect(arabic?.dictionary["plugin.reference.title"]).not.toBe("Reference tile");
+    expect(arabic?.dictionary["plugin.reference.title"]).toBeTypeOf("string");
     expect(extensions.value.core.resolveThemeTokens()).toEqual({
       "ext.reference-accent": "#0d6964",
     });

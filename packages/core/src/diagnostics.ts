@@ -107,6 +107,7 @@ export const DIAGNOSTIC_CODES = Object.freeze({
   MESSAGE_MISSING_PARAM: "MESSAGE_MISSING_PARAM",
   MESSAGE_INVALID_PARAM: "MESSAGE_INVALID_PARAM",
   MESSAGE_INVALID_DICTIONARY: "MESSAGE_INVALID_DICTIONARY",
+  MESSAGE_UNKNOWN_KEY: "MESSAGE_UNKNOWN_KEY",
   EXTENSION_INVALID: "EXTENSION_INVALID",
   EXTENSION_DUPLICATE: "EXTENSION_DUPLICATE",
   EXTENSION_INCOMPATIBLE_API: "EXTENSION_INCOMPATIBLE_API",
@@ -126,6 +127,8 @@ export interface Diagnostic {
   readonly hint?: string;
   readonly relatedIds?: readonly string[];
   readonly source?: string;
+  readonly detailKey?: string;
+  readonly detailParams?: Readonly<Record<string, string | number | boolean | bigint>>;
 }
 
 export interface DiagnosticOptions {
@@ -134,6 +137,8 @@ export interface DiagnosticOptions {
   readonly relatedIds?: readonly string[];
   readonly source?: string;
   readonly message?: string;
+  readonly detailKey?: string;
+  readonly detailParams?: Readonly<Record<string, string | number | boolean | bigint>>;
 }
 
 export interface OperationSuccess<T> {
@@ -291,6 +296,7 @@ export const DIAGNOSTIC_MESSAGES: Readonly<Record<string, string>> = Object.free
   MESSAGE_MISSING_PARAM: "A message placeholder has no matching interpolation parameter.",
   MESSAGE_INVALID_PARAM: "Interpolation parameters must be plain scalar values.",
   MESSAGE_INVALID_DICTIONARY: "A message dictionary is not a plain string-to-string record.",
+  MESSAGE_UNKNOWN_KEY: "A host message key is not documented in the English message catalog.",
   EXTENSION_INVALID:
     "The extension definition is missing required metadata or has an invalid shape.",
   EXTENSION_DUPLICATE: "An extension with this kind and ID is already registered.",
@@ -303,6 +309,12 @@ export const DIAGNOSTIC_MESSAGES: Readonly<Record<string, string>> = Object.free
     "The extension style sheet is invalid or escapes the Boardloom host scope.",
 });
 
+export function defaultDiagnosticMessage(code: string): string {
+  return Object.hasOwn(DIAGNOSTIC_MESSAGES, code)
+    ? (DIAGNOSTIC_MESSAGES[code] ?? `Diagnostic ${code}`)
+    : `Diagnostic ${code}`;
+}
+
 export function createDiagnostic(
   code: string,
   path: string,
@@ -311,13 +323,17 @@ export function createDiagnostic(
   return Object.freeze({
     code,
     path,
-    message: options.message ?? DIAGNOSTIC_MESSAGES[code] ?? `Diagnostic ${code}`,
+    message: options.message ?? defaultDiagnosticMessage(code),
     severity: options.severity ?? "error",
     ...(options.hint === undefined ? {} : { hint: options.hint }),
     ...(options.relatedIds === undefined
       ? {}
       : { relatedIds: Object.freeze([...options.relatedIds]) }),
     ...(options.source === undefined ? {} : { source: options.source }),
+    ...(options.detailKey === undefined ? {} : { detailKey: options.detailKey }),
+    ...(options.detailParams === undefined
+      ? {}
+      : { detailParams: Object.freeze({ ...options.detailParams }) }),
   });
 }
 

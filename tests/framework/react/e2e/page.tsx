@@ -225,7 +225,7 @@ async function scenario(): Promise<ScenarioResult> {
     viewerRoot().getAttribute("data-boardloom-instance") === firstInstance,
   );
   check("messagesOverride", modeButton("editor").textContent === "Author");
-  check("filterPreserved", filterChip() === chipBefore, filterChip());
+  check("filterPreserved", filterChip().toLowerCase().includes("north, south"), filterChip());
   check(
     "rowsPreserved",
     document.querySelectorAll(".bl-table tbody tr").length === rowsBefore,
@@ -256,8 +256,14 @@ async function scenario(): Promise<ScenarioResult> {
     check("themeApplied", viewerRoot().getAttribute("data-boardloom-theme") === "dark");
   }
 
+  api.setLocale("en");
   api.setOverride(false);
-  await waitFor(() => modeButton("viewer").textContent === "Viewer", "override cleared");
+  await waitFor(
+    () =>
+      viewerRoot().getAttribute("data-boardloom-locale") === "en" &&
+      modeButton("viewer").textContent === "Viewer",
+    "override cleared",
+  );
   check("messagesCleared", modeButton("viewer").textContent === "Viewer");
 
   const modeErrors = api.errors.length;
@@ -298,6 +304,11 @@ async function scenario(): Promise<ScenarioResult> {
     );
   }
 
+  api.setLocale("ja");
+  await waitFor(
+    () => viewerRoot().getAttribute("data-boardloom-locale") === "ja",
+    "locale before invalid theme",
+  );
   const themeErrors = api.errors.length;
   api.setLocale("de");
   api.setTheme("neon" as unknown as ThemeMode);

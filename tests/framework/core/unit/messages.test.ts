@@ -1,8 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
+  BUILT_IN_DICTIONARIES,
   BoardloomError,
   ENGLISH_MESSAGES,
   createMessageProvider,
+  formatEnglishMessage,
+  selectMessageText,
   createRuntime,
   type MessageParams,
 } from "../../../../packages/core/src/index.js";
@@ -37,11 +40,51 @@ describe("message provider contract", () => {
     expect(invalid.diagnostics[0]?.code).toBe("MESSAGE_INVALID_PARAM");
   });
 
-  it("reports unknown keys without inventing another message", () => {
+  it("returns the documented neutral text for keys missing from every provider", () => {
     const provider = createMessageProvider({ locale: "en" });
     const result = provider.format("missing.key");
-    expect(result.text).toBe("missing.key");
+    expect(result.text).toBe(ENGLISH_MESSAGES["common.unknown"]);
+    expect(result.usedFallback).toBe(true);
     expect(result.diagnostics[0]?.code).toBe("MESSAGE_MISSING_KEY");
+    const localized = createMessageProvider({ locale: "ru" }).format("missing.key");
+    expect(localized.text).toBe(BUILT_IN_DICTIONARIES.ru["common.unknown"]);
+  });
+
+  it("formats English developer detail through the shared message interpolation", () => {
+    expect(formatEnglishMessage("viewer.filters.origin.group", { name: "Sample" })).toBe(
+      "Group: Sample",
+    );
+    expect(
+      formatEnglishMessage("diagnostic.detail.unitConflict", {
+        unit: "kg",
+        baseUnit: "lb",
+      }),
+    ).toBe('Unit "kg" conflicts with field unit "lb".');
+    expect(formatEnglishMessage("constructor")).toBe("constructor");
+  });
+
+  it("treats non-object interpolation parameters deterministically", () => {
+    const provider = createMessageProvider({ locale: "en" });
+    for (const params of [null, "name", 42, ["name"]]) {
+      const result = provider.format(
+        "viewer.filters.origin.group",
+        params as unknown as MessageParams,
+      );
+      expect(result.text).toBe("Group: ");
+      expect(result.diagnostics[0]?.code).toBe("MESSAGE_INVALID_PARAM");
+      expect(result.diagnostics.some((item) => item.code === "MESSAGE_MISSING_PARAM")).toBe(true);
+    }
+  });
+
+  it("reports unknown host dictionary keys without rejecting custom copy", () => {
+    const provider = createMessageProvider({
+      locale: "en",
+      dictionaries: { en: { "host.custom": "Custom copy" } },
+    });
+    expect(provider.format("host.custom").text).toBe("Custom copy");
+    expect(provider.diagnostics).toHaveLength(1);
+    expect(provider.diagnostics[0]?.code).toBe("MESSAGE_UNKNOWN_KEY");
+    expect(provider.diagnostics[0]?.path).toContain("host.custom");
   });
 
   it("selects plural forms with Intl.PluralRules", () => {
@@ -51,11 +94,21 @@ describe("message provider contract", () => {
     expect(provider.plural("common.selected", 2).text).toBe("2 selected");
   });
 
-  it("falls back to English for a locale without a built-in dictionary", () => {
+  it("uses the complete built-in locale dictionary without English fallback", () => {
     const provider = createMessageProvider({ locale: "ru" });
     const result = provider.format("common.apply");
-    expect(result.text).toBe("Apply");
-    expect(result.usedFallback).toBe(true);
+    expect(result.text).toBe("Применять");
+    expect(result.usedFallback).toBe(false);
+  });
+
+  it("falls back to English when a selected dictionary lacks a documented key", () => {
+    const result = selectMessageText(
+      { "common.apply": "Apply" },
+      ENGLISH_MESSAGES,
+      "common.cancel",
+    );
+    expect(result).toEqual({ text: "Cancel", usedFallback: true });
+    expect(selectMessageText({}, ENGLISH_MESSAGES, "missing.key")).toBeNull();
   });
 
   it("applies host overrides before the built-in fallback", () => {

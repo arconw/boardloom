@@ -57,13 +57,13 @@ import {
   type FilterRuntimeState,
 } from "./filter-model.js";
 import type { Logger } from "./logger.js";
+import { resolveLocaleConfig, type LocaleConfig, type LocaleConfigInput } from "./locale.js";
 import {
-  resolveLocaleConfig,
-  type BoardloomLocale,
-  type LocaleConfig,
-  type LocaleConfigInput,
-} from "./locale.js";
-import { createMessageProvider, type MessageDictionary, type MessageProvider } from "./messages.js";
+  createMessageProvider,
+  formatEnglishMessage,
+  type MessageDictionaries,
+  type MessageProvider,
+} from "./messages.js";
 import type { ExtensionSession } from "./extensions.js";
 import type { BoardMigrationReport } from "./migrations.js";
 import type {
@@ -111,11 +111,23 @@ export interface SpaceDependencies {
   readonly documentValidator: DocumentValidator;
   readonly validationCatalog?: BoardValidationCatalog;
   readonly formatterFactory: (config: LocaleConfig) => FormatterProvider;
-  readonly messageDictionaries: Readonly<Partial<Record<BoardloomLocale, MessageDictionary>>>;
+  readonly messageDictionaries: MessageDictionaries;
   readonly historyLimit: number;
   readonly forwardEvent: (event: SpaceEvent) => void;
   readonly onDisposed: (spaceId: string, lifetimeId: string) => void;
   readonly onTerminalDelivered: (spaceId: string, lifetimeId: string) => void;
+}
+
+function reportMessageDiagnostics(
+  logger: SpaceDependencies["logger"],
+  diagnostics: readonly Diagnostic[],
+): void {
+  for (const diagnostic of diagnostics) {
+    logger.warn("Boardloom message dictionary warning", {
+      code: diagnostic.code,
+      path: diagnostic.path,
+    });
+  }
 }
 
 export interface SpaceInitOptions extends CreateSpaceOptions {
@@ -271,6 +283,7 @@ class SpaceImpl implements BoardSpace {
       locale: options.localeConfig.locale,
       dictionaries: deps.messageDictionaries,
     });
+    reportMessageDiagnostics(deps.logger, this.messages.diagnostics);
     this.committedDocument = snapshotDocument(options.document as BoardDocument);
     this.validationDiagnostics = deepFreeze([...(options.warnings ?? [])]);
     this.createdAt = deps.clock.now();
@@ -504,7 +517,11 @@ class SpaceImpl implements BoardSpace {
     if (filter.viewerEditable !== true && options.allowLocked !== true) {
       return this.failWith([
         createDiagnostic(DIAGNOSTIC_CODES.VIEWER_READ_ONLY, `filters/${filterId}`, {
-          message: `Filter "${filterId}" is not viewer-editable.`,
+          message: formatEnglishMessage("diagnostic.detail.filter.notEditable", {
+            filter: filterId,
+          }),
+          detailKey: "diagnostic.detail.filter.notEditable",
+          detailParams: { filter: filterId },
           relatedIds: [filterId],
         }),
       ]);
@@ -525,7 +542,11 @@ class SpaceImpl implements BoardSpace {
           DIAGNOSTIC_CODES.FILTER_STATE_INVALID,
           `filterState/activeValues/${filterId}`,
           {
-            message: `The active value for "${filterId}" does not match the declared filter operator and field type.`,
+            message: formatEnglishMessage("diagnostic.detail.filter.invalidValue", {
+              filter: filterId,
+            }),
+            detailKey: "diagnostic.detail.filter.invalidValue",
+            detailParams: { filter: filterId },
             relatedIds: [filterId],
           },
         ),
@@ -579,7 +600,11 @@ class SpaceImpl implements BoardSpace {
     if (filter.viewerEditable !== true && options.allowLocked !== true) {
       return this.failWith([
         createDiagnostic(DIAGNOSTIC_CODES.VIEWER_READ_ONLY, `filters/${filterId}`, {
-          message: `Filter "${filterId}" is not viewer-editable.`,
+          message: formatEnglishMessage("diagnostic.detail.filter.notEditable", {
+            filter: filterId,
+          }),
+          detailKey: "diagnostic.detail.filter.notEditable",
+          detailParams: { filter: filterId },
           relatedIds: [filterId],
         }),
       ]);
@@ -899,6 +924,7 @@ class SpaceImpl implements BoardSpace {
       });
     }
     this.messages = messages;
+    reportMessageDiagnostics(this.deps.logger, messages.diagnostics);
     this.updatedAt = this.deps.clock.now();
     this.clearDiagnostics();
     this.emit({

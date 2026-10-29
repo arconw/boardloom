@@ -8,6 +8,7 @@ import type {
   Diagnostic,
   EditorLease,
   ExtensionSelection,
+  MessageDictionaries,
   MessageDictionary,
   RendererDefinition,
   Result,
@@ -58,6 +59,7 @@ export interface BoardloomViewProps {
   readonly timezone?: string;
   readonly theme?: ThemeMode;
   readonly messages?: MessageDictionary;
+  readonly messageDictionaries?: MessageDictionaries;
   readonly realtime?: BoardloomRealtimeStatus;
   readonly provenance?: string;
   readonly blockTypes?: readonly BlockTypeDefinition[];
@@ -91,6 +93,7 @@ export interface AppliedUpdateState {
   readonly timezone: string | undefined;
   readonly theme: ThemeMode | undefined;
   readonly messages: MessageDictionary | undefined;
+  readonly messageDictionaries: MessageDictionaries | undefined;
   readonly realtime: BoardloomRealtimeStatus | undefined;
   readonly provenance: string | undefined;
   readonly mode: ViewMode | undefined;

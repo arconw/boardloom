@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   AGGREGATION_TYPES,
+  ENGLISH_MESSAGES,
   RENDERER_API_VERSION,
   createBoardValidationCatalog,
   createLocalDatasetProvider,
@@ -561,15 +562,14 @@ describe("T10 comparison presentation and builder", () => {
       (element) => element.textContent,
     );
     expect(diagnostics).toContain("INCOMPATIBLE_COMPARISON");
-    expect(root.textContent).toContain("incompatible measure units");
+    expect(root.textContent).toContain(
+      "The comparison mapping, units or alignment are incompatible.",
+    );
     expect(root.textContent).toContain("comparisons/comparison/unitPolicy");
     const detail = findByClass(root, "bl-diagnostic__detail")[0];
-    expect(detail?.parentNode?.children.map((child) => child.className)).toEqual([
-      "bl-diagnostic__heading",
-      "bl-diagnostic__message",
-      "bl-diagnostic__detail",
-      "bl-diagnostic__path-row",
-    ]);
+    expect(detail?.textContent).toBe(
+      ENGLISH_MESSAGES["diagnostic.detail.comparison.unitsIncompatible"],
+    );
     const draft = space.getSnapshot().draft?.document as BoardDocumentV1 | undefined;
     expect(draft?.comparisons?.[0]?.reference.datasetId).toBe("previous");
     unwrap(space.cancelDraft(lease));

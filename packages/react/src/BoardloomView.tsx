@@ -98,6 +98,7 @@ function updateStateOf(props: BoardloomViewProps): AppliedUpdateState {
     timezone: props.timezone,
     theme: props.theme,
     messages: props.messages,
+    messageDictionaries: props.messageDictionaries,
     realtime: props.realtime,
     provenance: props.provenance,
     mode: props.mode,
@@ -111,6 +112,7 @@ function sameUpdateState(left: AppliedUpdateState, right: AppliedUpdateState): b
     left.timezone === right.timezone &&
     left.theme === right.theme &&
     left.messages === right.messages &&
+    left.messageDictionaries === right.messageDictionaries &&
     left.realtime === right.realtime &&
     left.provenance === right.provenance &&
     left.mode === right.mode &&
@@ -316,6 +318,9 @@ function buildMountOptions(
     ...(props.timezone === undefined ? {} : { timezone: props.timezone }),
     ...(props.theme === undefined ? {} : { theme: props.theme }),
     ...(props.messages === undefined ? {} : { messages: props.messages }),
+    ...(props.messageDictionaries === undefined
+      ? {}
+      : { messageDictionaries: props.messageDictionaries }),
     ...(props.realtime === undefined ? {} : { realtime: props.realtime }),
     ...(props.provenance === undefined ? {} : { provenance: props.provenance }),
     ...(props.blockTypes === undefined ? {} : { blockTypes: props.blockTypes }),
@@ -341,6 +346,7 @@ function buildUpdateOptions(
     timezone?: string;
     theme?: NonNullable<BoardloomViewProps["theme"]>;
     messages?: NonNullable<BoardloomViewProps["messages"]>;
+    messageDictionaries?: NonNullable<BoardloomViewProps["messageDictionaries"]>;
     realtime?: NonNullable<BoardloomViewProps["realtime"]>;
     provenance?: string;
     mode?: ViewMode;
@@ -361,6 +367,10 @@ function buildUpdateOptions(
   }
   if (props.messages !== applied.messages) {
     options.messages = props.messages ?? {};
+    changed = true;
+  }
+  if (props.messageDictionaries !== applied.messageDictionaries) {
+    options.messageDictionaries = props.messageDictionaries ?? {};
     changed = true;
   }
   if (props.realtime !== undefined && props.realtime !== applied.realtime) {
@@ -660,6 +670,9 @@ export const BoardloomView = forwardRef<BoardloomViewHandle, BoardloomViewProps>
         },
         get element(): HTMLElement {
           return current().element;
+        },
+        get messageDiagnostics() {
+          return handleRef.current?.messageDiagnostics ?? Object.freeze([]);
         },
         get mounted(): boolean {
           return handleRef.current?.mounted ?? false;

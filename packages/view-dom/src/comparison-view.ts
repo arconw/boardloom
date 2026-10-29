@@ -3,6 +3,7 @@ import {
   buildChartRendererSpec,
   createDiagnostic,
   destroyRenderer,
+  formatEnglishMessage,
   formatValueParts,
   mountRenderer,
   selectChartBindings,
@@ -410,15 +411,15 @@ export function renderComparisonTable(
     headRow.append(cell);
   }
   for (const measure of result.measures) {
-    for (const [key, fallback, side] of [
-      ["editor.comparison.primary", "Primary", "primary"],
-      ["editor.comparison.reference", "Reference", "reference"],
+    for (const [key, side] of [
+      ["editor.comparison.primary", "primary"],
+      ["editor.comparison.reference", "reference"],
     ] as const) {
       const cell = createElement(doc, "th");
       cell.setAttribute("scope", "col");
       cell.setAttribute("data-measure", measure.id);
       cell.setAttribute("data-comparison-side", side);
-      const label = environment.messages.has(key) ? environment.messages.text(key) : fallback;
+      const label = environment.messages.text(key);
       const unit =
         side === "reference" && referenceUnitsDiffer(measure)
           ? unitLabel(measure.referenceUnit)
@@ -668,7 +669,10 @@ export function buildComparisonChartDatasets(
         createDiagnostic(
           DIAGNOSTIC_CODES.INCOMPATIBLE_COMPARISON,
           `blocks/${environment.block.id}/config`,
-          { message: "A comparison chart requires one measure and a visualization." },
+          {
+            message: formatEnglishMessage("diagnostic.detail.comparison.chartRequiresMeasure"),
+            detailKey: "diagnostic.detail.comparison.chartRequiresMeasure",
+          },
         ),
       ]),
     };
@@ -682,7 +686,10 @@ export function buildComparisonChartDatasets(
         createDiagnostic(
           DIAGNOSTIC_CODES.INCOMPATIBLE_COMPARISON,
           `blocks/${environment.block.id}/bindings`,
-          { message: "A comparison chart requires an X binding." },
+          {
+            message: formatEnglishMessage("diagnostic.detail.comparison.chartRequiresX"),
+            detailKey: "diagnostic.detail.comparison.chartRequiresX",
+          },
         ),
       ]),
     };
@@ -697,7 +704,8 @@ export function buildComparisonChartDatasets(
           DIAGNOSTIC_CODES.COMPARISON_ALIGNMENT_INVALID,
           `comparisons/${view.plan.comparisonId}/alignment`,
           {
-            message: "The chart X field must be one of the comparison alignment keys.",
+            message: formatEnglishMessage("diagnostic.detail.comparison.chartAlignment"),
+            detailKey: "diagnostic.detail.comparison.chartAlignment",
             relatedIds: [xBinding.field.fieldId],
           },
         ),
@@ -748,7 +756,10 @@ export function buildComparisonChartDatasets(
         createDiagnostic(
           DIAGNOSTIC_CODES.INCOMPATIBLE_COMPARISON,
           `blocks/${environment.block.id}/config/comparisonId`,
-          { message: "A chart comparison requires composite alignment keys." },
+          {
+            message: formatEnglishMessage("diagnostic.detail.comparison.chartComposite"),
+            detailKey: "diagnostic.detail.comparison.chartComposite",
+          },
         ),
       ]),
     };
@@ -935,7 +946,10 @@ export function createComparisonChartView(
             createDiagnostic(
               DIAGNOSTIC_CODES.RENDERER_UNSUPPORTED,
               `renderer/chart/${dataset.spec.kind === "chart" ? dataset.spec.visualization : "chart"}`,
-              { message: "No chart renderer is registered for this comparison." },
+              {
+                message: formatEnglishMessage("diagnostic.detail.comparison.rendererMissing"),
+                detailKey: "diagnostic.detail.comparison.rendererMissing",
+              },
             ),
           );
           break;

@@ -5,6 +5,7 @@ import {
   buildTableRendererSpec,
   createDiagnostic,
   fail,
+  formatEnglishMessage,
   ok,
   rendererAxisFromConfig,
   selectChartBindings as selectSharedChartBindings,
@@ -34,8 +35,18 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function bindingDiagnostic(path: string, message: string): Result<never> {
-  return fail([createDiagnostic(DIAGNOSTIC_CODES.INCOMPATIBLE_BINDING, path, { message })]);
+function bindingDiagnostic(
+  path: string,
+  detailKey: string,
+  detailParams?: Readonly<Record<string, string | number>>,
+): Result<never> {
+  return fail([
+    createDiagnostic(DIAGNOSTIC_CODES.INCOMPATIBLE_BINDING, path, {
+      message: formatEnglishMessage(detailKey, detailParams),
+      detailKey,
+      ...(detailParams === undefined ? {} : { detailParams }),
+    }),
+  ]);
 }
 
 function isMeasureBinding(binding: BindingDefinition): boolean {
@@ -100,7 +111,12 @@ function unitOverrideDiagnostic(
   const baseUnit = baseUnitDescriptor(environment, binding, fields);
   if (baseUnit !== undefined && baseUnit.unit !== unit) {
     return createDiagnostic(DIAGNOSTIC_CODES.INCOMPATIBLE_BINDING, path, {
-      message: `Unit "${unit}" conflicts with field unit "${baseUnit.unit}".`,
+      message: formatEnglishMessage("diagnostic.detail.unitConflict", {
+        unit,
+        baseUnit: baseUnit.unit,
+      }),
+      detailKey: "diagnostic.detail.unitConflict",
+      detailParams: { unit, baseUnit: baseUnit.unit },
       relatedIds: [binding.id],
     });
   }
@@ -303,40 +319,28 @@ function selectChartBindings(
     if (measures.length > 2) {
       return bindingDiagnostic(
         `blocks/${block.id}/bindings`,
-        "A scatter chart supports at most two measures, X and Y.",
+        "diagnostic.detail.scatter.maxMeasures",
       );
     }
     if (selection.x === null || selection.y === null) {
       return bindingDiagnostic(
         `blocks/${block.id}/bindings`,
-        "A scatter chart requires two numeric measures for X and Y.",
+        "diagnostic.detail.scatter.requiresMeasures",
       );
     }
     return ok({ x: selection.x, y: selection.y, series: selection.series });
   }
   if (selection.x === null) {
-    return bindingDiagnostic(
-      `blocks/${block.id}/bindings`,
-      "A chart requires an X dimension binding.",
-    );
+    return bindingDiagnostic(`blocks/${block.id}/bindings`, "diagnostic.detail.chart.requiresX");
   }
   if (measures.length > 1) {
-    return bindingDiagnostic(
-      `blocks/${block.id}/bindings`,
-      "A chart supports one Y measure binding.",
-    );
+    return bindingDiagnostic(`blocks/${block.id}/bindings`, "diagnostic.detail.chart.oneMeasure");
   }
   if (selection.y === null) {
-    return bindingDiagnostic(
-      `blocks/${block.id}/bindings`,
-      "A chart requires a Y measure binding.",
-    );
+    return bindingDiagnostic(`blocks/${block.id}/bindings`, "diagnostic.detail.chart.requiresY");
   }
   if (selection.seriesCandidates.length > 1) {
-    return bindingDiagnostic(
-      `blocks/${block.id}/bindings`,
-      "A chart supports at most one series dimension.",
-    );
+    return bindingDiagnostic(`blocks/${block.id}/bindings`, "diagnostic.detail.chart.oneSeries");
   }
   return ok({ x: selection.x, y: selection.y, series: selection.series });
 }
@@ -407,20 +411,20 @@ export function buildKpiSpecForBlock(
   if (measures.length === 0) {
     return bindingDiagnostic(
       `blocks/${environment.block.id}/bindings`,
-      "A metric block requires a measure binding.",
+      "diagnostic.detail.metric.requiresMeasure",
     );
   }
   if (measures.length > 1) {
     return bindingDiagnostic(
       `blocks/${environment.block.id}/bindings`,
-      "A metric block supports exactly one measure binding.",
+      "diagnostic.detail.metric.oneMeasure",
     );
   }
   const binding = measures[0] ?? null;
   if (binding === null) {
     return bindingDiagnostic(
       `blocks/${environment.block.id}/bindings`,
-      "A metric block requires a measure binding.",
+      "diagnostic.detail.metric.requiresMeasure",
     );
   }
   const fields = environment.query?.fields ?? [];
@@ -456,7 +460,7 @@ export function buildTableSpecForBlock(
   if (bindings.length === 0) {
     return bindingDiagnostic(
       `blocks/${environment.block.id}/bindings`,
-      "A table block requires at least one binding.",
+      "diagnostic.detail.table.requiresBinding",
     );
   }
   const configured = ownValue(environment.block.config, "columns");
@@ -465,7 +469,7 @@ export function buildTableSpecForBlock(
     if (!Array.isArray(configured)) {
       return bindingDiagnostic(
         `blocks/${environment.block.id}/config/columns`,
-        "Table columns must be an array of binding IDs.",
+        "diagnostic.detail.table.columnsArray",
       );
     }
     const byId = new Map(bindings.map((binding) => [binding.id, binding] as const));

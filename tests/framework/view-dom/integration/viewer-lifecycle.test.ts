@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  BUILT_IN_DICTIONARIES,
   ENGLISH_MESSAGES,
   createLocalDatasetProvider,
   createRuntime,
@@ -934,7 +935,107 @@ describe("T06 review-round regression coverage", () => {
     expect(localeFailure.ok).toBe(false);
     expect(thirdTarget.children).toHaveLength(0);
     expect(space.getSnapshot().locale).toBe("en");
+
+    const fourthTarget = createTarget(createMiniDocument());
+    const futureDictionaryFailure = mountBoardView(fourthTarget as unknown as HTMLElement, {
+      space,
+      locale: "de",
+      messageDictionaries: { de: { "mode.viewer": 42 } } as never,
+    });
+    expect(futureDictionaryFailure.ok).toBe(false);
+    expect(fourthTarget.children).toHaveLength(0);
+    expect(space.getSnapshot().locale).toBe("en");
+
+    const fifthTarget = createTarget(createMiniDocument());
+    const fifth = unwrap(
+      mountBoardView(fifthTarget as unknown as HTMLElement, { space, locale: "en" }),
+    );
+    const failedFutureDictionary = fifth.update({
+      locale: "de",
+      messageDictionaries: { de: { "mode.viewer": 42 } } as never,
+    });
+    expect(failedFutureDictionary.ok).toBe(false);
+    expect(space.getSnapshot().locale).toBe("en");
+    expect(rootOf(fifth).getAttribute("lang")).toBe("en");
+    expect(rootOf(fifth).getAttribute("data-boardloom-instance")).toBe(fifth.element.id);
+    unwrap(fifth.unmount());
+
+    let reads = 0;
+    const accessorDictionary = {
+      get "mode.viewer"() {
+        reads += 1;
+        return "Accessor";
+      },
+    };
+    const accessorFailure = mountBoardView(
+      createTarget(createMiniDocument()) as unknown as HTMLElement,
+      {
+        space,
+        messageDictionaries: { de: accessorDictionary } as never,
+      },
+    );
+    expect(accessorFailure.ok).toBe(false);
+    expect(reads).toBe(0);
+    const arrayFailure = mountBoardView(
+      createTarget(createMiniDocument()) as unknown as HTMLElement,
+      {
+        space,
+        messageDictionaries: { de: ["Mode"] } as never,
+      },
+    );
+    expect(arrayFailure.ok).toBe(false);
+    expect(space.getSnapshot().locale).toBe("en");
+
+    const diagnosticsTarget = createTarget(createMiniDocument());
+    const diagnosticsHandle = unwrap(
+      mountBoardView(diagnosticsTarget as unknown as HTMLElement, {
+        space,
+        messageDictionaries: { en: { "host.custom": "Custom view copy" } },
+      }),
+    );
+    expect(
+      diagnosticsHandle.messageDiagnostics.some(
+        (diagnostic) => diagnostic.code === "MESSAGE_UNKNOWN_KEY",
+      ),
+    ).toBe(true);
+    unwrap(diagnosticsHandle.unmount());
     unwrap(runtime.dispose());
+  });
+
+  it("validates runtime-option dictionaries when view-level dictionaries are also supplied", async () => {
+    const invalidCases: readonly unknown[] = [
+      { de: { "mode.viewer": 42 } },
+      { sv: { "mode.viewer": "Mode" } },
+      { de: ["Mode"] },
+    ];
+    for (const invalid of invalidCases) {
+      const target = createTarget(createMiniDocument());
+      const mounted = mountBoardView(target as unknown as HTMLElement, {
+        document: viewerFixtureDocument(),
+        runtimeOptions: {
+          messageDictionaries: invalid as never,
+        },
+        messageDictionaries: { en: { "host.custom": "Custom" } },
+      });
+      expect(mounted.ok).toBe(false);
+      expect(target.children).toHaveLength(0);
+    }
+    let reads = 0;
+    const accessor = {
+      get "mode.viewer"() {
+        reads += 1;
+        return "Accessor";
+      },
+    };
+    const target = createTarget(createMiniDocument());
+    const mounted = mountBoardView(target as unknown as HTMLElement, {
+      document: viewerFixtureDocument(),
+      runtimeOptions: { messageDictionaries: { de: accessor } as never },
+      messageDictionaries: { en: { "host.custom": "Custom" } },
+    });
+    expect(mounted.ok).toBe(false);
+    expect(reads).toBe(0);
+    expect(target.children).toHaveLength(0);
   });
 
   it("fails and cleans up when onEvent disposes the view during initial rendering", async () => {
@@ -1080,6 +1181,21 @@ describe("T06 review-round regression coverage", () => {
     expect(failedAgain.ok).toBe(false);
     expect(findByClass(rootOf(handle), "bl-live")[0]?.textContent).toBe("Updated lease failure");
     expect(space.getSnapshot().committedRevision).toBe(revision);
+    unwrap(handle.unmount());
+    unwrap(runtime.dispose());
+  });
+
+  it("localizes the editor notice for a rejected mode change in a complete locale", async () => {
+    const { runtime } = createViewerRuntime();
+    const space = unwrap(runtime.createSpace({ document: viewerFixtureDocument() }));
+    const target = createTarget(createMiniDocument());
+    const handle = unwrap(mountBoardView(target as unknown as HTMLElement, { space }));
+    await flush();
+    const failed = handle.update({ locale: "ja", mode: "editor" });
+    expect(failed.ok).toBe(false);
+    const notice = findByClass(rootOf(handle), "bl-editor-notice")[0];
+    expect(notice?.textContent).toBe(BUILT_IN_DICTIONARIES.ja["diagnostic.EDITOR_LEASE_REQUIRED"]);
+    expect(notice?.textContent).not.toBe(ENGLISH_MESSAGES["diagnostic.EDITOR_LEASE_REQUIRED"]);
     unwrap(handle.unmount());
     unwrap(runtime.dispose());
   });

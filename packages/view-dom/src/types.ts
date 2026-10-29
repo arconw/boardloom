@@ -5,6 +5,8 @@ import type {
   DatasetProvider,
   EditorLease,
   BoardSerialization,
+  Diagnostic,
+  MessageDictionaries,
   MessageDictionary,
   RendererDefinition,
   ExtensionSelection,
@@ -32,6 +34,7 @@ export interface MountBoardViewOptions {
   readonly timezone?: string;
   readonly theme?: ThemeMode;
   readonly messages?: MessageDictionary;
+  readonly messageDictionaries?: MessageDictionaries;
   readonly realtime?: BoardloomRealtimeStatus;
   readonly provenance?: string;
   readonly blockTypes?: readonly BlockTypeDefinition[];
@@ -51,6 +54,7 @@ export interface UpdateBoardViewOptions {
   readonly timezone?: string;
   readonly theme?: ThemeMode;
   readonly messages?: MessageDictionary;
+  readonly messageDictionaries?: MessageDictionaries;
   readonly realtime?: BoardloomRealtimeStatus;
   readonly provenance?: string;
   readonly mode?: ViewMode;
@@ -64,6 +68,7 @@ export interface BoardViewHandle {
   readonly space: BoardSpace;
   readonly view: BoardView;
   readonly element: HTMLElement;
+  readonly messageDiagnostics: readonly Diagnostic[];
   readonly mounted: boolean;
   readonly disposed: boolean;
   update(options?: UpdateBoardViewOptions): Result<void>;

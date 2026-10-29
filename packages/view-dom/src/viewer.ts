@@ -7,10 +7,12 @@ import {
   THEME_MODES,
   canonicalJson,
   createDiagnostic,
+  defaultDiagnosticMessage,
   crossFilterTargetStatus,
   describeBindingSlots,
   fail,
   fieldCompatibilityReason,
+  formatEnglishMessage,
   documentField,
   filterDefinitionOperators,
   filterOperatorsForField,
@@ -47,6 +49,7 @@ import {
   type FormatterProvider,
   type JsonObject,
   type JsonValue,
+  type MessageDictionaries,
   type MessageDictionary,
   type MessageProvider,
   type QueryState,
@@ -94,6 +97,7 @@ import { releaseMountedView } from "./mount-registry.js";
 import { activeFilterChipSummaries, crossFilterSummaries } from "./filter-summary.js";
 import { createViewMessages, pluralKey, type ViewMessages } from "./messages.js";
 import { realtimeText, type BoardloomRealtimeStatus } from "./realtime.js";
+import { applyLocaleScope } from "./locale-scope.js";
 import { renderDiagnosticList, renderErrorState } from "./states.js";
 import { themeTokenProperty } from "./theme-tokens.js";
 import { installScopedStyles, type ScopedStylesHandle } from "./plugin-styles.js";
@@ -169,6 +173,7 @@ interface BlockInteractionState {
 interface ViewerConfig {
   theme?: ThemeMode;
   messages?: MessageDictionary;
+  messageDictionaries?: MessageDictionaries;
   realtime?: import("./realtime.js").BoardloomRealtimeStatus;
   provenance?: string;
   onEvent?: (event: SpaceEvent) => void;
@@ -480,9 +485,14 @@ function dedupeDiagnostics(diagnostics: readonly Diagnostic[]): readonly Diagnos
   const seen = new Set<string>();
   const output: Diagnostic[] = [];
   for (const diagnostic of diagnostics) {
-    const key = [diagnostic.code, diagnostic.path, diagnostic.message, diagnostic.severity].join(
-      "\u0000",
-    );
+    const key = [
+      diagnostic.code,
+      diagnostic.path,
+      diagnostic.message,
+      diagnostic.severity,
+      diagnostic.detailKey ?? "",
+      JSON.stringify(diagnostic.detailParams ?? {}),
+    ].join("\u0000");
     if (!seen.has(key)) {
       seen.add(key);
       output.push(diagnostic);
@@ -536,7 +546,10 @@ function createSurfaceFailureSurface(
         element,
         environment.messages,
         diagnostics ?? [
-          createDiagnostic(DIAGNOSTIC_CODES.BLOCK_SURFACE_FAILED, "block/surface", { message }),
+          createDiagnostic(DIAGNOSTIC_CODES.BLOCK_SURFACE_FAILED, "block/surface", {
+            message,
+            source: "host",
+          }),
         ],
       );
     },
@@ -602,6 +615,7 @@ export class ViewerHost implements BoardViewHandle {
   private readonly editorLayout: HTMLElement;
   private readonly library: HTMLElement;
   private readonly libraryHeading: HTMLElement;
+  private readonly librarySearchLabel: HTMLElement;
   private readonly librarySearch: HTMLInputElement;
   private readonly libraryList: HTMLElement;
   private readonly canvas: HTMLElement;
@@ -652,9 +666,11 @@ export class ViewerHost implements BoardViewHandle {
   private readonly blockElements = new Map<string, MountedBlock>();
   private appliedThemeTokens = new Set<string>();
   private messagesValue: ViewMessages;
+  private messageDiagnosticsValue: readonly Diagnostic[];
   private messagesLocale: string;
   private messageProvider: MessageProvider;
   private messageOverrides: MessageDictionary | undefined;
+  private messageDictionaries: MessageDictionaries | undefined;
   private actionDiagnostics: readonly Diagnostic[] = Object.freeze([]);
   private readonly pendingFilters = new Map<string, FilterDefinition>();
   private unsubscribeSpace: (() => void) | null;
@@ -1167,9 +1183,11 @@ export class ViewerHost implements BoardViewHandle {
     this.registry = registry;
     this.rendererRegistry = rendererRegistry;
     this.messagesValue = messages;
+    this.messageDiagnosticsValue = messages.diagnostics;
     this.messagesLocale = messages.locale;
     this.messageProvider = space.getMessageProvider();
     this.messageOverrides = config.messages;
+    this.messageDictionaries = config.messageDictionaries;
     this.config = config;
     this.unsubscribeSpace = null;
 
@@ -1341,6 +1359,7 @@ export class ViewerHost implements BoardViewHandle {
     const librarySearchField = createElement(this.doc, "div", "bl-library__search");
     const searchLabel = createElement(this.doc, "label", "bl-visually-hidden");
     searchLabel.setAttribute("for", `${instanceId}-library-search`);
+    this.librarySearchLabel = searchLabel;
     setKeyedText(
       searchLabel,
       "editor.library.search",
@@ -1501,6 +1520,10 @@ export class ViewerHost implements BoardViewHandle {
     return this.root;
   }
 
+  get messageDiagnostics(): readonly Diagnostic[] {
+    return this.messageDiagnosticsValue;
+  }
+
   get mounted(): boolean {
     return this.mountedFlag;
   }
@@ -1520,11 +1543,14 @@ export class ViewerHost implements BoardViewHandle {
         }),
       ]);
     }
-    if (options.messages !== undefined) {
+    if (options.messages !== undefined || options.messageDictionaries !== undefined) {
       try {
         createViewMessages({
           provider: this.spaceValue.getMessageProvider(),
-          overrides: options.messages,
+          ...(options.messages === undefined ? {} : { overrides: options.messages }),
+          ...(options.messageDictionaries === undefined
+            ? {}
+            : { dictionaries: options.messageDictionaries }),
         });
       } catch (error) {
         return fail(failureFrom(error, "messages"));
@@ -1552,6 +1578,9 @@ export class ViewerHost implements BoardViewHandle {
     }
     if (options.messages !== undefined) {
       this.config.messages = options.messages;
+    }
+    if (options.messageDictionaries !== undefined) {
+      this.config.messageDictionaries = options.messageDictionaries;
     }
     if (options.realtime !== undefined) {
       this.config.realtime = options.realtime;
@@ -2434,7 +2463,11 @@ export class ViewerHost implements BoardViewHandle {
           createDiagnostic(
             DIAGNOSTIC_CODES.INCOMPATIBLE_COMPARISON,
             `comparisons/${comparisonId}`,
-            { message: "A comparison needs two distinct inputs.", relatedIds: [comparisonId] },
+            {
+              message: formatEnglishMessage("diagnostic.detail.comparison.distinctInputs"),
+              detailKey: "diagnostic.detail.comparison.distinctInputs",
+              relatedIds: [comparisonId],
+            },
           ),
         ]);
         return;
@@ -2450,7 +2483,8 @@ export class ViewerHost implements BoardViewHandle {
             DIAGNOSTIC_CODES.INCOMPATIBLE_COMPARISON,
             `comparisons/${comparisonId}/mapping`,
             {
-              message: "The selected inputs do not share compatible dimension and measure fields.",
+              message: formatEnglishMessage("diagnostic.detail.comparison.incompatibleInputs"),
+              detailKey: "diagnostic.detail.comparison.incompatibleInputs",
               relatedIds: [comparisonId],
             },
           ),
@@ -2465,7 +2499,8 @@ export class ViewerHost implements BoardViewHandle {
             DIAGNOSTIC_CODES.INCOMPATIBLE_COMPARISON,
             `comparisons/${comparisonId}/unitPolicy`,
             {
-              message: "The selected inputs use incompatible measure units.",
+              message: formatEnglishMessage("diagnostic.detail.comparison.unitsIncompatible"),
+              detailKey: "diagnostic.detail.comparison.unitsIncompatible",
               relatedIds: [comparisonId],
               hint: "Choose side-by-side display with deltas disabled, or declare a documented explicit conversion.",
             },
@@ -2649,7 +2684,10 @@ export class ViewerHost implements BoardViewHandle {
         createDiagnostic(
           DIAGNOSTIC_CODES.INVALID_PROPERTY_TYPE,
           `comparisons/${comparisonId}/windows/${side}`,
-          { message: "A comparison window requires a timezone, start and end." },
+          {
+            message: formatEnglishMessage("diagnostic.detail.comparison.windowIncomplete"),
+            detailKey: "diagnostic.detail.comparison.windowIncomplete",
+          },
         ),
       ]);
       return;
@@ -2690,7 +2728,10 @@ export class ViewerHost implements BoardViewHandle {
         createDiagnostic(
           DIAGNOSTIC_CODES.INCOMPATIBLE_COMPARISON,
           "blocks/pending/config/comparisonId",
-          { message: "Add a data block with bindings before creating a comparison." },
+          {
+            message: formatEnglishMessage("diagnostic.detail.comparison.addDataBlock"),
+            detailKey: "diagnostic.detail.comparison.addDataBlock",
+          },
         ),
       ]);
       return;
@@ -2740,8 +2781,8 @@ export class ViewerHost implements BoardViewHandle {
     if (chosen === undefined) {
       this.setComparisonDiagnostics([
         createDiagnostic(DIAGNOSTIC_CODES.INCOMPATIBLE_COMPARISON, "comparisons/pending/mapping", {
-          message:
-            "No other dataset or slice has compatible dimension and measure fields for an explicit mapping.",
+          message: formatEnglishMessage("diagnostic.detail.comparison.noCompatibleInputs"),
+          detailKey: "diagnostic.detail.comparison.noCompatibleInputs",
         }),
       ]);
       return;
@@ -3679,17 +3720,23 @@ export class ViewerHost implements BoardViewHandle {
       this.messagesValue.locale === snapshot.locale &&
       this.messagesLocale === snapshot.locale &&
       this.messageProvider === provider &&
-      this.messageOverrides === this.config.messages
+      this.messageOverrides === this.config.messages &&
+      this.messageDictionaries === this.config.messageDictionaries
     ) {
       return;
     }
     this.messagesValue = createViewMessages({
       provider,
       ...(this.config.messages === undefined ? {} : { overrides: this.config.messages }),
+      ...(this.config.messageDictionaries === undefined
+        ? {}
+        : { dictionaries: this.config.messageDictionaries }),
     });
+    this.messageDiagnosticsValue = this.messagesValue.diagnostics;
     this.messagesLocale = this.messagesValue.locale;
     this.messageProvider = provider;
     this.messageOverrides = this.config.messages;
+    this.messageDictionaries = this.config.messageDictionaries;
   }
 
   private deriveRealtimeStatus(): BoardloomRealtimeStatus | null {
@@ -4230,6 +4277,20 @@ export class ViewerHost implements BoardViewHandle {
     this.liveRegion.removeAttribute("data-severity");
   }
 
+  private refreshShellMessages(messages: ViewMessages): void {
+    setKeyedText(this.libraryHeading, "editor.library", messages.text("editor.library"));
+    setKeyedText(
+      this.librarySearchLabel,
+      "editor.library.search",
+      messages.text("editor.library.search"),
+    );
+    const searchText = messages.text("editor.library.search");
+    this.librarySearch.setAttribute("placeholder", searchText);
+    this.librarySearch.setAttribute("aria-label", searchText);
+    this.librarySearch.setAttribute("data-message-key", "editor.library.search");
+    setKeyedText(this.canvasHeading, "editor.canvas", messages.text("editor.canvas"));
+  }
+
   private renderEditorShell(snapshot: SpaceSnapshot, messages: ViewMessages): void {
     const editorMode = this.viewValue.mode === "editor" && this.activeEditorLease() !== null;
     setHidden(this.draftBar, !editorMode);
@@ -4340,9 +4401,31 @@ export class ViewerHost implements BoardViewHandle {
           : "editor.draft.confirmDiscard";
       setKeyedText(this.confirmationText, key, messages.text(key));
     }
+    const firstDiagnostic = this.actionDiagnostics[0];
+    const diagnosticKey =
+      firstDiagnostic === undefined ? null : `diagnostic.${firstDiagnostic.code}`;
+    const diagnosticDetail =
+      firstDiagnostic === undefined
+        ? null
+        : firstDiagnostic.detailKey !== undefined && messages.has(firstDiagnostic.detailKey)
+          ? messages.text(firstDiagnostic.detailKey, firstDiagnostic.detailParams)
+          : firstDiagnostic.source === "host" &&
+              firstDiagnostic.message !== defaultDiagnosticMessage(firstDiagnostic.code)
+            ? firstDiagnostic.message
+            : null;
+    const noticeKey =
+      firstDiagnostic === undefined
+        ? this.exportNoticeKey
+        : diagnosticDetail === null && diagnosticKey !== null && messages.has(diagnosticKey)
+          ? diagnosticKey
+          : null;
     const notice =
-      this.actionDiagnostics[0]?.message ??
-      (this.exportNoticeKey === null ? "" : messages.text(this.exportNoticeKey));
+      diagnosticDetail ??
+      (noticeKey !== null
+        ? messages.text(noticeKey)
+        : firstDiagnostic === undefined
+          ? ""
+          : firstDiagnostic.message);
     if (notice === "") {
       setHidden(this.editorNotice, true);
       this.editorNotice.textContent = "";
@@ -4350,8 +4433,8 @@ export class ViewerHost implements BoardViewHandle {
     } else {
       setHidden(this.editorNotice, false);
       this.editorNotice.textContent = notice;
-      if (this.actionDiagnostics[0] === undefined && this.exportNoticeKey !== null) {
-        this.editorNotice.setAttribute("data-message-key", this.exportNoticeKey);
+      if (noticeKey !== null) {
+        this.editorNotice.setAttribute("data-message-key", noticeKey);
       } else {
         this.editorNotice.removeAttribute("data-message-key");
       }
@@ -4657,10 +4740,8 @@ export class ViewerHost implements BoardViewHandle {
     }
     const theme = this.config.theme ?? documentTheme(document);
     this.root.setAttribute("data-boardloom-theme", theme);
-    this.root.setAttribute("lang", snapshot.locale);
-    this.root.setAttribute("dir", messages.direction);
+    applyLocaleScope(this.root, snapshot.locale);
     this.root.setAttribute("data-boardloom-mode", this.viewValue.mode);
-    this.root.setAttribute("data-boardloom-locale", snapshot.locale);
     this.root.setAttribute("data-boardloom-timezone", snapshot.timezone);
     setKeyedLabel(this.body, "a11y.boardRegion", messages.text("a11y.boardRegion"));
     setKeyedLabel(this.filterSection, "a11y.filterRegion", messages.text("a11y.filterRegion"));
@@ -4803,6 +4884,7 @@ export class ViewerHost implements BoardViewHandle {
 
     this.renderInspector(document);
     this.renderBlocks(document, snapshot, formatters);
+    this.refreshShellMessages(messages);
     this.renderEditorShell(snapshot, messages);
     this.restoreBindingFocus(bindingFocus);
     this.restoreInspectorFocus(inspectorFocus);

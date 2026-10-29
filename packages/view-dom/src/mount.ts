@@ -4,6 +4,7 @@ import {
   createRendererRegistry,
   createRuntime,
   fail,
+  mergeMessageDictionaries,
   ok,
   restoreViewSession,
   type BoardSpace,
@@ -15,7 +16,7 @@ import {
 } from "@boardloom/core";
 import { createBlockRegistry, type BlockTypeDefinition } from "./block-registry.js";
 import { createBoardloomExtensions, type BoardloomExtensions } from "./extensions.js";
-import { createViewMessages, type ViewMessages } from "./messages.js";
+import { createViewMessages, validateViewMessageOptions, type ViewMessages } from "./messages.js";
 import { claimMountedView, isMountedView, releaseMountedView } from "./mount-registry.js";
 import type { MountBoardViewOptions, BoardViewHandle } from "./types.js";
 import { ViewerHost, failureFrom, isThemeMode } from "./viewer.js";
@@ -109,6 +110,14 @@ function resolveSpace(
       options.runtime ??
       createRuntime({
         ...runtimeOptions,
+        ...(options.messageDictionaries === undefined
+          ? {}
+          : {
+              messageDictionaries: mergeMessageDictionaries(
+                runtimeOptions?.messageDictionaries,
+                options.messageDictionaries,
+              ),
+            }),
         ...(runtimeOptions?.extensions === undefined && extensions !== null
           ? { extensions: extensions.core }
           : {}),
@@ -198,12 +207,14 @@ function resolveView(
 function buildMessages(
   space: BoardSpace,
   overrides: MountBoardViewOptions["messages"],
+  dictionaries: MountBoardViewOptions["messageDictionaries"],
 ): Result<ViewMessages> {
   try {
     return ok(
       createViewMessages({
         provider: space.getMessageProvider(),
         ...(overrides === undefined ? {} : { overrides }),
+        ...(dictionaries === undefined ? {} : { dictionaries }),
       }),
     );
   } catch (error) {
@@ -287,6 +298,16 @@ export function mountBoardView(
         message: "A theme must be light, dark or system.",
       }),
     ]);
+  }
+  try {
+    validateViewMessageOptions({
+      ...(options.messages === undefined ? {} : { overrides: options.messages }),
+      ...(options.messageDictionaries === undefined
+        ? {}
+        : { dictionaries: options.messageDictionaries }),
+    });
+  } catch (error) {
+    return fail(failureFrom(error, "messages"));
   }
   let extensions: BoardloomExtensions;
   let ownsExtensions = false;
@@ -492,7 +513,7 @@ export function mountBoardView(
       ]);
     }
   }
-  const messages = buildMessages(space, options.messages);
+  const messages = buildMessages(space, options.messages, options.messageDictionaries);
   if (!messages.ok) {
     cleanupAndDispose(space, view, resolved.value.runtime, ownership);
     rollbackExternalLocale();
@@ -521,6 +542,9 @@ export function mountBoardView(
   const config = {
     ...(options.theme === undefined ? {} : { theme: options.theme }),
     ...(options.messages === undefined ? {} : { messages: options.messages }),
+    ...(options.messageDictionaries === undefined
+      ? {}
+      : { messageDictionaries: options.messageDictionaries }),
     ...(options.realtime === undefined ? {} : { realtime: options.realtime }),
     ...(options.provenance === undefined ? {} : { provenance: options.provenance }),
     ...(options.onEvent === undefined ? {} : { onEvent: options.onEvent }),
