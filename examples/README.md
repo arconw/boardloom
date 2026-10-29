@@ -1,5 +1,7 @@
 # Boardloom examples
 
-Planned runnable consumers for plain JavaScript, TypeScript, React, Angular and Svelte. Each example must install and run the built package or tarball rather than relying only on workspace source aliases.
+Runnable consumers for the built Boardloom packages. Each example must install and run the built package or tarball rather than relying only on workspace source aliases.
 
-Status: T01 layout placeholder. T14, T15, T16 and T19 add the real examples and consumer verification.
+- `react/`: Vite React example with synthetic data, locale/timezone forwarding, host message overrides, imperative actions and Strict Mode lifecycle coverage.
+
+Status: T14 adds the React example. T15, T16 and T19 add the Angular, Svelte and final consumer-matrix work.

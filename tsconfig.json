@@ -7,10 +7,13 @@
     "sourceMap": false,
     "types": ["node"],
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "jsx": "react-jsx",
     "baseUrl": ".",
     "paths": {
-      "@boardloom/core": ["packages/core/src/index.ts"]
+      "@boardloom/core": ["packages/core/src/index.ts"],
+      "@boardloom/view-dom": ["packages/view-dom/src/index.ts"],
+      "@boardloom/react": ["packages/react/src/index.ts"]
     }
   },
-  "include": ["tests/framework/**/*.ts", "vitest.config.ts"]
+  "include": ["tests/framework/**/*.ts", "tests/framework/**/*.tsx", "vitest.config.ts"]
 }

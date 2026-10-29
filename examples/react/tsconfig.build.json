@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "paths": {
+      "@boardloom/core": ["../../.tmp/build/packages/core/dist/index.d.ts"],
+      "@boardloom/react": ["../../.tmp/build/packages/react/dist/index.d.ts"],
+      "@boardloom/view-dom": ["../../.tmp/build/packages/view-dom/dist/index.d.ts"]
+    }
+  },
+  "include": ["src/**/*.ts", "src/**/*.tsx", "vite.config.ts"]
+}

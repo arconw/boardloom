@@ -6,11 +6,14 @@ export default defineConfig({
   resolve: {
     alias: {
       "@boardloom/core": fileURLToPath(new URL("./packages/core/src/index.ts", import.meta.url)),
+      "@boardloom/view-dom": fileURLToPath(
+        new URL("./packages/view-dom/src/index.ts", import.meta.url),
+      ),
     },
   },
   test: {
     environment: "node",
-    include: ["tests/framework/**/*.test.{ts,mjs}"],
+    include: ["tests/framework/**/*.test.{ts,tsx,mjs}"],
     testTimeout: 20_000,
     hookTimeout: 20_000,
     coverage: {
