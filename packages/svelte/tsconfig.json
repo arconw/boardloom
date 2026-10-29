@@ -3,8 +3,12 @@
   "compilerOptions": {
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "outDir": "dist",
-    "rootDir": "src",
-    "types": []
+    "types": [],
+    "baseUrl": ".",
+    "paths": {
+      "@boardloom/core": ["../core/src/index.ts"],
+      "@boardloom/view-dom": ["../view-dom/src/index.ts"]
+    }
   },
-  "include": ["src/**/*.ts"]
+  "include": ["src/**/*.ts", "src/**/*.svelte"]
 }

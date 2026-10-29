@@ -2,6 +2,9 @@ import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { build } from "esbuild";
+import { svelte as svelteVitePlugin } from "@sveltejs/vite-plugin-svelte";
+import { compile } from "svelte/compiler";
+import { build as viteBuild } from "vite";
 import { repoRoot, run } from "./lib/repo.mjs";
 
 function fail(message) {
@@ -9,10 +12,31 @@ function fail(message) {
   process.exit(1);
 }
 
+function sveltePlugin() {
+  return {
+    name: "boardloom-svelte-components",
+    setup(builder) {
+      builder.onLoad({ filter: /\.svelte$/ }, (args) => {
+        const compiled = compile(readFileSync(args.path, "utf8"), {
+          filename: args.path,
+          generate: "client",
+          css: "injected",
+          dev: false,
+        });
+        return {
+          contents: compiled.js.code,
+          loader: "js",
+          resolveDir: path.dirname(args.path),
+        };
+      });
+    },
+  };
+}
+
 const stagingRoot = path.join(repoRoot, ".tmp", "build", "packages");
 const consumerRoot = path.join(repoRoot, ".tmp", "consumers", "frameworks");
 const packRoot = path.join(consumerRoot, "packs");
-const requiredPackages = ["core", "view-dom", "react", "angular"];
+const requiredPackages = ["core", "view-dom", "react", "angular", "svelte"];
 
 for (const packageName of requiredPackages) {
   try {
@@ -56,6 +80,22 @@ try {
   );
 }
 
+try {
+  run(
+    process.execPath,
+    [
+      path.join(repoRoot, "node_modules", "svelte-check", "bin", "svelte-check"),
+      "--tsconfig",
+      "./tsconfig.build.json",
+    ],
+    { cwd: path.join(repoRoot, "examples", "svelte") },
+  );
+} catch (error) {
+  fail(
+    `svelte example typecheck against built declarations failed: ${error.stderr || error.message}`,
+  );
+}
+
 for (const packageName of requiredPackages) {
   const directory = path.join(stagingRoot, packageName);
   if (!existsSync(path.join(directory, "dist", "index.js"))) {
@@ -88,6 +128,13 @@ for (const packageName of requiredPackages) {
       fail(`angular tarball includes a compiled workspace dependency: ${file}`);
     }
   }
+  if (packageName === "svelte") {
+    for (const required of ["dist/index.js", "dist/index.d.ts", "dist/BoardloomView.svelte"]) {
+      if (!files.includes(required)) {
+        fail(`svelte tarball is missing ${required}`);
+      }
+    }
+  }
   tarballs.set(packageName, path.join(packRoot, entry.filename));
 }
 
@@ -101,6 +148,7 @@ const manifest = {
     "@boardloom/view-dom": `file:${path.relative(consumerRoot, tarballs.get("view-dom")).split(path.sep).join("/")}`,
     "@boardloom/react": `file:${path.relative(consumerRoot, tarballs.get("react")).split(path.sep).join("/")}`,
     "@boardloom/angular": `file:${path.relative(consumerRoot, tarballs.get("angular")).split(path.sep).join("/")}`,
+    "@boardloom/svelte": `file:${path.relative(consumerRoot, tarballs.get("svelte")).split(path.sep).join("/")}`,
     react: "19.3.1",
     "react-dom": "19.3.1",
     "@angular/common": "21.2.25",
@@ -108,6 +156,7 @@ const manifest = {
     "@angular/core": "21.2.25",
     "@angular/platform-browser": "21.2.25",
     rxjs: "7.8.2",
+    svelte: "5.57.3",
     tslib: "2.8.1",
   },
 };
@@ -133,6 +182,13 @@ const reactManifest = JSON.parse(
 const angularManifest = JSON.parse(
   readFileSync(new URL("./node_modules/@boardloom/angular/package.json", import.meta.url), "utf8"),
 );
+const svelteManifest = JSON.parse(
+  readFileSync(new URL("./node_modules/@boardloom/svelte/package.json", import.meta.url), "utf8"),
+);
+const svelteComponentPath = new URL(
+  "./node_modules/@boardloom/svelte/dist/BoardloomView.svelte",
+  import.meta.url,
+);
 const viewManifest = JSON.parse(
   readFileSync(new URL("./node_modules/@boardloom/view-dom/package.json", import.meta.url), "utf8"),
 );
@@ -140,7 +196,7 @@ const coreManifest = JSON.parse(
   readFileSync(new URL("./node_modules/@boardloom/core/package.json", import.meta.url), "utf8"),
 );
 
-if (reactManifest.name !== "@boardloom/react" || angularManifest.name !== "@boardloom/angular" || viewManifest.name !== "@boardloom/view-dom" || coreManifest.name !== "@boardloom/core") {
+if (reactManifest.name !== "@boardloom/react" || angularManifest.name !== "@boardloom/angular" || svelteManifest.name !== "@boardloom/svelte" || viewManifest.name !== "@boardloom/view-dom" || coreManifest.name !== "@boardloom/core") {
   throw new Error("packed package identity mismatch");
 }
 if (reactManifest.dependencies === undefined || reactManifest.dependencies["@boardloom/view-dom"] === undefined) {
@@ -151,6 +207,15 @@ if (angularManifest.dependencies === undefined || angularManifest.dependencies["
 }
 if (angularManifest.peerDependencies === undefined || angularManifest.peerDependencies["@angular/core"] === undefined) {
   throw new Error("angular tarball does not declare the Angular peer dependency");
+}
+if (svelteManifest.dependencies === undefined || svelteManifest.dependencies["@boardloom/view-dom"] === undefined) {
+  throw new Error("svelte tarball does not declare the shared runtime dependency");
+}
+if (svelteManifest.peerDependencies === undefined || svelteManifest.peerDependencies.svelte === undefined) {
+  throw new Error("svelte tarball does not declare the Svelte peer dependency");
+}
+if (!readFileSync(svelteComponentPath, "utf8").includes("BoardloomSession")) {
+  throw new Error("packed svelte component is missing its shared session integration");
 }
 const angularComponent = angularAdapter.BoardloomViewComponent;
 if (typeof angularComponent !== "function" || angularComponent.ɵcmp === undefined) {
@@ -395,6 +460,127 @@ try {
   fail(`packed angular consumer DOM smoke failed: ${error.stderr || error.message}`);
 }
 
+const svelteSmokeEntry = path.join(consumerRoot, "svelte-smoke-entry.mjs");
+const svelteSmokeBundle = path.join(consumerRoot, "svelte-smoke.mjs");
+const svelteSmokeSource = `const { Window } = await import(process.env.BOARDLOOM_HAPPY_DOM);
+const window = new Window({ url: "http://127.0.0.1/" });
+for (const [key, value] of Object.entries({
+  window,
+  document: window.document,
+  navigator: window.navigator,
+  Node: window.Node,
+  Element: window.Element,
+  HTMLElement: window.HTMLElement,
+  HTMLDivElement: window.HTMLDivElement,
+  ShadowRoot: window.ShadowRoot,
+  DocumentFragment: window.DocumentFragment,
+  Text: window.Text,
+  Event: window.Event,
+  CustomEvent: window.CustomEvent,
+  KeyboardEvent: window.KeyboardEvent,
+  MouseEvent: window.MouseEvent,
+  MutationObserver: window.MutationObserver,
+  requestAnimationFrame: window.requestAnimationFrame.bind(window),
+  cancelAnimationFrame: window.cancelAnimationFrame.bind(window),
+  getComputedStyle: window.getComputedStyle.bind(window),
+})) {
+  Object.defineProperty(globalThis, key, { value, configurable: true, writable: true });
+}
+
+const { mount, unmount } = await import("svelte");
+const { BoardloomView } = await import("@boardloom/svelte");
+
+async function waitFor(predicate, label, timeout = 5000) {
+  const start = Date.now();
+  while (!predicate()) {
+    if (Date.now() - start > timeout) {
+      throw new Error("timed out waiting for " + label);
+    }
+    await new Promise((resolve) => setTimeout(resolve, 25));
+  }
+}
+
+const container = document.createElement("div");
+document.body.append(container);
+const component = mount(BoardloomView, {
+  target: container,
+  props: {
+    document: {
+      schemaVersion: 1,
+      id: "consumer-board",
+      title: "Packed consumer board",
+      createdAt: 1700000000000,
+      updatedAt: 1700000000000,
+      theme: { mode: "light" },
+      datasets: [],
+      slices: [],
+      filterGroups: [],
+      blocks: [
+        {
+          id: "note",
+          type: "text",
+          title: "Packed consumer",
+          bindings: [],
+          config: { text: "Mounted from packed Boardloom tarballs." },
+        },
+      ],
+      filters: [],
+      comparisons: [],
+      layout: {
+        desktop: { columns: 12, placements: [{ blockId: "note", x: 0, y: 0, width: 6, height: 2 }] },
+        tablet: { columns: 8, placements: [{ blockId: "note", x: 0, y: 0, width: 6, height: 2 }] },
+        narrow: { columns: 4, placements: [{ blockId: "note", x: 0, y: 0, width: 4, height: 2 }] }
+      },
+      extensions: {}
+    },
+    locale: "de",
+    timezone: "Asia/Tokyo",
+  },
+});
+await waitFor(() => container.querySelectorAll(".boardloom").length === 1, "packed adapter mount");
+if (container.querySelectorAll(".boardloom").length !== 1) {
+  throw new Error("packed svelte adapter mounted " + container.querySelectorAll(".boardloom").length + " roots");
+}
+const host = container.querySelector("[data-boardloom-svelte]");
+if (host === null) {
+  throw new Error("packed svelte adapter host marker is missing");
+}
+const root = container.querySelector(".boardloom");
+if (root?.getAttribute("data-boardloom-locale") !== "de") {
+  throw new Error("packed svelte adapter dropped the locale prop");
+}
+if (root?.getAttribute("data-boardloom-timezone") !== "Asia/Tokyo") {
+  throw new Error("packed svelte adapter dropped the timezone prop");
+}
+await unmount(component);
+await waitFor(() => container.querySelectorAll(".boardloom").length === 0, "packed adapter cleanup");
+if (container.querySelectorAll(".boardloom").length !== 0) {
+  throw new Error("packed svelte adapter left a mounted root");
+}
+console.log("packed svelte consumer DOM smoke passed");
+`;
+writeFileSync(svelteSmokeEntry, svelteSmokeSource);
+try {
+  await build({
+    entryPoints: [svelteSmokeEntry],
+    outfile: svelteSmokeBundle,
+    bundle: true,
+    format: "esm",
+    platform: "browser",
+    target: ["node24"],
+    plugins: [sveltePlugin()],
+    logLevel: "silent",
+  });
+  execFileSync(process.execPath, [svelteSmokeBundle], {
+    cwd: consumerRoot,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+    env: { ...process.env, BOARDLOOM_HAPPY_DOM: import.meta.resolve("happy-dom") },
+  });
+} catch (error) {
+  fail(`packed svelte consumer DOM smoke failed: ${error.stderr || error.message}`);
+}
+
 const appSource = `import { createElement } from "react";
 import { BoardloomView } from "@boardloom/react";
 
@@ -473,6 +659,118 @@ if (!bundleText.includes("BoardloomView")) {
   fail("packed consumer bundle does not include the React adapter");
 }
 
+const svelteAppSource = `import { mount } from "svelte";
+import { BoardloomView } from "@boardloom/svelte";
+
+const target = document.createElement("div");
+document.body.append(target);
+mount(BoardloomView, {
+  target,
+  props: {
+    document: {
+      schemaVersion: 1,
+      id: "consumer-board",
+      title: "Packed consumer board",
+      createdAt: 1700000000000,
+      updatedAt: 1700000000000,
+      theme: { mode: "light" },
+      datasets: [],
+      slices: [],
+      filterGroups: [],
+      blocks: [
+        {
+          id: "note",
+          type: "text",
+          title: "Packed consumer",
+          bindings: [],
+          config: { text: "Rendered from packed Boardloom tarballs." },
+        },
+      ],
+      filters: [],
+      comparisons: [],
+      layout: {
+        desktop: { columns: 12, placements: [{ blockId: "note", x: 0, y: 0, width: 6, height: 2 }] },
+        tablet: { columns: 8, placements: [{ blockId: "note", x: 0, y: 0, width: 6, height: 2 }] },
+        narrow: { columns: 4, placements: [{ blockId: "note", x: 0, y: 0, width: 4, height: 2 }] }
+      },
+      extensions: {}
+    }
+  }
+});
+`;
+const svelteAppEntry = path.join(consumerRoot, "app-svelte.js");
+writeFileSync(svelteAppEntry, svelteAppSource);
+const svelteBundlePath = path.join(consumerRoot, "app-svelte.bundle.js");
+try {
+  await build({
+    entryPoints: [svelteAppEntry],
+    outfile: svelteBundlePath,
+    bundle: true,
+    format: "esm",
+    platform: "browser",
+    target: ["chrome120"],
+    plugins: [sveltePlugin()],
+    logLevel: "silent",
+  });
+} catch (error) {
+  fail(`packed consumer Svelte bundle failed: ${error.message}`);
+}
+const svelteBundleText = readFileSync(svelteBundlePath, "utf8");
+for (const forbidden of [
+  "packages/svelte/src",
+  "packages/view-dom/src",
+  "packages/core/src",
+  ".tmp/build/packages",
+]) {
+  if (svelteBundleText.includes(forbidden)) {
+    fail(`packed consumer Svelte bundle references workspace source: ${forbidden}`);
+  }
+}
+if (!svelteBundleText.includes("data-boardloom-svelte")) {
+  fail("packed consumer Svelte bundle does not include the Svelte adapter");
+}
+
+const svelteViteEntry = path.join(consumerRoot, "app-svelte-vite.js");
+writeFileSync(svelteViteEntry, svelteAppSource);
+const svelteViteOut = path.join(consumerRoot, "svelte-vite-dist");
+try {
+  await viteBuild({
+    root: consumerRoot,
+    configFile: false,
+    logLevel: "silent",
+    plugins: [svelteVitePlugin()],
+    build: {
+      outDir: svelteViteOut,
+      emptyOutDir: true,
+      lib: {
+        entry: svelteViteEntry,
+        formats: ["es"],
+        fileName: "app-svelte-vite",
+      },
+    },
+  });
+} catch (error) {
+  fail(`packed consumer Svelte Vite bundle failed: ${error.message}`);
+}
+const svelteViteBundlePath = path.join(svelteViteOut, "app-svelte-vite.js");
+if (!existsSync(svelteViteBundlePath)) {
+  fail("packed consumer Svelte Vite bundle did not produce app-svelte-vite.js");
+}
+const svelteViteText = readFileSync(svelteViteBundlePath, "utf8");
+for (const forbidden of [
+  "packages/svelte/src",
+  "packages/view-dom/src",
+  "packages/core/src",
+  ".tmp/build/packages",
+]) {
+  if (svelteViteText.includes(forbidden)) {
+    fail(`packed consumer Svelte Vite bundle references workspace source: ${forbidden}`);
+  }
+}
+if (!svelteViteText.includes("data-boardloom-svelte")) {
+  fail("packed consumer Svelte Vite bundle does not include the Svelte adapter");
+}
+
 console.log(
-  `Packed consumer verification passed for ${requiredPackages.length} Boardloom tarballs, built-declaration typecheck, Node and DOM smokes for React and Angular, and a React bundle in .tmp/consumers/frameworks.`,
+  `Packed consumer verification passed for ${requiredPackages.length} Boardloom tarballs, built-declaration typechecks, Node and DOM smokes for React, Angular and Svelte, React and Svelte esbuild bundles, and a Svelte Vite consumer bundle in .tmp/consumers/frameworks.`,
 );

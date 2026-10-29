@@ -42,25 +42,46 @@ rmSync(stagingDirectory, { recursive: true, force: true });
 mkdirSync(path.join(stagingDirectory, "dist"), { recursive: true });
 
 const usesAngularCompiler = packageInfo.manifest.peerDependencies?.["@angular/core"] !== undefined;
-const compilerPath = usesAngularCompiler
-  ? path.join(
-      repoRoot,
-      "node_modules",
-      "@angular",
-      "compiler-cli",
-      "bundles",
-      "src",
-      "bin",
-      "ngc.js",
-    )
-  : path.join(repoRoot, "node_modules", "typescript", "bin", "tsc");
-run(process.execPath, [
-  compilerPath,
-  "-p",
-  path.join(packageDirectory, "tsconfig.json"),
-  "--outDir",
-  path.join(stagingDirectory, "dist"),
-]);
+const usesSvelteCompiler = packageInfo.manifest.peerDependencies?.svelte !== undefined;
+if (usesSvelteCompiler) {
+  try {
+    run(
+      process.execPath,
+      [
+        path.join(repoRoot, "node_modules", "@sveltejs", "package", "svelte-package.js"),
+        "-i",
+        "src",
+        "-o",
+        path.join(stagingDirectory, "dist"),
+        "--tsconfig",
+        path.join(packageDirectory, "tsconfig.json"),
+      ],
+      { cwd: packageDirectory },
+    );
+  } finally {
+    rmSync(path.join(packageDirectory, ".svelte-kit"), { recursive: true, force: true });
+  }
+} else {
+  const compilerPath = usesAngularCompiler
+    ? path.join(
+        repoRoot,
+        "node_modules",
+        "@angular",
+        "compiler-cli",
+        "bundles",
+        "src",
+        "bin",
+        "ngc.js",
+      )
+    : path.join(repoRoot, "node_modules", "typescript", "bin", "tsc");
+  run(process.execPath, [
+    compilerPath,
+    "-p",
+    path.join(packageDirectory, "tsconfig.json"),
+    "--outDir",
+    path.join(stagingDirectory, "dist"),
+  ]);
+}
 
 const distDirectory = path.join(stagingDirectory, "dist");
 if (!existsSync(path.join(distDirectory, "index.js"))) {
