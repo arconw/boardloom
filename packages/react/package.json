@@ -25,6 +25,14 @@
     "build": "node ../../scripts/build-package.mjs react",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
+  "dependencies": {
+    "@boardloom/core": "0.0.0",
+    "@boardloom/view-dom": "0.0.0"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
   "engines": {
     "node": ">=24.21.0 <25"
   }

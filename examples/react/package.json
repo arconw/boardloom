@@ -1,0 +1,25 @@
+{
+  "name": "@boardloom/example-react",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Runnable Boardloom React example",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "typecheck:built": "tsc -p tsconfig.build.json --noEmit"
+  },
+  "dependencies": {
+    "@boardloom/core": "0.0.0",
+    "@boardloom/react": "0.0.0",
+    "@boardloom/view-dom": "0.0.0",
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
+  },
+  "devDependencies": {
+    "vite": "7.3.7"
+  }
+}
