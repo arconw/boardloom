@@ -64,6 +64,7 @@ import {
   type LocaleConfigInput,
 } from "./locale.js";
 import { createMessageProvider, type MessageDictionary, type MessageProvider } from "./messages.js";
+import type { ExtensionSession } from "./extensions.js";
 import type { BoardMigrationReport } from "./migrations.js";
 import type {
   AcquireEditorLeaseOptions,
@@ -120,6 +121,7 @@ export interface SpaceDependencies {
 export interface SpaceInitOptions extends CreateSpaceOptions {
   readonly localeConfig: LocaleConfig;
   readonly warnings?: readonly Diagnostic[];
+  readonly extensionSession?: ExtensionSession;
 }
 
 export interface SpaceImportMetadata {
@@ -148,6 +150,7 @@ export interface BoardSpace {
   setLocale(config: LocaleConfigInput): Result<SpaceSnapshot>;
   getFormatters(): FormatterProvider;
   getMessageProvider(): MessageProvider;
+  getExtensionThemeTokens(): Readonly<Record<string, string>>;
   getFilterState(): FilterRuntimeState;
   setFilterValue(
     filterId: string,
@@ -236,6 +239,7 @@ class SpaceImpl implements BoardSpace {
   private readonly events: EventBus<SpaceEvent>;
   private readonly queryController: QueryController;
   private readonly datasetProvider: DatasetProvider | null;
+  private readonly extensionSession: ExtensionSession | null;
   private readonly viewHost: ViewHost;
   private readonly views = new Map<string, ViewImpl>();
   private readonly tasks = new Map<string, unknown>();
@@ -280,6 +284,7 @@ class SpaceImpl implements BoardSpace {
       deps.forwardEvent(event);
     });
     this.datasetProvider = options.datasetProvider ?? null;
+    this.extensionSession = options.extensionSession ?? null;
     this.queryController = createQueryController({
       ...(options.datasetProvider === undefined ? {} : { provider: options.datasetProvider }),
       ...(options.realtime === undefined ? {} : { realtime: options.realtime }),
@@ -380,6 +385,10 @@ class SpaceImpl implements BoardSpace {
 
   getMessageProvider(): MessageProvider {
     return this.messages;
+  }
+
+  getExtensionThemeTokens(): Readonly<Record<string, string>> {
+    return this.extensionSession?.themeTokens ?? Object.freeze({});
   }
 
   getFilterState(): FilterRuntimeState {
@@ -879,8 +888,16 @@ class SpaceImpl implements BoardSpace {
     }
 
     const previous = this.localeConfig;
+    const previousFormatters = this.formatters;
     this.localeConfig = next;
     this.formatters = formatters;
+    const formatterDiagnostics = this.extensionSession?.releaseFormatter(previousFormatters) ?? [];
+    for (const diagnostic of formatterDiagnostics) {
+      this.deps.logger.error("Boardloom formatter disposal failed", {
+        code: diagnostic.code,
+        path: diagnostic.path,
+      });
+    }
     this.messages = messages;
     this.updatedAt = this.deps.clock.now();
     this.clearDiagnostics();
@@ -1569,10 +1586,17 @@ class SpaceImpl implements BoardSpace {
     this.status = "disposed";
     this.updatedAt = this.deps.clock.now();
     this.disposedFlag = true;
+    const extensionDiagnostics = this.extensionSession?.dispose() ?? [];
+    for (const diagnostic of extensionDiagnostics) {
+      this.deps.logger.error("Boardloom extension disposal failed", {
+        code: diagnostic.code,
+        path: diagnostic.path,
+      });
+    }
     this.deps.onDisposed(this.id, this.lifetimeId);
     this.emitTerminal({ type: "space:disposed" });
     this.events.finishShutdown();
-    return ok(undefined);
+    return extensionDiagnostics.length === 0 ? ok(undefined) : fail(extensionDiagnostics);
   }
 
   private bindingValidationCatalog(): BoardValidationCatalog | undefined {

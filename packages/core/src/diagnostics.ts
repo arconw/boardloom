@@ -107,6 +107,12 @@ export const DIAGNOSTIC_CODES = Object.freeze({
   MESSAGE_MISSING_PARAM: "MESSAGE_MISSING_PARAM",
   MESSAGE_INVALID_PARAM: "MESSAGE_INVALID_PARAM",
   MESSAGE_INVALID_DICTIONARY: "MESSAGE_INVALID_DICTIONARY",
+  EXTENSION_INVALID: "EXTENSION_INVALID",
+  EXTENSION_DUPLICATE: "EXTENSION_DUPLICATE",
+  EXTENSION_INCOMPATIBLE_API: "EXTENSION_INCOMPATIBLE_API",
+  EXTENSION_FAILED: "EXTENSION_FAILED",
+  EXTENSION_DISPOSAL_FAILED: "EXTENSION_DISPOSAL_FAILED",
+  EXTENSION_STYLE_INVALID: "EXTENSION_STYLE_INVALID",
 } as const);
 
 export type DiagnosticCode = (typeof DIAGNOSTIC_CODES)[keyof typeof DIAGNOSTIC_CODES];
@@ -285,6 +291,16 @@ export const DIAGNOSTIC_MESSAGES: Readonly<Record<string, string>> = Object.free
   MESSAGE_MISSING_PARAM: "A message placeholder has no matching interpolation parameter.",
   MESSAGE_INVALID_PARAM: "Interpolation parameters must be plain scalar values.",
   MESSAGE_INVALID_DICTIONARY: "A message dictionary is not a plain string-to-string record.",
+  EXTENSION_INVALID:
+    "The extension definition is missing required metadata or has an invalid shape.",
+  EXTENSION_DUPLICATE: "An extension with this kind and ID is already registered.",
+  EXTENSION_INCOMPATIBLE_API:
+    "The extension targets an API version that this Boardloom build does not support.",
+  EXTENSION_FAILED: "The extension failed while it was being created, used or disposed.",
+  EXTENSION_DISPOSAL_FAILED:
+    "An extension failed during disposal; other extensions were still disposed.",
+  EXTENSION_STYLE_INVALID:
+    "The extension style sheet is invalid or escapes the Boardloom host scope.",
 });
 
 export function createDiagnostic(

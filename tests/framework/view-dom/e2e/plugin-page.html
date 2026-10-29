@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Boardloom T13 plugin check</title>
+    <link rel="stylesheet" href="/build/view-dom/styles.css" />
+    <style>
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        background: #dddddd;
+      }
+      #first,
+      #second {
+        width: 1200px;
+      }
+      #result {
+        white-space: pre-wrap;
+      }
+      #host-probe {
+        margin: 8px;
+        padding: 4px;
+        border: 2px solid #777777;
+      }
+    </style>
+    <script type="importmap">
+      {
+        "imports": {
+          "@boardloom/core": "/build/core/dist/index.js"
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <div id="host-probe" class="plugin-reference">Host page probe</div>
+    <div id="first"></div>
+    <div id="second"></div>
+    <pre id="result"></pre>
+    <script type="module" src="./plugin-page.js"></script>
+  </body>
+</html>

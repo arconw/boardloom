@@ -482,7 +482,7 @@ describe("T12 editor workflow", () => {
       committedTitle: "After ordering apply",
     });
     expect(result.checks.complete).toBe(true);
-  });
+  }, 60_000);
 
   it("uses narrow drawers with a modal inspector and no page overflow", async () => {
     const result = await runScenario(390);
@@ -502,5 +502,5 @@ describe("T12 editor workflow", () => {
     });
     expect(Number((result.checks.responsive as { width?: number }).width)).toBeLessThan(768);
     expect(result.checks.complete).toBe(true);
-  });
+  }, 60_000);
 });

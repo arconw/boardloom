@@ -380,6 +380,40 @@ export { formatValueParts, formatValueText, unitTextOf } from "./value-format.js
 export type { FormattedValue, ValueFieldSpec, ValueMessages } from "./value-format.js";
 
 export {
+  BLOCK_EXTENSION_API_VERSION,
+  CORE_EXTENSION_KINDS,
+  EXTENSION_API_VERSION,
+  EXTENSION_KINDS,
+  RENDERER_EXTENSION_API_VERSION,
+  createExtensionRegistry,
+  extensionStyleDiagnostics,
+  isValidExtensionApi,
+  registerLocaleDictionary,
+} from "./extensions.js";
+export type {
+  CoreExtensionDefinition,
+  CoreExtensionKind,
+  ExtensionApiRange,
+  ExtensionDefinitionMap,
+  ExtensionFactoryContext,
+  ExtensionKind,
+  ExtensionMetadata,
+  ExtensionRegistration,
+  ExtensionRegistry,
+  ExtensionRegistryEvent,
+  ExtensionRegistryOptions,
+  ExtensionSelection,
+  ExtensionSession,
+  FormatterDefinition,
+  LocaleDictionaryRegistrationOptions,
+  MessageDictionaryDefinition,
+  QueryAdapterDefinition,
+  RealtimeAdapterDefinition,
+  ThemeExtensionDefinition,
+} from "./extensions.js";
+export { assertExtensionStyles, validateExtensionStyles } from "./extension-style.js";
+
+export {
   DEFAULT_RENDERER_COLORS,
   RENDERER_API_VERSION,
   RENDERER_KINDS,
@@ -535,6 +569,8 @@ export type {
   FilterChangedEvent,
   FilterRejectedEvent,
   DocumentMigratedEvent,
+  ExtensionErrorEvent,
+  ExtensionRegisteredEvent,
   ImportFailedEvent,
   QueryCancelledEvent,
   QueryEvent,

@@ -13,6 +13,26 @@ export {
   type BlockTypeDefinition,
 } from "./block-registry.js";
 export { BUILT_IN_BLOCK_TYPES } from "./built-in-blocks.js";
+export {
+  createBoardloomExtensions,
+  type BoardloomExtensionDefinitions,
+  type BoardloomExtensionSummary,
+  type BoardloomExtensions,
+} from "./extensions.js";
+export {
+  REFERENCE_BLOCK_TYPE,
+  REFERENCE_PLUGIN,
+  REFERENCE_RENDERER_ID,
+  createReferencePlugin,
+  type ReferencePlugin,
+  type ReferencePluginOptions,
+} from "./reference-plugin.js";
+export {
+  installScopedStyles,
+  scopeExtensionCss,
+  type ScopedStyleEntry,
+  type ScopedStylesHandle,
+} from "./plugin-styles.js";
 export { BUILT_IN_RENDERERS } from "./built-in-renderers.js";
 export {
   buildChartSpecForBlock,

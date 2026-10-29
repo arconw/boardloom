@@ -2,7 +2,7 @@
 
 Boardloom headless runtime: isolated spaces, lifecycle, view-local modes, editor lease and draft foundations, locale/timezone configuration, formatting and message-provider contracts. The package has no DOM, UI framework, server, SQL, ORM or database dependency. It imports and runs in Node and in browsers.
 
-Status: T02 implements the headless core. T03 adds the versioned board document schema, canonical export, non-destructive import and a synthetic migration harness. T04 adds the dataset/field/slice contract, capability validation, local and async query adapters, canonical query keys, generations, cancellation and query states. T07 adds the DOM-free renderer contract and registry, the normative field-type matrix, shared value formatting, and renderer-neutral chart, KPI and table models plus lifecycle/error containment. T08 adds the shared X/Y/series/group binding model, selectable and fixed binding enforcement, provider aggregation-capability admission and fixed-binding preservation across document replacement and import. T09 adds dataset-qualified scoped filters, explicit mappings, typed operators, deterministic composition, serializable per-space runtime state, reset paths, cross-filter compatibility and loop suppression, comparison-side filter mapping, and atomic rejection that retains the prior accepted state. T10 adds comparison plan construction for primary and reference query sides, dataset-qualified mappings, composite-key alignment after explicit grouping and aggregation, duplicate-key rejection, null-key exclusion with counted diagnostics, outer alignment, absolute and percentage delta arithmetic with explicit unavailable reasons, declared unit conversion, independent time windows, renderer-neutral comparison results and comparison change events. T11 adds the transport-independent query-shaped realtime contract, generation and epoch invalidation, snapshot/update state machine, bounded buffers, reconnect and resync status, the browser WebSocket adapter and a separate in-memory simulation transport. T12 adds the editor document-operation model for adding, deleting, duplicating, reordering, moving, resizing, configuring and resetting every built-in block type, plus validated theme editing, lease-bound view commands and an explicit fixed-block removal decision for editor deletion. Full built-in locale dictionaries and RTL layout belong to T17.
+Status: T02 implements the headless core. T03 adds the versioned board document schema, canonical export, non-destructive import and a synthetic migration harness. T04 adds the dataset/field/slice contract, capability validation, local and async query adapters, canonical query keys, generations, cancellation and query states. T07 adds the DOM-free renderer contract and registry, the normative field-type matrix, shared value formatting, and renderer-neutral chart, KPI and table models plus lifecycle/error containment. T08 adds the shared X/Y/series/group binding model, selectable and fixed binding enforcement, provider aggregation-capability admission and fixed-binding preservation across document replacement and import. T09 adds dataset-qualified scoped filters, explicit mappings, typed operators, deterministic composition, serializable per-space runtime state, reset paths, cross-filter compatibility and loop suppression, comparison-side filter mapping, and atomic rejection that retains the prior accepted state. T10 adds comparison plan construction for primary and reference query sides, dataset-qualified mappings, composite-key alignment after explicit grouping and aggregation, duplicate-key rejection, null-key exclusion with counted diagnostics, outer alignment, absolute and percentage delta arithmetic with explicit unavailable reasons, declared unit conversion, independent time windows, renderer-neutral comparison results and comparison change events. T11 adds the transport-independent query-shaped realtime contract, generation and epoch invalidation, snapshot/update state machine, bounded buffers, reconnect and resync status, the browser WebSocket adapter and a separate in-memory simulation transport. T13 adds the public extension contracts and registries for query adapters, realtime adapters, formatters, message dictionaries and theme packs, with semantic version metadata, API compatibility ranges, duplicate/override policy, deterministic per-space instances, contained failures and runtime extension events. Locale override dictionaries use the same registry. T12 adds the editor document-operation model for adding, deleting, duplicating, reordering, moving, resizing, configuring and resetting every built-in block type, plus validated theme editing, lease-bound view commands and an explicit fixed-block removal decision for editor deletion. Full built-in locale dictionaries and RTL layout belong to T17.
 
 Distribution target: browser ESM with TypeScript declarations. npm publication is not authorized; planned scoped names are used for tarball consumers only.
 
@@ -40,7 +40,33 @@ Every space instance has a `lifetimeId`. Events, snapshots and space summaries e
 
 ## Injection
 
-`createRuntime` accepts an injected clock, ID factory, logger, document validator, provider validation catalog, formatter factory, message dictionaries and draft history limit. Tests use a fake clock and deterministic ID factory; hosts can provide their own. The default clock uses host timer functions, the default logger is silent and the default ID factory is runtime-scoped. A host document validator is composed after the schema baseline. Message dictionaries are validated as plain enumerable string-to-string records before use; non-plain containers and accessor-backed dictionaries are rejected with `MESSAGE_INVALID_DICTIONARY`.
+`createRuntime` accepts an injected clock, ID factory, logger, document validator, provider validation catalog, formatter factory, message dictionaries, draft history limit, block-type allowlist and extension registry. Tests use a fake clock and deterministic ID factory; hosts can provide their own. The default clock uses host timer functions, the default logger is silent and the default ID factory is runtime-scoped. A host document validator is composed after the schema baseline. Message dictionaries are validated as plain enumerable string-to-string records before use; non-plain containers and accessor-backed dictionaries are rejected with `MESSAGE_INVALID_DICTIONARY`.
+
+## Extensions
+
+`createExtensionRegistry()` exposes registries for query adapters, realtime adapters, formatters, message dictionaries and theme packs. Every definition carries a stable ID, semantic `version`, `apiVersion` and optional `apiCompatibility` range and capability list. The registry rejects incompatible API versions, malformed definitions, duplicate IDs and unknown theme tokens with stable diagnostics; `{ override: true }` is the only replacement path and marks the registration as replaced.
+
+```ts
+import { createExtensionRegistry, registerLocaleDictionary } from "@boardloom/core";
+
+const extensions = createExtensionRegistry();
+registerLocaleDictionary(extensions, "en", { "host.greeting": "Host dictionary" });
+const runtime = createRuntime({
+  extensions,
+  blockTypes: ["plugin.sample"],
+});
+const space = runtime.createSpace({
+  document,
+  extensionSelection: {
+    queryAdapter: "host.query",
+    formatter: "host.formatter",
+    messageDictionaries: ["locale.en"],
+    themes: ["host.theme"],
+  },
+});
+```
+
+`extensions.createSession(selection, context)` instantiates only the selected adapters for one space. A factory error is contained and returned as `EXTENSION_FAILED`; other spaces and registrations remain usable. Disposing the space calls the adapter's optional `dispose` hook in reverse creation order, keeps going after a failure and reports `EXTENSION_DISPOSAL_FAILED`. `getExtensionThemeTokens()` exposes the selected theme tokens to the DOM layer, where document tokens take precedence. The core registry performs no DOM work and does not evaluate document content.
 
 ## Board document schema
 

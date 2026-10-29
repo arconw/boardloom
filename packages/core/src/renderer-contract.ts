@@ -33,6 +33,7 @@ import type { FormatterProvider } from "./formatting.js";
 import type { JsonValue } from "./json.js";
 import type { BoardloomLocale, TextDirection } from "./locale.js";
 import type { CategoryOrder, VisualizationKind } from "./field-matrix.js";
+import { validateExtensionStyles } from "./extension-style.js";
 
 export const RENDERER_API_VERSION = 1 as const;
 
@@ -185,8 +186,11 @@ export interface RendererDefinition<HostElement = unknown> {
   readonly kind: RendererKind;
   readonly visualizations: readonly ChartType[];
   readonly capabilities: RendererCapabilities;
+  readonly explicitOnly?: boolean;
+  readonly styles?: string;
   validate(spec: RendererSpec): RendererValidation;
   mount(input: RendererInput<HostElement>): RendererHandle<HostElement>;
+  dispose?(): void;
 }
 
 export interface RendererLookup {
@@ -282,8 +286,22 @@ export function resolveRendererColors(
   });
 }
 
+const SEMANTIC_VERSION = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/;
+
 function definitionDiagnostic(path: string, message: string, ids?: readonly string[]): Diagnostic {
   return createDiagnostic(DIAGNOSTIC_CODES.RENDERER_INVALID, path, {
+    message,
+    ...(ids === undefined ? {} : { relatedIds: ids }),
+  });
+}
+
+function extensionDiagnostic(
+  code: string,
+  path: string,
+  message: string,
+  ids?: readonly string[],
+): Diagnostic {
+  return createDiagnostic(code, path, {
     message,
     ...(ids === undefined ? {} : { relatedIds: ids }),
   });
@@ -568,12 +586,20 @@ class RendererRegistryImpl<HostElement> implements RendererRegistry<HostElement>
     if (!isNonEmptyString(definition.id)) {
       return fail([definitionDiagnostic("renderer/id", "A renderer needs a stable ID.")]);
     }
-    if (!isNonEmptyString(definition.version)) {
-      return fail([definitionDiagnostic("renderer/version", "A renderer must declare a version.")]);
+    if (!isNonEmptyString(definition.version) || !SEMANTIC_VERSION.test(definition.version)) {
+      return fail([
+        extensionDiagnostic(
+          DIAGNOSTIC_CODES.EXTENSION_INVALID,
+          "renderer/version",
+          "A renderer must declare a semantic version.",
+          [definition.id],
+        ),
+      ]);
     }
     if (definition.apiVersion !== RENDERER_API_VERSION) {
       return fail([
-        definitionDiagnostic(
+        extensionDiagnostic(
+          DIAGNOSTIC_CODES.EXTENSION_INCOMPATIBLE_API,
           "renderer/apiVersion",
           `Renderer ${definition.id} targets API ${String(definition.apiVersion)}; this build supports ${RENDERER_API_VERSION}.`,
           [definition.id],
@@ -601,6 +627,24 @@ class RendererRegistryImpl<HostElement> implements RendererRegistry<HostElement>
         definitionDiagnostic(
           "renderer/visualizations",
           `Renderer ${definition.id} must declare a visualizations array.`,
+          [definition.id],
+        ),
+      ]);
+    }
+    if (definition.styles !== undefined) {
+      const styleDiagnostics = validateExtensionStyles(
+        definition.styles,
+        `renderer/${definition.id}/styles`,
+      );
+      if (styleDiagnostics.length > 0) {
+        return fail([...styleDiagnostics]);
+      }
+    }
+    if (definition.explicitOnly !== undefined && typeof definition.explicitOnly !== "boolean") {
+      return fail([
+        definitionDiagnostic(
+          "renderer/explicitOnly",
+          `Renderer ${definition.id} must declare explicitOnly as a boolean.`,
           [definition.id],
         ),
       ]);
@@ -634,7 +678,7 @@ class RendererRegistryImpl<HostElement> implements RendererRegistry<HostElement>
         ]),
       ]);
     }
-    if (definition.kind !== "chart") {
+    if (definition.kind !== "chart" && definition.explicitOnly !== true) {
       const kindKey = visualizationKey(definition.kind, undefined);
       if (this.visualizations.has(kindKey)) {
         return fail([
@@ -656,16 +700,18 @@ class RendererRegistryImpl<HostElement> implements RendererRegistry<HostElement>
           ),
         ]);
       }
-      for (const visualization of definition.visualizations) {
-        const key = visualizationKey("chart", visualization);
-        if (this.visualizations.has(key)) {
-          return fail([
-            definitionDiagnostic(
-              "renderer/visualizations",
-              `A chart renderer is already registered for ${visualization}.`,
-              [definition.id, visualization],
-            ),
-          ]);
+      if (definition.explicitOnly !== true) {
+        for (const visualization of definition.visualizations) {
+          const key = visualizationKey("chart", visualization);
+          if (this.visualizations.has(key)) {
+            return fail([
+              definitionDiagnostic(
+                "renderer/visualizations",
+                `A chart renderer is already registered for ${visualization}.`,
+                [definition.id, visualization],
+              ),
+            ]);
+          }
         }
       }
     }
@@ -680,6 +726,9 @@ class RendererRegistryImpl<HostElement> implements RendererRegistry<HostElement>
       }),
     });
     this.definitions.set(frozen.id, frozen);
+    if (frozen.explicitOnly === true) {
+      return ok(undefined);
+    }
     if (frozen.kind === "chart") {
       for (const visualization of frozen.visualizations) {
         this.visualizations.set(visualizationKey("chart", visualization), frozen);

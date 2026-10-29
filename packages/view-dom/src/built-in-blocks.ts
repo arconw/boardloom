@@ -1,4 +1,5 @@
 import {
+  BLOCK_EXTENSION_API_VERSION,
   DIAGNOSTIC_CODES,
   createDiagnostic,
   destroyRenderer,
@@ -885,9 +886,34 @@ function createFilterSurface(environment: BlockSurfaceEnvironment): BlockSurface
 }
 
 export const BUILT_IN_BLOCK_TYPES: readonly BlockTypeDefinition[] = Object.freeze([
-  Object.freeze({ type: "text", version: "1.0.0", createSurface: createTextSurface }),
-  Object.freeze({ type: "metric", version: "1.0.0", createSurface: createMetricSurface }),
-  Object.freeze({ type: "table", version: "1.0.0", createSurface: createTableSurface }),
-  Object.freeze({ type: "chart", version: "1.0.0", createSurface: createChartSurface }),
-  Object.freeze({ type: "filter", version: "1.0.0", createSurface: createFilterSurface }),
+  Object.freeze({
+    type: "text",
+    version: "1.0.0",
+    apiVersion: BLOCK_EXTENSION_API_VERSION,
+    createSurface: createTextSurface,
+  }),
+  Object.freeze({
+    type: "metric",
+    version: "1.0.0",
+    apiVersion: BLOCK_EXTENSION_API_VERSION,
+    createSurface: createMetricSurface,
+  }),
+  Object.freeze({
+    type: "table",
+    version: "1.0.0",
+    apiVersion: BLOCK_EXTENSION_API_VERSION,
+    createSurface: createTableSurface,
+  }),
+  Object.freeze({
+    type: "chart",
+    version: "1.0.0",
+    apiVersion: BLOCK_EXTENSION_API_VERSION,
+    createSurface: createChartSurface,
+  }),
+  Object.freeze({
+    type: "filter",
+    version: "1.0.0",
+    apiVersion: BLOCK_EXTENSION_API_VERSION,
+    createSurface: createFilterSurface,
+  }),
 ]);

@@ -336,6 +336,26 @@ export interface ImportFailedEvent extends BaseSpaceEvent {
   readonly diagnostics: readonly Diagnostic[];
 }
 
+export interface ExtensionRegisteredEvent extends BaseSpaceEvent {
+  readonly type: "extension:registered";
+  readonly scope: "runtime" | "space";
+  readonly runtimeId: string;
+  readonly kind: string;
+  readonly id: string;
+  readonly version: string;
+  readonly replaced: boolean;
+}
+
+export interface ExtensionErrorEvent extends BaseSpaceEvent {
+  readonly type: "extension:error";
+  readonly scope: "runtime" | "space";
+  readonly runtimeId: string;
+  readonly kind: string;
+  readonly id: string;
+  readonly diagnostic: Diagnostic;
+  readonly diagnostics: readonly Diagnostic[];
+}
+
 export type QueryEvent =
   | QueryStartedEvent
   | QuerySettledEvent
@@ -377,6 +397,8 @@ export type SpaceEvent =
   | DocumentMigratedEvent
   | SpaceImportedEvent
   | ImportFailedEvent
+  | ExtensionRegisteredEvent
+  | ExtensionErrorEvent
   | QueryEvent
   | RealtimeEvent;
 

@@ -4,6 +4,7 @@ import type { Diagnostic } from "./diagnostics.js";
 import type { BoardloomLocale } from "./locale.js";
 import type { FilterRuntimeState } from "./filter-model.js";
 import type { RealtimeTransport } from "./realtime-contract.js";
+import type { ExtensionSelection } from "./extensions.js";
 
 export type ViewMode = "viewer" | "editor";
 export type SpaceStatus = "active" | "paused" | "disposed";
@@ -92,6 +93,8 @@ export interface CreateSpaceOptions {
   readonly timezone?: string;
   readonly datasetProvider?: DatasetProvider;
   readonly realtime?: RealtimeTransport;
+  readonly extensionSelection?: ExtensionSelection;
+  readonly blockTypes?: readonly string[];
 }
 
 export interface CreateViewOptions {

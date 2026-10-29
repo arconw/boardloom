@@ -1,4 +1,5 @@
 import {
+  BLOCK_EXTENSION_API_VERSION,
   DIAGNOSTIC_CODES,
   createDiagnostic,
   fail,
@@ -16,6 +17,7 @@ import {
   type FilterRuntimeState,
   type JsonValue,
   type Result,
+  validateExtensionStyles,
 } from "@boardloom/core";
 import type { DerivedBlockQuery } from "./block-query.js";
 import type { ComparisonViewState } from "./comparison-query.js";
@@ -57,7 +59,10 @@ export interface BlockSurface {
 export interface BlockTypeDefinition {
   readonly type: string;
   readonly version: string;
+  readonly apiVersion?: number;
+  readonly styles?: string;
   createSurface(environment: BlockSurfaceEnvironment): BlockSurface;
+  dispose?(): void;
 }
 
 export interface BlockRegistry {
@@ -67,8 +72,14 @@ export interface BlockRegistry {
   list(): readonly BlockTypeDefinition[];
 }
 
+const SEMANTIC_VERSION = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/;
+
 function definitionDiagnostic(path: string, message: string): Diagnostic {
   return createDiagnostic(DIAGNOSTIC_CODES.INVALID_ARGUMENT, path, { message });
+}
+
+function extensionDiagnostic(code: string, path: string, message: string): Diagnostic {
+  return createDiagnostic(code, path, { message });
 }
 
 class BlockRegistryImpl implements BlockRegistry {
@@ -83,10 +94,35 @@ class BlockRegistryImpl implements BlockRegistry {
     ) {
       return fail([definitionDiagnostic("blockType/type", "A block type must have a stable ID.")]);
     }
-    if (typeof definition.version !== "string" || definition.version.trim() === "") {
+    if (typeof definition.version !== "string" || !SEMANTIC_VERSION.test(definition.version)) {
       return fail([
-        definitionDiagnostic("blockType/version", "A block type must declare a version."),
+        extensionDiagnostic(
+          DIAGNOSTIC_CODES.EXTENSION_INVALID,
+          "blockType/version",
+          "A block type must declare a semantic version.",
+        ),
       ]);
+    }
+    if (
+      definition.apiVersion !== undefined &&
+      definition.apiVersion !== BLOCK_EXTENSION_API_VERSION
+    ) {
+      return fail([
+        extensionDiagnostic(
+          DIAGNOSTIC_CODES.EXTENSION_INCOMPATIBLE_API,
+          "blockType/apiVersion",
+          `The block type ${definition.type} targets API ${String(definition.apiVersion)}; this build supports ${BLOCK_EXTENSION_API_VERSION}.`,
+        ),
+      ]);
+    }
+    if (definition.styles !== undefined) {
+      const styleDiagnostics = validateExtensionStyles(
+        definition.styles,
+        `blockType/${definition.type}/styles`,
+      );
+      if (styleDiagnostics.length > 0) {
+        return fail([...styleDiagnostics]);
+      }
     }
     if (typeof definition.createSurface !== "function") {
       return fail([

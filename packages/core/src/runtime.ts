@@ -43,6 +43,13 @@ import {
   type SpaceImportMetadata,
 } from "./space.js";
 import type { CreateSpaceOptions, SpaceSummary } from "./types.js";
+import {
+  createExtensionRegistry,
+  type ExtensionRegistry,
+  type ExtensionRegistryEvent,
+  type ExtensionSelection,
+  type ExtensionSession,
+} from "./extensions.js";
 
 export interface RuntimeOptions {
   readonly clock?: Clock;
@@ -57,6 +64,8 @@ export interface RuntimeOptions {
   readonly timezone?: string;
   readonly datasetProvider?: DatasetProvider;
   readonly realtime?: RealtimeTransport;
+  readonly extensions?: ExtensionRegistry;
+  readonly blockTypes?: readonly string[];
 }
 
 export interface ImportDocumentOptions extends Omit<
@@ -68,6 +77,8 @@ export interface ImportDocumentOptions extends Omit<
   readonly timezone?: string;
   readonly datasetProvider?: DatasetProvider;
   readonly realtime?: RealtimeTransport;
+  readonly blockTypes?: readonly string[];
+  readonly extensionSelection?: ExtensionSelection;
 }
 
 export interface ImportedDocument {
@@ -84,6 +95,7 @@ export interface BoardloomRuntime {
   readonly disposed: boolean;
   readonly spaceCount: number;
   readonly listenerCount: number;
+  readonly extensions: ExtensionRegistry;
   createSpace(options: CreateSpaceOptions): Result<BoardSpace>;
   importDocument(input: unknown, options?: ImportDocumentOptions): Result<ImportedDocument>;
   getSpace(spaceId: string): BoardSpace | undefined;
@@ -132,6 +144,9 @@ class RuntimeImpl implements BoardloomRuntime {
   private readonly historyLimit: number;
   private readonly datasetProvider?: DatasetProvider;
   private readonly realtimeTransport?: RealtimeTransport;
+  private readonly extensionsRegistry: ExtensionRegistry;
+  private readonly ownsExtensions: boolean;
+  private readonly blockTypes: readonly string[];
   private readonly localeInput: { readonly locale?: string; readonly timezone?: string };
   private readonly spaces = new Map<string, SpaceImpl>();
   private readonly spaceProviders = new Map<string, DatasetProvider>();
@@ -141,6 +156,8 @@ class RuntimeImpl implements BoardloomRuntime {
   private disposing = false;
   private shuttingDown = false;
   private importEventSequence = 0;
+  private extensionEventSequence = 0;
+  private readonly extensionUnsubscribe: () => void;
 
   constructor(options: RuntimeOptions = {}) {
     this.clock = options.clock ?? createSystemClock();
@@ -161,6 +178,9 @@ class RuntimeImpl implements BoardloomRuntime {
       Number.isFinite(requestedLimit) && requestedLimit >= 0 ? Math.floor(requestedLimit) : 100;
     this.datasetProvider = options.datasetProvider;
     this.realtimeTransport = options.realtime;
+    this.extensionsRegistry = options.extensions ?? createExtensionRegistry();
+    this.ownsExtensions = options.extensions === undefined;
+    this.blockTypes = Object.freeze([...(options.blockTypes ?? [])]);
     this.localeInput = Object.freeze({
       locale: options.locale,
       timezone: options.timezone,
@@ -171,6 +191,13 @@ class RuntimeImpl implements BoardloomRuntime {
         error: error instanceof Error ? error.message : String(error),
       });
     });
+    this.extensionUnsubscribe = this.extensionsRegistry.subscribe((event) =>
+      this.forwardExtensionEvent(event),
+    );
+  }
+
+  get extensions(): ExtensionRegistry {
+    return this.extensionsRegistry;
   }
 
   get disposed(): boolean {
@@ -250,9 +277,12 @@ class RuntimeImpl implements BoardloomRuntime {
     const effectiveImportProvider =
       options.datasetProvider ?? sourceProvider ?? this.datasetProvider;
 
-    const effectiveCatalog = this.effectiveValidationCatalog(
-      options.catalog ?? this.validationCatalog,
-      effectiveImportProvider,
+    const effectiveCatalog = this.catalogWithBlockTypes(
+      this.effectiveValidationCatalog(
+        options.catalog ?? this.validationCatalog,
+        effectiveImportProvider,
+      ),
+      [...this.blockTypes, ...(options.blockTypes ?? [])],
     );
     const prepared = parseBoardDocument(input, {
       ...(options.maxBytes === undefined ? {} : { maxBytes: options.maxBytes }),
@@ -321,6 +351,10 @@ class RuntimeImpl implements BoardloomRuntime {
             ? {}
             : { realtime: options.realtime }
           : { realtime: this.realtimeTransport }),
+        ...(options.blockTypes === undefined ? {} : { blockTypes: options.blockTypes }),
+        ...(options.extensionSelection === undefined
+          ? {}
+          : { extensionSelection: options.extensionSelection }),
       },
       importMetadata,
       prepared.value.warnings,
@@ -372,6 +406,103 @@ class RuntimeImpl implements BoardloomRuntime {
     return createEffectiveValidationCatalog(catalog, descriptors);
   }
 
+  private catalogWithBlockTypes(
+    catalog: BoardValidationCatalog | undefined,
+    extra: readonly string[],
+  ): BoardValidationCatalog | undefined {
+    if (extra.length === 0) {
+      return catalog;
+    }
+    const blockTypes = [...new Set([...(catalog?.blockTypes ?? []), ...extra])];
+    return Object.freeze({
+      datasets: catalog?.datasets ?? Object.freeze({}),
+      blockTypes: Object.freeze(blockTypes),
+      ...(catalog?.conversionProviders === undefined
+        ? {}
+        : { conversionProviders: Object.freeze([...catalog.conversionProviders]) }),
+    });
+  }
+
+  private emitExtensionRegistered(
+    kind: string,
+    id: string,
+    version: string,
+    replaced = false,
+  ): void {
+    if (this.disposedFlag || this.disposing || this.shuttingDown) {
+      return;
+    }
+    this.extensionEventSequence += 1;
+    this.events.emit(
+      deepFreeze({
+        type: "extension:registered",
+        scope: "runtime",
+        runtimeId: this.runtimeId,
+        spaceId: "",
+        lifetimeId: "",
+        sequence: this.extensionEventSequence,
+        timestamp: this.clock.now(),
+        kind,
+        id,
+        version,
+        replaced,
+      }),
+    );
+  }
+
+  private emitExtensionError(kind: string, id: string, diagnostics: readonly Diagnostic[]): void {
+    if (this.disposedFlag || this.disposing || this.shuttingDown) {
+      return;
+    }
+    const diagnostic =
+      diagnostics[0] ?? createDiagnostic(DIAGNOSTIC_CODES.EXTENSION_FAILED, `extensions/${kind}`);
+    this.extensionEventSequence += 1;
+    this.events.emit(
+      deepFreeze({
+        type: "extension:error",
+        scope: "runtime",
+        runtimeId: this.runtimeId,
+        spaceId: "",
+        lifetimeId: "",
+        sequence: this.extensionEventSequence,
+        timestamp: this.clock.now(),
+        kind,
+        id,
+        diagnostic,
+        diagnostics: Object.freeze([...diagnostics]),
+      }),
+    );
+  }
+
+  private emitExtensionDiagnostics(diagnostics: readonly Diagnostic[]): void {
+    for (const diagnostic of diagnostics) {
+      const match = /^extensions\/([^/]+)/.exec(diagnostic.path);
+      this.emitExtensionError(match?.[1] ?? "extension", "", [diagnostic]);
+    }
+  }
+
+  private forwardExtensionEvent(event: ExtensionRegistryEvent): void {
+    if (event.type === "extension:registered") {
+      this.emitExtensionRegistered(event.kind, event.id, event.version, event.replaced);
+      return;
+    }
+    this.emitExtensionError(event.kind, event.id, event.diagnostics);
+  }
+
+  private disposeExtensionSession(session: ExtensionSession | null): readonly Diagnostic[] {
+    if (session === null) {
+      return Object.freeze([]);
+    }
+    const diagnostics = session.dispose();
+    for (const diagnostic of diagnostics) {
+      this.logger.error("Boardloom extension disposal failed", {
+        code: diagnostic.code,
+        path: diagnostic.path,
+      });
+    }
+    return diagnostics;
+  }
+
   private createSpaceInternal(
     options: CreateSpaceOptions,
     importMetadata?: SpaceImportMetadata,
@@ -394,19 +525,6 @@ class RuntimeImpl implements BoardloomRuntime {
       return localeResult;
     }
 
-    const effectiveProvider = options.datasetProvider ?? this.datasetProvider;
-    const effectiveRealtime = options.realtime ?? this.realtimeTransport;
-    const validationCatalog = this.effectiveValidationCatalog(
-      catalogOverride ?? this.validationCatalog,
-      effectiveProvider,
-    );
-    const documentValidator = this.createDocumentValidator(validationCatalog);
-    const validation = documentValidator(options.document);
-    if (isBlockingValidation(validation)) {
-      return fail(validation.diagnostics);
-    }
-    const warnings = dedupeDiagnostics([...importWarnings, ...validationWarnings(validation)]);
-
     if (options.id !== undefined && (typeof options.id !== "string" || options.id.trim() === "")) {
       return fail([
         createDiagnostic(DIAGNOSTIC_CODES.INVALID_ARGUMENT, "id", {
@@ -423,14 +541,87 @@ class RuntimeImpl implements BoardloomRuntime {
       ]);
     }
 
+    const requested = options.extensionSelection;
+    const selection: ExtensionSelection = {
+      ...(requested?.queryAdapter === undefined || options.datasetProvider !== undefined
+        ? {}
+        : { queryAdapter: requested.queryAdapter }),
+      ...(requested?.realtimeAdapter === undefined || options.realtime !== undefined
+        ? {}
+        : { realtimeAdapter: requested.realtimeAdapter }),
+      ...(requested?.formatter === undefined ? {} : { formatter: requested.formatter }),
+      ...(requested?.messageDictionaries === undefined
+        ? {}
+        : { messageDictionaries: requested.messageDictionaries }),
+      ...(requested?.themes === undefined ? {} : { themes: requested.themes }),
+    };
+    const hasSelection =
+      selection.queryAdapter !== undefined ||
+      selection.realtimeAdapter !== undefined ||
+      selection.formatter !== undefined ||
+      (selection.messageDictionaries?.length ?? 0) > 0 ||
+      (selection.themes?.length ?? 0) > 0;
+    let extensionSession: ExtensionSession | null = null;
+    if (hasSelection) {
+      const created = this.extensionsRegistry.createSession(selection, {
+        spaceId,
+        locale: localeResult.value.locale,
+        timezone: localeResult.value.timezone,
+      });
+      if (!created.ok) {
+        this.emitExtensionDiagnostics(created.diagnostics);
+        return created;
+      }
+      extensionSession = created.value;
+    }
+
+    const effectiveProvider =
+      options.datasetProvider ?? extensionSession?.queryProvider ?? this.datasetProvider;
+    const effectiveRealtime =
+      options.realtime ?? extensionSession?.realtimeTransport ?? this.realtimeTransport;
+    const validationCatalog = this.catalogWithBlockTypes(
+      this.effectiveValidationCatalog(catalogOverride ?? this.validationCatalog, effectiveProvider),
+      [...this.blockTypes, ...(options.blockTypes ?? [])],
+    );
+    const documentValidator = this.createDocumentValidator(validationCatalog);
+    const validation = documentValidator(options.document);
+    if (isBlockingValidation(validation)) {
+      this.disposeExtensionSession(extensionSession);
+      return fail(validation.diagnostics);
+    }
+    const warnings = dedupeDiagnostics([...importWarnings, ...validationWarnings(validation)]);
+    const formatterFactory =
+      extensionSession !== null && selection.formatter !== undefined
+        ? (config: LocaleConfig): FormatterProvider => {
+            const created = extensionSession?.createFormatter(config);
+            if (created === undefined || !created.ok) {
+              const diagnostic =
+                created === undefined || created.ok
+                  ? createDiagnostic(DIAGNOSTIC_CODES.FORMATTER_INIT_FAILED, "locale")
+                  : created.diagnostics[0];
+              throw new BoardloomError(
+                diagnostic ?? createDiagnostic(DIAGNOSTIC_CODES.FORMATTER_INIT_FAILED, "locale"),
+              );
+            }
+            return created.value;
+          }
+        : this.formatterFactory;
+    const messageDictionaries: Readonly<Partial<Record<BoardloomLocale, MessageDictionary>>> =
+      extensionSession === null
+        ? this.messageDictionaries
+        : Object.freeze({
+            ...this.messageDictionaries,
+            ...extensionSession.messageDictionaries,
+          });
+
     const dependencies: SpaceDependencies = {
       idFactory: this.idFactory,
       clock: this.clock,
       logger: this.logger,
       documentValidator,
       ...(validationCatalog === undefined ? {} : { validationCatalog }),
-      formatterFactory: this.formatterFactory,
-      messageDictionaries: this.messageDictionaries,
+      formatterFactory,
+      messageDictionaries,
       historyLimit: this.historyLimit,
       forwardEvent: (event) => {
         if (event.type === "space:disposed") {
@@ -470,18 +661,21 @@ class RuntimeImpl implements BoardloomRuntime {
           localeConfig: localeResult.value,
           ...(effectiveProvider === undefined ? {} : { datasetProvider: effectiveProvider }),
           ...(effectiveRealtime === undefined ? {} : { realtime: effectiveRealtime }),
+          ...(extensionSession === null ? {} : { extensionSession }),
           warnings,
         },
         dependencies,
       );
     } catch (error) {
+      const disposalDiagnostics = this.disposeExtensionSession(extensionSession);
       if (error instanceof BoardloomError) {
-        return fail([error.diagnostic]);
+        return fail([error.diagnostic, ...disposalDiagnostics]);
       }
       return fail([
         createDiagnostic(DIAGNOSTIC_CODES.FORMATTER_INIT_FAILED, "options", {
           message: error instanceof Error ? error.message : String(error),
         }),
+        ...disposalDiagnostics,
       ]);
     }
 
@@ -531,6 +725,10 @@ class RuntimeImpl implements BoardloomRuntime {
     this.spaceProviders.clear();
     this.pendingTerminals.clear();
     this.events.finishShutdownDeferred();
+    this.extensionUnsubscribe();
+    if (this.ownsExtensions) {
+      this.extensionsRegistry.dispose();
+    }
     this.disposing = false;
     return ok(undefined);
   }
