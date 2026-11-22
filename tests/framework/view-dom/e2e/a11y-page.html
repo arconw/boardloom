@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Boardloom accessibility audit</title>
+    <link rel="stylesheet" href="/build/view-dom/styles.css" />
+    <style>
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        background: #dddddd;
+      }
+      body {
+        font-family: sans-serif;
+      }
+      #audit-root,
+      #audit-second {
+        width: 100%;
+      }
+      #result {
+        white-space: pre-wrap;
+      }
+      body[data-visual] #result {
+        display: none;
+      }
+    </style>
+    <script type="importmap">
+      {
+        "imports": {
+          "@boardloom/core": "/build/core/dist/index.js"
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <div id="audit-root"></div>
+    <div id="audit-second"></div>
+    <pre id="result"></pre>
+    <script src="/axe.js"></script>
+    <script type="module" src="/a11y.js"></script>
+  </body>
+</html>

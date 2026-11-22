@@ -199,3 +199,35 @@ T18 and later UI tasks must record:
 7. A note of what was not verified, including browser, screen reader, locale and assistive-technology limitations.
 
 The static references in this directory can guide the review, but they are not evidence of a passing production audit.
+
+## 13. T18 audit status and limitations
+
+Status: implementation evidence for T18. Independent review and the reviewer keyboard, screen-reader and video evidence are still required; this section is not an acceptance claim.
+
+Automated coverage run against the built viewer and editor:
+
+- Axe reports zero critical and zero serious violations for the tested light, dark, narrow viewer and editor states, including open filter and inspector drawers, the discard/release confirmation dialog, the narrow inspector-sheet discard path, a second instance with a different theme, and light and dark states under reduced-motion emulation. Serious-impact incomplete results are recorded per state. The automated gate accepts only nodes that are decorative `aria-hidden` glyphs, or the explicitly listed transparent inspector title in the measured light or dark editor themes, whose rendered ratio is measured separately and meets AA. Any other serious or critical incomplete fails the audit. Moderate best-practice notes for duplicate landmarks are recorded where a page embeds more than one board.
+- Rendered contrast measurements range from 5.41:1 to 15.90:1 for text and from 6.69:1 to 9.90:1 for focus rings in the light and dark themes. Axe additionally checks every rendered text node.
+- The viewer and editor reflow without page-level or board-root horizontal overflow at 320 CSS px and at the 640 and 720 CSS px narrow composition used for 200 percent zoom checks.
+- Reduced motion collapses every duration token and removes scoped animation, transition and smooth scrolling inside the Boardloom root. Charts are rendered without animation. Light and dark viewer and editor states are axe-audited under reduced-motion emulation.
+- The chart exposes a visible summary, a keyboard-operable data table disclosure, a named table region, column and row headers, and a non-empty accessible image description. The table carries units and missing counts.
+- Drawers and the confirmation dialog set modal semantics, trap Tab in both directions and close on Escape. Cancel returns focus to the invoking control. Confirmed discard and release return focus to a visible, enabled fallback when the invoking control is disabled or hidden; the inspector-sheet discard path focuses the inspector heading while the inspector modal stays open. The background is inert while a modal is open.
+- Escape closes an open modal when focus has been moved to the document body or document element. Escape in another board instance or host content does not act on this instance.
+- Adding a block returns focus to the active library control. Confirmed discard and release return focus to a visible, enabled fallback when the invoking control is disabled or hidden. Filter reset returns focus to the same reset control or the filter heading.
+- Block selection uses `aria-current` rather than an unsupported `aria-selected` attribute on a section. Icon glyphs are decorative and separate from the localized accessible name. Filter manager selects, inputs and checkboxes meet the 24 by 24 CSS px minimum target size.
+- A multi-instance check mounts light and dark boards together and verifies separate instance identifiers, independent backgrounds and an unchanged host background.
+- Committed screenshot baselines cover light and dark desktop viewers, a 320 px narrow viewer, and light desktop and narrow editors. The regression check compares pixels with a 0.2 percent difference tolerance.
+
+Manual and assistive-technology evidence:
+
+- Instrumented keyboard flows cover mode switching, block selection, keyboard move and resize, Escape cancellation, add-block focus, Escape from a body focus target, drawer focus return, confirmation cancel and confirm focus, filter reset focus and chart disclosure.
+- The independent reviewer recorded a Chrome accessibility-tree capture. A human screen-reader session and a physical keyboard-only walkthrough remain required by AC-121 and are not claimed here.
+
+Residual limitations:
+
+- Browser evidence is Chromium-only in T18. The full browser matrix remains T23 scope.
+- Axe cannot inspect canvas chart marks. The summary and data table are the accessible alternative; this is disclosed rather than treated as full canvas equivalence.
+- A host that embeds several boards on one page can expose duplicate banner landmarks. This is an axe best-practice note, not a WCAG A or AA failure, and each instance keeps its own labels and theme scope.
+- Automated theme audits mount each theme as a fresh instance. Theme switching itself is covered by the viewer E2E checks.
+- Visual baselines are local Chromium renders, not a cross-browser image comparison.
+- No professional translation or assistive-technology certification is claimed. A human assistive-technology pass remains an open reviewer obligation.

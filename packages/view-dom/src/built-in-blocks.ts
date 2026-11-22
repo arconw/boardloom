@@ -701,6 +701,7 @@ function createFilterControl(
   field: FieldDescriptor,
 ): HTMLElement {
   const control = createElement(doc, "div", "bl-filter-control");
+  control.setAttribute("role", "group");
   control.setAttribute("data-filter-id", filter.id);
   control.setAttribute("data-filter-operator", filter.operator);
   control.setAttribute(
@@ -806,6 +807,7 @@ function createFilterSurface(environment: BlockSurfaceEnvironment): BlockSurface
   const doc = environment.dom;
   const element = createElement(doc, "div", "bl-filter-surface");
   const heading = createElement(doc, "p", "bl-overline");
+  heading.setAttribute("tabindex", "-1");
   setKeyedText(
     heading,
     "viewer.filters.active",
@@ -813,6 +815,21 @@ function createFilterSurface(environment: BlockSurfaceEnvironment): BlockSurface
   );
   const list = createElement(doc, "div", "bl-filter-list");
   element.append(heading, list);
+  let pendingResetFocus: string | null = null;
+  const restoreResetFocus = (): void => {
+    if (pendingResetFocus === null) {
+      return;
+    }
+    const resetId = pendingResetFocus;
+    pendingResetFocus = null;
+    const match = [...list.querySelectorAll<HTMLElement>("[data-filter-reset]")].find(
+      (element) => element.getAttribute("data-filter-reset") === resetId,
+    );
+    const target = match ?? heading;
+    if (target.getClientRects().length > 0 && target.closest("[hidden], [inert]") === null) {
+      target.focus();
+    }
+  };
   return {
     element,
     update(next: BlockSurfaceEnvironment): void {
@@ -830,6 +847,7 @@ function createFilterSurface(environment: BlockSurfaceEnvironment): BlockSurface
         const none = createElement(doc, "p", "bl-filter-list__none");
         setKeyedText(none, "viewer.filters.none", next.messages.text("viewer.filters.none"));
         list.append(none);
+        restoreResetFocus();
         return;
       }
       for (const filter of filters) {
@@ -867,7 +885,11 @@ function createFilterSurface(environment: BlockSurfaceEnvironment): BlockSurface
             }),
           );
           reset.addEventListener("click", () => {
-            next.resetFilterValue(filter.id);
+            pendingResetFocus = filter.id;
+            const result = next.resetFilterValue(filter.id);
+            if (!result.ok) {
+              pendingResetFocus = null;
+            }
           });
           item.append(reset);
         } else {
@@ -881,6 +903,7 @@ function createFilterSurface(environment: BlockSurfaceEnvironment): BlockSurface
         }
         list.append(item);
       }
+      restoreResetFocus();
     },
   };
 }

@@ -183,6 +183,11 @@
   .boardloom :focus-visible {
     outline: var(--bl-focus-width) solid var(--bl-color-focus);
     outline-offset: var(--bl-focus-offset);
+    scroll-margin-block: var(--bl-space-16);
+  }
+
+  .boardloom .bl-block {
+    scroll-margin-block: var(--bl-space-16);
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -197,10 +202,9 @@
     .boardloom *,
     .boardloom *::before,
     .boardloom *::after {
-      animation-duration: 0.01ms !important;
-      animation-iteration-count: 1 !important;
+      animation: none !important;
+      transition: none !important;
       scroll-behavior: auto !important;
-      transition-duration: 0.01ms !important;
     }
   }
   .boardloom.bl-viewer {
@@ -851,6 +855,8 @@
   }
 
   .boardloom .bl-filter-input,
+  .boardloom select.bl-filter-control,
+  .boardloom input.bl-filter-control,
   .boardloom .bl-filter-control select,
   .boardloom .bl-filter-control input {
     min-block-size: var(--bl-target-min);
@@ -862,6 +868,13 @@
     font: inherit;
     font-size: var(--bl-font-size-sm);
     min-inline-size: 0;
+  }
+
+  .boardloom input.bl-filter-control[type="checkbox"] {
+    inline-size: var(--bl-target-min);
+    block-size: var(--bl-target-min);
+    padding: 0;
+    accent-color: var(--bl-color-accent);
   }
 
   .boardloom .bl-filter-control__fixed,
@@ -1734,6 +1747,10 @@
 
   .boardloom .bl-block[data-editor-selected="true"] .bl-block-actions {
     display: flex;
+  }
+
+  .boardloom .bl-icon-glyph::before {
+    content: attr(data-glyph);
   }
 
   .boardloom .bl-icon-button {

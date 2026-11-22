@@ -569,6 +569,13 @@ function isUsableSurface(value: unknown): value is BlockSurface {
   );
 }
 
+function setIconGlyph(doc: Document, button: HTMLElement, glyph: string): void {
+  const icon = createElement(doc, "span", "bl-icon-glyph");
+  icon.setAttribute("aria-hidden", "true");
+  icon.setAttribute("data-glyph", glyph);
+  button.append(icon);
+}
+
 export class ViewerHost implements BoardViewHandle {
   private readonly target: HTMLElement;
   private readonly doc: Document;
@@ -657,6 +664,8 @@ export class ViewerHost implements BoardViewHandle {
   private libraryOpen = false;
   private inspectorOpen = false;
   private drawerTrigger: HTMLElement | null = null;
+  private confirmationTrigger: HTMLElement | null = null;
+  private confirmationVisible = false;
   private pendingActionFocus: {
     readonly action: string;
     readonly target: string;
@@ -665,6 +674,9 @@ export class ViewerHost implements BoardViewHandle {
   private exportNoticeKey: string | null = null;
   private readonly blockElements = new Map<string, MountedBlock>();
   private appliedThemeTokens = new Set<string>();
+  private readonly inertElements = new Set<HTMLElement>();
+  private lastLibrarySignature: string | null = null;
+  private lastFilterChipsSignature: string | null = null;
   private messagesValue: ViewMessages;
   private messageDiagnosticsValue: readonly Diagnostic[];
   private messagesLocale: string;
@@ -781,6 +793,7 @@ export class ViewerHost implements BoardViewHandle {
       const result = this.applyFilterOperation("reset", () => this.spaceValue.resetFilter(resetId));
       if (result.ok) {
         this.scheduleRender();
+        this.queueFocusResolved(() => this.filterResetControl(resetId) ?? this.filterHeading);
       }
       return;
     }
@@ -788,6 +801,7 @@ export class ViewerHost implements BoardViewHandle {
       const result = this.applyFilterOperation("reset", () => this.spaceValue.resetAllFilters());
       if (result.ok) {
         this.scheduleRender();
+        this.queueFocusResolved(() => this.filterResetAllControl() ?? this.filterHeading);
       }
       return;
     }
@@ -797,6 +811,7 @@ export class ViewerHost implements BoardViewHandle {
       );
       if (result.ok) {
         this.scheduleRender();
+        this.queueFocusResolved(() => this.filterResetAllControl() ?? this.filterHeading);
       }
       return;
     }
@@ -810,6 +825,7 @@ export class ViewerHost implements BoardViewHandle {
       );
       if (result.ok) {
         this.scheduleRender();
+        this.queueFocusResolved(() => this.filterHeading);
       }
       return;
     }
@@ -899,13 +915,17 @@ export class ViewerHost implements BoardViewHandle {
       return;
     }
     if (keyboard.key === "Escape") {
-      if (this.libraryOpen || this.inspectorOpen || this.pendingConfirmation !== null) {
-        this.pendingConfirmation = null;
+      if (this.pendingConfirmation !== null) {
+        this.closeConfirmation(true);
+      } else if (this.libraryOpen || this.inspectorOpen) {
         this.setDrawer(null, false);
-        this.scheduleRender();
       } else {
         this.selectEditorBlock(null);
       }
+      return;
+    }
+    if (keyboard.key === "Tab" && this.pendingConfirmation !== null) {
+      this.trapFocus(this.confirmation, event, target);
       return;
     }
     if (
@@ -914,38 +934,8 @@ export class ViewerHost implements BoardViewHandle {
       (this.libraryOpen || this.inspectorOpen)
     ) {
       const panel = this.inspectorOpen ? this.inspector : this.library;
-      const focusable = [
-        ...panel.querySelectorAll<HTMLElement>(
-          "button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), a[href], [tabindex]:not([tabindex='-1'])",
-        ),
-      ].filter((element) => {
-        if (
-          element.hasAttribute("hidden") ||
-          element.hasAttribute("disabled") ||
-          element.hasAttribute("inert")
-        ) {
-          return false;
-        }
-        if (element.closest("[hidden], [inert]") !== null) {
-          return false;
-        }
-        return element.getClientRects().length > 0;
-      });
-      const first = focusable[0];
-      const last = focusable[focusable.length - 1];
-      if (first !== undefined && last !== undefined) {
-        const outside = target === null || !elementContains(panel, target as Node | null);
-        if (keyboard.shiftKey === true && (target === first || outside)) {
-          last.focus();
-          keyboard.preventDefault?.();
-          return;
-        }
-        if (keyboard.shiftKey !== true && (target === last || outside)) {
-          first.focus();
-          keyboard.preventDefault?.();
-          return;
-        }
-      }
+      this.trapFocus(panel, event, target);
+      return;
     }
     if (formControl) {
       return;
@@ -1005,6 +995,32 @@ export class ViewerHost implements BoardViewHandle {
         ...direction,
       }),
     );
+  };
+
+  private readonly onDocumentKeyDown = (event: Event): void => {
+    if (this.disposedFlag || !this.mountedFlag || this.viewValue.mode !== "editor") {
+      return;
+    }
+    const keyboard = event as Event & { readonly key?: string; preventDefault?: () => void };
+    if (keyboard.key !== "Escape") {
+      return;
+    }
+    if (!(this.libraryOpen || this.inspectorOpen || this.pendingConfirmation !== null)) {
+      return;
+    }
+    const target = event.target;
+    if (target !== null && elementContains(this.root, target as Node | null)) {
+      return;
+    }
+    if (target !== this.doc.body && target !== this.doc.documentElement) {
+      return;
+    }
+    keyboard.preventDefault?.();
+    if (this.pendingConfirmation !== null) {
+      this.closeConfirmation(true);
+      return;
+    }
+    this.setDrawer(null, false);
   };
 
   private readonly onInput = (event: Event): void => {
@@ -1268,6 +1284,7 @@ export class ViewerHost implements BoardViewHandle {
     this.filterSection.setAttribute("aria-label", this.messagesValue.text("a11y.filterRegion"));
     this.filterSection.setAttribute("data-message-key", "a11y.filterRegion");
     this.filterHeading = createElement(this.doc, "p", "bl-overline");
+    this.filterHeading.setAttribute("tabindex", "-1");
     setKeyedText(
       this.filterHeading,
       "viewer.filters.active",
@@ -1329,6 +1346,8 @@ export class ViewerHost implements BoardViewHandle {
     this.confirmation.setAttribute("aria-modal", "true");
     this.confirmation.setAttribute("hidden", "");
     this.confirmationText = createElement(this.doc, "p", "bl-confirm__text");
+    this.confirmationText.id = `${instanceId}-confirm-text`;
+    this.confirmation.setAttribute("aria-labelledby", this.confirmationText.id);
     this.confirmationCancel = createElement(this.doc, "button", "bl-button bl-button--ghost");
     this.confirmationCancel.setAttribute("type", "button");
     this.confirmationCancel.setAttribute("data-confirm-action", "cancel");
@@ -1349,7 +1368,7 @@ export class ViewerHost implements BoardViewHandle {
     );
     this.root.insertBefore(this.draftBar, this.statusbar);
 
-    this.library = createElement(this.doc, "aside", "bl-library");
+    this.library = createElement(this.doc, "div", "bl-library");
     this.library.id = `${instanceId}-library`;
     this.library.setAttribute("role", "region");
     this.library.setAttribute("aria-labelledby", `${instanceId}-library-title`);
@@ -1406,13 +1425,14 @@ export class ViewerHost implements BoardViewHandle {
     canvasHead.append(canvasIdentity, this.canvasTools);
     this.canvas.append(canvasHead);
 
-    this.inspector = createElement(this.doc, "aside", "bl-inspector");
+    this.inspector = createElement(this.doc, "div", "bl-inspector");
     this.inspector.id = `${instanceId}-inspector`;
     this.inspector.setAttribute("role", "region");
     this.inspector.setAttribute("aria-labelledby", `${instanceId}-inspector-title`);
     this.inspector.setAttribute("data-message-key", "a11y.inspectorRegion");
     this.inspectorHeading = createElement(this.doc, "h2", "bl-inspector__title");
     this.inspectorHeading.id = `${instanceId}-inspector-title`;
+    this.inspectorHeading.setAttribute("tabindex", "-1");
     setKeyedText(
       this.inspectorHeading,
       "editor.inspector",
@@ -1462,6 +1482,9 @@ export class ViewerHost implements BoardViewHandle {
       this.root.addEventListener("change", this.onChange);
       this.root.addEventListener("input", this.onInput);
       this.root.addEventListener("keydown", this.onKeyDown);
+      if (typeof this.doc.addEventListener === "function") {
+        this.doc.addEventListener("keydown", this.onDocumentKeyDown);
+      }
       this.target.append(this.root);
       const styleEntries = [
         ...this.registry.list().map((definition) => ({
@@ -1833,21 +1856,31 @@ export class ViewerHost implements BoardViewHandle {
     }
   }
 
-  private setModalBackgroundInert(inert: boolean): void {
-    for (const element of [
-      this.header,
-      this.statusbar,
-      this.filterSection,
-      this.library,
-      this.canvas,
-      this.draftBar,
-    ]) {
-      if (inert) {
-        element.setAttribute("inert", "");
-      } else {
-        element.removeAttribute("inert");
-      }
+  private setModalBackgroundInert(activeModal: HTMLElement | null): void {
+    for (const element of this.inertElements) {
+      element.removeAttribute("inert");
     }
+    this.inertElements.clear();
+    if (activeModal === null) {
+      return;
+    }
+    const mark = (container: HTMLElement): void => {
+      for (const child of [...container.children] as HTMLElement[]) {
+        if (child === activeModal) {
+          continue;
+        }
+        if (elementContains(child, activeModal)) {
+          mark(child);
+          continue;
+        }
+        if (child === this.liveRegion || child === this.drawerScrim) {
+          continue;
+        }
+        child.setAttribute("inert", "");
+        this.inertElements.add(child);
+      }
+    };
+    mark(this.root);
   }
 
   private renderInspector(document: BoardDocumentV1): void {
@@ -3981,27 +4014,110 @@ export class ViewerHost implements BoardViewHandle {
   }
 
   private requestConfirmation(kind: EditorConfirmation): void {
+    const active = this.doc.activeElement;
+    if (active !== null && typeof (active as HTMLElement).focus === "function") {
+      this.confirmationTrigger = active as HTMLElement;
+    }
     this.pendingConfirmation = kind;
     this.scheduleRender();
   }
 
+  private isRestorableFocus(target: HTMLElement | null): target is HTMLElement {
+    if (target === null) {
+      return false;
+    }
+    const connected = typeof target.isConnected === "boolean" ? target.isConnected : true;
+    const visible =
+      typeof target.getClientRects === "function" ? target.getClientRects().length > 0 : true;
+    const obscured =
+      typeof target.closest === "function"
+        ? target.closest("[hidden], [inert]") !== null
+        : target.hasAttribute("hidden");
+    return (
+      connected &&
+      visible &&
+      !obscured &&
+      !target.hasAttribute("disabled") &&
+      target.getAttribute("aria-disabled") !== "true"
+    );
+  }
+
+  private defaultFocusTarget(): HTMLElement | null {
+    const selected =
+      this.selectedBlockId === null
+        ? null
+        : ([...this.blockElements.values()].find(
+            (mounted) => mounted.id === this.selectedBlockId,
+          ) ?? null);
+    if (selected !== null) {
+      selected.heading.setAttribute("tabindex", "-1");
+      if (this.isRestorableFocus(selected.heading)) {
+        return selected.heading;
+      }
+    }
+    if (this.inspectorOpen) {
+      this.inspectorHeading.setAttribute("tabindex", "-1");
+      if (this.isRestorableFocus(this.inspectorHeading)) {
+        return this.inspectorHeading;
+      }
+    }
+    if (this.libraryOpen && this.isRestorableFocus(this.librarySearch)) {
+      return this.librarySearch;
+    }
+    const modeButton =
+      this.viewValue.mode === "viewer" ? this.viewerModeButton : this.editorModeButton;
+    return this.isRestorableFocus(modeButton) ? modeButton : this.body;
+  }
+
+  private queueFocus(preferred: HTMLElement | null): void {
+    this.queueFocusResolved(() => preferred);
+  }
+
+  private queueFocusResolved(resolve: () => HTMLElement | null): void {
+    queueMicrotask(() => {
+      if (this.disposedFlag || !this.mountedFlag) {
+        return;
+      }
+      const candidate = resolve();
+      const fallback = this.libraryOpen ? this.librarySearch : this.defaultFocusTarget();
+      const target = this.isRestorableFocus(candidate) ? candidate : fallback;
+      if (this.isRestorableFocus(target)) {
+        target.focus();
+      }
+    });
+  }
+
+  private closeConfirmation(returnFocus: boolean): void {
+    const trigger = this.confirmationTrigger;
+    this.confirmationTrigger = null;
+    this.pendingConfirmation = null;
+    this.scheduleRender();
+    if (returnFocus) {
+      this.queueFocus(trigger);
+    }
+  }
+
   private handleConfirmation(action: string): void {
     if (action === "cancel") {
-      this.pendingConfirmation = null;
-      this.scheduleRender();
+      this.closeConfirmation(true);
       return;
     }
     const pending = this.pendingConfirmation;
+    const trigger = this.confirmationTrigger;
+    this.confirmationTrigger = null;
     this.pendingConfirmation = null;
     if (pending === "discard") {
       this.runViewCommand(() => this.viewValue.commands.cancelDraft());
+      this.queueFocus(trigger);
       return;
     }
     if (pending === "release") {
       this.releaseEditorLease("cancel");
+      this.queueFocus(trigger);
       return;
     }
     this.scheduleRender();
+    this.queueFocus(trigger);
   }
 
   private releaseEditorLease(decision: "apply" | "cancel"): void {
@@ -4038,6 +4154,27 @@ export class ViewerHost implements BoardViewHandle {
     const added = blocks?.at(-1);
     this.selectedBlockId = added === undefined ? this.selectedBlockId : added.id;
     this.scheduleRender();
+    this.queueFocusResolved(() => {
+      if (this.libraryOpen) {
+        const candidates =
+          typeof this.library.querySelectorAll === "function"
+            ? [...this.library.querySelectorAll<HTMLElement>("[data-editor-add]")]
+            : [];
+        const match = candidates.find(
+          (candidate) => candidate.getAttribute("data-editor-add") === type,
+        );
+        return match ?? this.librarySearch;
+      }
+      if (added === undefined) {
+        return this.defaultFocusTarget();
+      }
+      const mounted = this.blockElements.get(added.id);
+      if (mounted === undefined) {
+        return this.defaultFocusTarget();
+      }
+      mounted.heading.setAttribute("tabindex", "-1");
+      return mounted.heading;
+    });
   }
 
   private selectEditorBlock(blockId: string | null): void {
@@ -4154,8 +4291,73 @@ export class ViewerHost implements BoardViewHandle {
   private restoreDrawerFocus(): void {
     const trigger = this.drawerTrigger;
     this.drawerTrigger = null;
-    if (trigger !== null) {
-      trigger.focus();
+    this.queueFocus(trigger);
+  }
+
+  private syncConfirmationFocus(visible: boolean): void {
+    if (visible === this.confirmationVisible) {
+      return;
+    }
+    this.confirmationVisible = visible;
+    if (!visible) {
+      return;
+    }
+    queueMicrotask(() => {
+      if (this.disposedFlag || !this.mountedFlag || this.pendingConfirmation === null) {
+        return;
+      }
+      const focusable =
+        typeof this.confirmation.querySelector === "function"
+          ? (this.confirmation.querySelector<HTMLElement>("button:not([disabled])") ??
+            this.confirmationCancel)
+          : this.confirmationCancel;
+      focusable.focus();
+    });
+  }
+
+  private trapFocus(
+    container: HTMLElement,
+    event: Event,
+    target: (EventTarget & { readonly tagName?: string }) | null,
+  ): void {
+    const keyboard = event as Event & {
+      readonly shiftKey?: boolean;
+      preventDefault?: () => void;
+    };
+    if (typeof container.querySelectorAll !== "function") {
+      return;
+    }
+    const focusable = [
+      ...container.querySelectorAll<HTMLElement>(
+        "button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), a[href], [tabindex]:not([tabindex='-1'])",
+      ),
+    ].filter((element) => {
+      if (
+        element.hasAttribute("hidden") ||
+        element.hasAttribute("disabled") ||
+        element.hasAttribute("inert")
+      ) {
+        return false;
+      }
+      if (element.closest("[hidden], [inert]") !== null) {
+        return false;
+      }
+      return element.getClientRects().length > 0;
+    });
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (first === undefined || last === undefined) {
+      return;
+    }
+    const outside = target === null || !elementContains(container, target as Node | null);
+    if (keyboard.shiftKey === true && (target === first || outside)) {
+      last.focus();
+      keyboard.preventDefault?.();
+      return;
+    }
+    if (keyboard.shiftKey !== true && (target === last || outside)) {
+      first.focus();
+      keyboard.preventDefault?.();
     }
   }
 
@@ -4320,23 +4522,39 @@ export class ViewerHost implements BoardViewHandle {
     this.inspector.setAttribute("data-open", String(this.inspectorOpen));
     const narrow = this.root.getAttribute("data-boardloom-breakpoint") === "narrow";
     const inspectorModal = narrow && editorMode && this.inspectorOpen;
-    if (inspectorModal) {
-      this.inspector.setAttribute("role", "dialog");
-      this.inspector.setAttribute("aria-modal", "true");
-    } else {
-      this.inspector.setAttribute("role", "region");
-      this.inspector.removeAttribute("aria-modal");
+    const libraryModal = narrow && editorMode && this.libraryOpen;
+    for (const [panel, modal] of [
+      [this.library, libraryModal],
+      [this.inspector, inspectorModal],
+    ] as const) {
+      if (modal) {
+        panel.setAttribute("role", "dialog");
+        panel.setAttribute("aria-modal", "true");
+      } else {
+        panel.setAttribute("role", "region");
+        panel.removeAttribute("aria-modal");
+      }
     }
-    const scrimVisible = narrow && (this.libraryOpen || this.inspectorOpen);
+    const scrimVisible = libraryModal || inspectorModal;
     setHidden(this.drawerScrim, !scrimVisible);
     setHidden(this.inspectorDraftFooter, !inspectorModal);
     setHidden(this.inspector, !editorMode);
-    this.setModalBackgroundInert(inspectorModal);
     if (inspectorModal) {
-      this.inspectorDraftFooter.append(this.confirmation);
-    } else {
+      if (this.confirmation.parentNode !== this.inspectorDraftFooter) {
+        this.inspectorDraftFooter.append(this.confirmation);
+      }
+    } else if (this.confirmation.parentNode !== this.draftBar) {
       this.draftBar.append(this.confirmation);
     }
+    const activeModal =
+      this.pendingConfirmation !== null
+        ? this.confirmation
+        : inspectorModal
+          ? this.inspector
+          : libraryModal
+            ? this.library
+            : null;
+    this.setModalBackgroundInert(activeModal);
     if (!editorMode) {
       this.libraryOpen = false;
       this.inspectorOpen = false;
@@ -4401,6 +4619,7 @@ export class ViewerHost implements BoardViewHandle {
           : "editor.draft.confirmDiscard";
       setKeyedText(this.confirmationText, key, messages.text(key));
     }
+    this.syncConfirmationFocus(confirmationVisible);
     const firstDiagnostic = this.actionDiagnostics[0];
     const diagnosticKey =
       firstDiagnostic === undefined ? null : `diagnostic.${firstDiagnostic.code}`;
@@ -4443,8 +4662,20 @@ export class ViewerHost implements BoardViewHandle {
 
   private renderLibrary(messages: ViewMessages): void {
     const query = this.librarySearch.value.trim().toLowerCase();
-    clearElement(this.libraryList);
     const definitions = this.registry.list();
+    const signature = [
+      this.viewValue.mode,
+      this.messagesLocale,
+      query,
+      ...definitions.map(
+        (definition) => `${definition.type}:${editorLibraryLabel(messages, definition.type)}`,
+      ),
+    ].join("|");
+    if (signature === this.lastLibrarySignature) {
+      return;
+    }
+    this.lastLibrarySignature = signature;
+    clearElement(this.libraryList);
     const groups = new Map<string, BlockTypeDefinition[]>();
     for (const definition of definitions) {
       const group = editorLibraryGroup(definition.type);
@@ -4609,7 +4840,7 @@ export class ViewerHost implements BoardViewHandle {
       button.setAttribute("data-block-target", block.id);
       button.setAttribute("data-block-breakpoint", this.selectedBreakpoint);
       setKeyedLabel(button, key, messages.text(key));
-      button.textContent = moveSymbols[action] ?? action;
+      setIconGlyph(this.doc, button, moveSymbols[action] ?? action);
       pad.append(button);
     }
     const resize = createElement(this.doc, "div", "bl-resize-actions");
@@ -4680,7 +4911,7 @@ export class ViewerHost implements BoardViewHandle {
         "editor.theme.removeToken",
         messages.text("editor.theme.removeToken", { token: name }),
       );
-      remove.textContent = "×";
+      setIconGlyph(this.doc, remove, "×");
       row.append(label, input, remove);
       tokenControls.push(row);
     }
@@ -4822,63 +5053,72 @@ export class ViewerHost implements BoardViewHandle {
     }
     renderDiagnosticList(this.diagnosticsPanel, messages, diagnostics);
 
-    clearElement(this.filterChips);
     const state = snapshot.filterState;
     const filters = activeFilterChipSummaries(document, messages, state);
     const selections = crossFilterSummaries(document, messages, state);
-    if (filters.length === 0 && selections.length === 0) {
-      const none = createElement(this.doc, "p", "bl-filters__none");
-      setKeyedText(none, "viewer.filters.none", messages.text("viewer.filters.none"));
-      this.filterChips.append(none);
-    } else {
-      for (const filter of filters) {
-        const chip = createElement(this.doc, "span", "bl-filter-chip");
-        chip.setAttribute("data-filter-chip", filter.id);
-        chip.setAttribute("data-filter-active", String(filter.active));
-        const origin = createElement(this.doc, "span", "bl-filter-chip__origin");
-        setKeyedText(origin, filter.originKey, filter.originText);
-        const label = createElement(this.doc, "span", "bl-filter-chip__label");
-        setHostText(label, filter.label);
-        const value = createElement(this.doc, "span", "bl-filter-chip__value");
-        setHostText(value, filter.value);
-        chip.append(origin, label, value);
-        if (filter.editable) {
-          const reset = createElement(this.doc, "button", "bl-filter-chip__action");
-          reset.setAttribute("type", "button");
-          reset.setAttribute("data-filter-reset", filter.id);
-          reset.setAttribute(
-            "aria-label",
-            messages.text("viewer.filters.resetNamed", { name: filter.label }),
-          );
-          setKeyedText(reset, "common.reset", messages.text("common.reset"));
-          chip.append(reset);
+    const filterChipsSignature = JSON.stringify({
+      locale: messages.locale,
+      mode: this.viewValue.mode,
+      filters,
+      selections,
+    });
+    if (filterChipsSignature !== this.lastFilterChipsSignature) {
+      this.lastFilterChipsSignature = filterChipsSignature;
+      clearElement(this.filterChips);
+      if (filters.length === 0 && selections.length === 0) {
+        const none = createElement(this.doc, "p", "bl-filters__none");
+        setKeyedText(none, "viewer.filters.none", messages.text("viewer.filters.none"));
+        this.filterChips.append(none);
+      } else {
+        for (const filter of filters) {
+          const chip = createElement(this.doc, "span", "bl-filter-chip");
+          chip.setAttribute("data-filter-chip", filter.id);
+          chip.setAttribute("data-filter-active", String(filter.active));
+          const origin = createElement(this.doc, "span", "bl-filter-chip__origin");
+          setKeyedText(origin, filter.originKey, filter.originText);
+          const label = createElement(this.doc, "span", "bl-filter-chip__label");
+          setHostText(label, filter.label);
+          const value = createElement(this.doc, "span", "bl-filter-chip__value");
+          setHostText(value, filter.value);
+          chip.append(origin, label, value);
+          if (filter.editable) {
+            const reset = createElement(this.doc, "button", "bl-filter-chip__action");
+            reset.setAttribute("type", "button");
+            reset.setAttribute("data-filter-reset", filter.id);
+            reset.setAttribute(
+              "aria-label",
+              messages.text("viewer.filters.resetNamed", { name: filter.label }),
+            );
+            setKeyedText(reset, "common.reset", messages.text("common.reset"));
+            chip.append(reset);
+          }
+          this.filterChips.append(chip);
         }
-        this.filterChips.append(chip);
-      }
-      for (const selection of selections) {
-        const chip = createElement(this.doc, "span", "bl-filter-chip bl-filter-chip--selection");
-        chip.setAttribute("data-cross-chip", selection.id);
-        chip.setAttribute("data-cross-source", selection.sourceBlockId);
-        const origin = createElement(this.doc, "span", "bl-filter-chip__origin");
-        setKeyedText(origin, selection.originKey, selection.originText);
-        const label = createElement(this.doc, "span", "bl-filter-chip__label");
-        setHostText(label, selection.label);
-        const value = createElement(this.doc, "span", "bl-filter-chip__value");
-        setHostText(value, selection.value);
-        const clear = createElement(this.doc, "button", "bl-filter-chip__action");
-        clear.setAttribute("type", "button");
-        clear.setAttribute("data-cross-clear", "true");
-        clear.setAttribute("aria-label", messages.text("viewer.filters.clearSelection"));
-        setKeyedText(clear, "common.close", messages.text("common.close"));
-        chip.append(origin, label, value, clear);
-        this.filterChips.append(chip);
-      }
-      if (filters.some((filter) => filter.active && filter.editable)) {
-        const resetAll = createElement(this.doc, "button", "bl-filters__reset");
-        resetAll.setAttribute("type", "button");
-        resetAll.setAttribute("data-filter-reset-all", "true");
-        setKeyedText(resetAll, "viewer.filters.reset", messages.text("viewer.filters.reset"));
-        this.filterChips.append(resetAll);
+        for (const selection of selections) {
+          const chip = createElement(this.doc, "span", "bl-filter-chip bl-filter-chip--selection");
+          chip.setAttribute("data-cross-chip", selection.id);
+          chip.setAttribute("data-cross-source", selection.sourceBlockId);
+          const origin = createElement(this.doc, "span", "bl-filter-chip__origin");
+          setKeyedText(origin, selection.originKey, selection.originText);
+          const label = createElement(this.doc, "span", "bl-filter-chip__label");
+          setHostText(label, selection.label);
+          const value = createElement(this.doc, "span", "bl-filter-chip__value");
+          setHostText(value, selection.value);
+          const clear = createElement(this.doc, "button", "bl-filter-chip__action");
+          clear.setAttribute("type", "button");
+          clear.setAttribute("data-cross-clear", "true");
+          clear.setAttribute("aria-label", messages.text("viewer.filters.clearSelection"));
+          setKeyedText(clear, "common.close", messages.text("common.close"));
+          chip.append(origin, label, value, clear);
+          this.filterChips.append(chip);
+        }
+        if (filters.some((filter) => filter.active && filter.editable)) {
+          const resetAll = createElement(this.doc, "button", "bl-filters__reset");
+          resetAll.setAttribute("type", "button");
+          resetAll.setAttribute("data-filter-reset-all", "true");
+          setKeyedText(resetAll, "viewer.filters.reset", messages.text("viewer.filters.reset"));
+          this.filterChips.append(resetAll);
+        }
       }
     }
 
@@ -5002,7 +5242,11 @@ export class ViewerHost implements BoardViewHandle {
       const editable = this.viewValue.mode === "editor" && this.activeEditorLease() !== null;
       const selected = editable && this.selectedBlockId === block.id;
       mounted.element.setAttribute("data-editor-selected", String(selected));
-      mounted.element.setAttribute("aria-selected", String(selected));
+      if (selected) {
+        mounted.element.setAttribute("aria-current", "true");
+      } else {
+        mounted.element.removeAttribute("aria-current");
+      }
       mounted.element.setAttribute("tabindex", editable ? "0" : "-1");
       if (editable && selected) {
         setKeyedLabel(
@@ -5134,7 +5378,11 @@ export class ViewerHost implements BoardViewHandle {
       button.setAttribute("data-block-action", action);
       button.setAttribute("data-block-target", blockId);
       setKeyedLabel(button, key, messages.text(key));
-      button.textContent = Object.hasOwn(icons, action) ? (icons[action] ?? action) : action;
+      setIconGlyph(
+        this.doc,
+        button,
+        Object.hasOwn(icons, action) ? (icons[action] ?? action) : action,
+      );
       toolbar.append(button);
     }
     return toolbar;
@@ -5596,6 +5844,24 @@ export class ViewerHost implements BoardViewHandle {
     });
   }
 
+  private filterResetControl(filterId: string): HTMLElement | null {
+    if (typeof this.root.querySelectorAll !== "function") {
+      return null;
+    }
+    return (
+      [...this.root.querySelectorAll<HTMLElement>("[data-filter-reset]")].find(
+        (element) => element.getAttribute("data-filter-reset") === filterId,
+      ) ?? null
+    );
+  }
+
+  private filterResetAllControl(): HTMLElement | null {
+    if (typeof this.filterChips.querySelector !== "function") {
+      return null;
+    }
+    return this.filterChips.querySelector<HTMLElement>("[data-filter-reset-all]") ?? null;
+  }
+
   private applyFilterValue(filterId: string, value: JsonValue): Result<FilterRuntimeState> {
     return this.applyFilterOperation("value", () =>
       this.spaceValue.setFilterValue(filterId, value),
@@ -5801,6 +6067,9 @@ export class ViewerHost implements BoardViewHandle {
     this.root.removeEventListener("change", this.onChange);
     this.root.removeEventListener("input", this.onInput);
     this.root.removeEventListener("keydown", this.onKeyDown);
+    if (typeof this.doc.removeEventListener === "function") {
+      this.doc.removeEventListener("keydown", this.onDocumentKeyDown);
+    }
     for (const mounted of this.blockElements.values()) {
       this.removeBlockQuery(mounted);
       this.removeComparisonQueries(mounted);

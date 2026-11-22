@@ -1070,4 +1070,40 @@ describe("T09 filter block and manager UI", () => {
     unwrap(handle.unmount({ draftDecision: "cancel" }));
     unwrap(runtime.dispose());
   });
+
+  it("does not steal focus after a rejected filter-block reset", async () => {
+    const document = createMiniDocument();
+    const target = createTarget(document);
+    const { runtime } = createViewerRuntime(createViewerProvider());
+    const space = unwrap(runtime.createSpace({ document: viewerFixtureDocument() }));
+    const handle = unwrap(
+      mountBoardView(target as unknown as HTMLElement, { space, theme: "light" }),
+    );
+    await flush();
+    const root = rootOf(handle);
+    const mode = findByClass(root, "bl-mode").find(
+      (element) => element.getAttribute("data-mode") === "viewer",
+    );
+    mode!.focus();
+    const mutable = space as unknown as {
+      resetFilter: (filterId: string) => { readonly ok: false; readonly diagnostics: readonly [] };
+    };
+    const original = space.resetFilter;
+    let resetCalls = 0;
+    mutable.resetFilter = () => {
+      resetCalls += 1;
+      return { ok: false, diagnostics: [] };
+    };
+    const reset = findByClass(root, "bl-filter-reset")[0];
+    expect(reset).toBeDefined();
+    reset!.click();
+    await flush();
+    expect(resetCalls).toBe(1);
+    unwrap(handle.update({ theme: "dark" }));
+    await flush();
+    expect(document.activeElement).toBe(mode);
+    mutable.resetFilter = original as unknown as typeof mutable.resetFilter;
+    unwrap(handle.unmount({ draftDecision: "cancel" }));
+    unwrap(runtime.dispose());
+  });
 });
